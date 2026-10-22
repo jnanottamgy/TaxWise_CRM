@@ -1,0 +1,13 @@
+# Supabase CLI configuration (used for `supabase db push` / `supabase db reset` against linked projects).
+# Schema changes ONLY through supabase/migrations (§0.1 rule 1). Seeds are §16 content only.
+project_id = "taxwise-practice-os"
+
+[db]
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed/*.sql"]
+
+[auth]
+enable_signup = false

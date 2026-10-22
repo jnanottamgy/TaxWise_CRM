@@ -2,7 +2,7 @@
  * Local database harness (development and tests only; never points at Supabase).
  *
  *   npx tsx scripts/db-local.ts reset [dbName]   drop + create the database, apply the Supabase shim,
- *                                                 every migration in order, then supabase/seed.sql
+ *                                                 every migration in order, then supabase/seed/*.sql in order
  *   npx tsx scripts/db-local.ts migrate [dbName] apply migrations not yet applied
  *
  * Needs LOCAL_PG_ADMIN_URL (a superuser URL to the local server's `postgres` database), e.g. in
@@ -15,7 +15,7 @@ import { Client } from "pg";
 const ROOT = join(__dirname, "..");
 const MIGRATIONS_DIR = join(ROOT, "supabase", "migrations");
 const SHIM = join(ROOT, "tests", "db", "shim", "supabase-shim.sql");
-const SEED = join(ROOT, "supabase", "seed.sql");
+const SEED_DIR = join(ROOT, "supabase", "seed");
 
 function loadEnvFile() {
   const p = join(ROOT, ".env.test.local");
@@ -40,6 +40,11 @@ export function dbUrl(dbName: string): string {
   const u = new URL(adminUrl());
   u.pathname = `/${dbName}`;
   return u.toString();
+}
+
+export function seedFiles(): string[] {
+  if (!existsSync(SEED_DIR)) return [];
+  return readdirSync(SEED_DIR).filter((f) => /^\d{2}_.+\.sql$/.test(f)).sort();
 }
 
 export function migrationFiles(): string[] {
@@ -67,9 +72,16 @@ export async function resetDatabase(dbName: string, opts: { seed?: boolean; quie
         throw new Error(`Migration ${f} failed: ${e.message}${e.where ? `\n  where: ${e.where}` : ""}${e.position ? `\n  position: ${e.position}` : ""}`);
       }
     }
-    if (opts.seed !== false && existsSync(SEED)) {
-      if (!opts.quiet) console.log("applying seed.sql");
-      await db.query(readFileSync(SEED, "utf8"));
+    if (opts.seed !== false) {
+      for (const f of seedFiles()) {
+        if (!opts.quiet) console.log(`seeding ${f}`);
+        try {
+          await db.query(readFileSync(join(SEED_DIR, f), "utf8"));
+        } catch (err) {
+          const e = err as Error & { where?: string };
+          throw new Error(`Seed ${f} failed: ${e.message}${e.where ? `\n  where: ${e.where}` : ""}`);
+        }
+      }
     }
   } finally {
     await db.end();
@@ -81,6 +93,9 @@ async function main() {
   if (cmd === "reset") {
     await resetDatabase(dbName);
     console.log(`database ${dbName} is ready`);
+  } else if (cmd === "migrate-only") {
+    await resetDatabase(dbName, { seed: false });
+    console.log(`database ${dbName} migrated (no seed)`);
   } else {
     console.error(`unknown command ${cmd}`);
     process.exit(1);
