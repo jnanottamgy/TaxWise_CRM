@@ -48,3 +48,5 @@ next-env.d.ts
 /desktop/node_modules/
 /desktop/dist/
 /desktop/out/
+/desktop/dist-build/
+/desktop/release/
