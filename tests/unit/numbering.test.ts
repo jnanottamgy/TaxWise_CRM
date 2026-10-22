@@ -220,6 +220,26 @@ describe("planNextNumber (mirror of next_document_number)", () => {
     expect(planNextNumber("invoice", { financialYear: "2026-27", nextValue: 1 }, { date: "2026-10-22", prefix: "TWCINV" }).ok).toBe(false);
   });
 
+  it("trims the prefix and refuses characters GST Rule 46 doesn't allow, before anything else (as the SQL does)", () => {
+    expect(planNextNumber("invoice", { financialYear: "2026-27", nextValue: 3 }, { date: "2026-10-22", prefix: " TWC " })).toMatchObject({
+      ok: true,
+      number: "TWC/26-27/0003",
+    });
+    expect(planNextNumber("invoice", { financialYear: "2026-27", nextValue: 3 }, { date: "2026-10-22", prefix: "TW#1" })).toEqual({
+      ok: false,
+      error: 'The invoice prefix "TW#1" can use only letters, digits, - and /. Fix it in Settings → Numbering.',
+    });
+    expect(planNextNumber("client_code", { financialYear: null, nextValue: 1 }, { date: "2026-10-22", prefix: "   " })).toEqual({
+      ok: false,
+      error: 'The client code prefix "" can use only letters, digits, - and /. Fix it in Settings → Numbering.',
+    });
+    // The prefix is checked before the FY: an earlier-FY date with a bad prefix reports the prefix.
+    expect(planNextNumber("invoice", { financialYear: "2027-28", nextValue: 5 }, { date: "2026-10-22", prefix: "TW 1" })).toMatchObject({
+      ok: false,
+      error: expect.stringContaining('prefix "TW 1"'),
+    });
+  });
+
   it("never resets series that aren't FY-scoped", () => {
     expect(planNextNumber("client_code", { financialYear: null, nextValue: 42 }, { date: "2027-04-01" })).toEqual({
       ok: true,

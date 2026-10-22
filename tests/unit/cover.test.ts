@@ -147,6 +147,17 @@ describe("canSeeClient mirrors can_see_client (§4.6)", () => {
     expect(canSeeClient({ role: "employee", isActive: true, employeeId: E2 }, abc, teams, [c], NOW)).toBe(false);
   });
 
+  it("a soft-deleted client is visible to Partners and Managers only (recycle bin, §4.1)", () => {
+    const deleted = { ...xyz, deletedAt: "2026-10-21T10:00:00Z" };
+    const person = { kind: "person" as const, clientId: null, absentEmployeeId: E3, coverEmployeeId: E2, startsAt: ist("2026-10-22T09:00:00"), endsAt: ist("2026-10-24T00:00:00") };
+    expect(canSeeClient({ role: "partner", isActive: true }, deleted, teams, [], NOW)).toBe(true);
+    expect(canSeeClient({ role: "manager", isActive: true }, deleted, teams, [], NOW)).toBe(true);
+    expect(canSeeClient({ role: "employee", isActive: true, employeeId: E3 }, deleted, teams, [], NOW)).toBe(false);
+    expect(canSeeClient({ role: "employee", isActive: true, employeeId: E2 }, deleted, teams, [person], NOW)).toBe(false);
+    expect(canSeeClient({ role: "client", isActive: true, userId: "portal-user-xyz" }, deleted, [], [], NOW)).toBe(false);
+    expect(canSeeClient({ role: "employee", isActive: true, employeeId: E3 }, { ...xyz, deletedAt: null }, teams, [], NOW)).toBe(true);
+  });
+
   it("a client sees only their own client record (portal_user_id)", () => {
     expect(canSeeClient({ role: "client", isActive: true, userId: "portal-user-xyz" }, xyz, [], [], NOW)).toBe(true);
     expect(canSeeClient({ role: "client", isActive: true, userId: "portal-user-xyz" }, abc, [], [], NOW)).toBe(false);

@@ -1,12 +1,13 @@
 "use server";
 
+import type { Json } from "@/lib/database.types";
 import { z } from "zod";
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
 import { ActionError, ok, type ActionResult } from "@/lib/result";
 import { formatDate } from "@/lib/format";
 import { compareDates, todayIST, type DateString } from "@/lib/domain/fy";
 import { applyOverride, removeOverride as unapplyOverride, type DueDateOverride, type OverridableEvent } from "@/lib/domain/statutory-calendar";
-import type { ComplianceStatus, ComplianceWorkflow } from "@/lib/domain/enums";
+import type { ComplianceStatus, ComplianceType, ComplianceWorkflow } from "@/lib/domain/enums";
 import {
   ConcordanceSchema,
   DueDateRuleChangeSchema,
@@ -96,7 +97,7 @@ export const changeParameter = defineAction(
       .from("statutory_parameters")
       .insert({
         key: row.key,
-        value: input.value,
+        value: input.value as Json,
         effective_from: input.effective_from,
         effective_to: row.effective_to,
         statute: input.statute,
@@ -153,7 +154,7 @@ export const addParameter = defineAction(
       .from("statutory_parameters")
       .insert({
         key: input.key,
-        value: input.value,
+        value: input.value as Json,
         effective_from: input.effective_from,
         effective_to: input.effective_to,
         statute: input.statute,
@@ -282,11 +283,11 @@ export const changeDueDateRule = defineAction(
       .insert({
         code: input.new_code,
         title: input.title,
-        compliance_type: row.compliance_type,
+        compliance_type: row.compliance_type as ComplianceType,
         form_code: input.form_code,
-        applies_to: input.applies_to,
+        applies_to: input.applies_to as Json,
         frequency: input.frequency,
-        rule: input.rule,
+        rule: input.rule as Json,
         reminder_days: input.reminder_days,
         effective_from: input.effective_from,
         effective_to: row.effective_to,

@@ -1,5 +1,6 @@
 "use server";
 
+import type { Json } from "@/lib/database.types";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
@@ -30,7 +31,7 @@ async function mergePreferences(ctx: ActionContext, patch: (current: Record<stri
 
   const { data: updated, error: updateError } = await ctx.supabase
     .from("profiles")
-    .update({ preferences: next })
+    .update({ preferences: next as Json })
     .eq("id", ctx.user.id)
     .select("id");
   throwIfDbError(updateError);

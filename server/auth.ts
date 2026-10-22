@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Json } from "@/lib/database.types";
 import { cookies, headers } from "next/headers";
 import type { AuditEvent } from "@/lib/action";
 import type { ServerSupabase } from "@/lib/supabase/server";
@@ -96,7 +97,7 @@ export async function auditAuthEvent(entry: AuthAuditEntry): Promise<void> {
       resource_type: "auth",
       resource_id: entry.userId ?? null,
       action: entry.action,
-      details: entry.details ?? {},
+      details: (entry.details ?? {}) as Json,
       success: entry.success,
       error: entry.error ?? null,
     });

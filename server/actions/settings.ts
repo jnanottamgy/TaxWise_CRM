@@ -1,5 +1,6 @@
 "use server";
 
+import { untyped } from "@/lib/supabase/untyped";
 import { z } from "zod";
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
 import { ActionError, ok, type ActionResult } from "@/lib/result";
@@ -366,7 +367,7 @@ async function takenNumbers(supabase: ServerSupabase, key: SeriesKey, prefix: st
   const taken: string[] = [];
   for (let i = 0; i < candidates.length; i += 100) {
     const chunk = candidates.slice(i, i + 100);
-    const { data, error } = await supabase.from(target.table).select(target.column).in(target.column, chunk).limit(chunk.length);
+    const { data, error } = await untyped(supabase).from(target.table).select(target.column).in(target.column, chunk).limit(chunk.length);
     throwIfDbError(error);
     for (const r of (data ?? []) as unknown as Array<Record<string, string>>) taken.push(r[target.column]);
   }

@@ -162,6 +162,7 @@ export type NextNumber =
 
 /**
  * One step of the counter, as `next_document_number(p_key, p_date)` does it under `FOR UPDATE`:
+ * - the prefix (trimmed) may use only letters, digits, `-` and `/` (GST Rule 46), checked first;
  * - an FY-scoped series restarts at 1 when the date is in a later FY than the row;
  * - a date in an earlier FY than the row is refused, because restarting would reuse that FY's
  *   numbers (the row only remembers its latest FY);
@@ -174,6 +175,13 @@ export function planNextNumber(
 ): NextNumber {
   const def = SERIES[key];
   const max = args.maxLength ?? NUMBERING_DEFAULTS.gstDocumentMaxLength;
+  const prefix = (args.prefix ?? def.defaultPrefix).trim();
+  if (!GST_DOCUMENT_CHARS.test(prefix)) {
+    return {
+      ok: false,
+      error: `The ${def.noun} prefix "${prefix}" can use only letters, digits, - and /. Fix it in Settings → Numbering.`,
+    };
+  }
   if (!Number.isSafeInteger(state.nextValue) || state.nextValue < 1) {
     return { ok: false, error: `The ${def.noun} counter is damaged (next value ${state.nextValue}). Ask a Partner to check Settings → Numbering.` };
   }
@@ -192,7 +200,7 @@ export function planNextNumber(
     if (rowStart === null || dateStart > rowStart) seq = 1;
     fy = dateFy;
   }
-  const number = formatSeriesNumber(key, { seq, prefix: args.prefix, fy: fy ?? undefined });
+  const number = formatSeriesNumber(key, { seq, prefix, fy: fy ?? undefined });
   if (number.length > max) {
     return {
       ok: false,

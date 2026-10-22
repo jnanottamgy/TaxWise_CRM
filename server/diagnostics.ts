@@ -1,5 +1,6 @@
 import "server-only";
 
+import { untyped } from "@/lib/supabase/untyped";
 import { unstable_rethrow } from "next/navigation";
 import { createClient, type ServerSupabase } from "@/lib/supabase/server";
 import { EXPECTED_SCHEMA_VERSION, appEnv } from "@/lib/env";
@@ -377,7 +378,7 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
   async tables(supabase) {
     const names = [...EXPECTED_TABLES.map((n) => ({ name: n, kind: "table" })), ...EXPECTED_VIEWS.map((n) => ({ name: n, kind: "view" }))];
     const items = await inBatches(names, 8, async ({ name, kind }): Promise<DiagnosticItem> => {
-      const { error } = await supabase.from(name).select("*").limit(0);
+      const { error } = await untyped(supabase).from(name).select("*").limit(0);
       if (!error) return { label: name, status: "pass" };
       if (error.code === "42501") return { label: name, status: "pass", code: "42501", detail: `The ${kind} exists; Partners can't read it directly, by design.` };
       return { label: name, status: "fail", code: errorCode(error), detail: isMissingRelation(error) ? `The ${kind} is missing.` : describe(error) };
@@ -398,13 +399,13 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
     const results = await inBatches(names, 6, async (name): Promise<DiagnosticItem> => {
       const { table, column } = ENUM_COLUMNS[name];
       const values = DB_ENUMS[name] as readonly string[];
-      const { error } = await supabase.from(table).select(column).in(column, [...values]).limit(0);
+      const { error } = await untyped(supabase).from(table).select(column).in(column, [...values]).limit(0);
       if (!error) return { label: name, status: "pass" };
       if (error.code !== "22P02") return { label: name, status: "fail", code: errorCode(error), detail: `${table}.${column}: ${describe(error)}` };
       // One or more values are missing: find which.
       const missing: string[] = [];
       for (const v of values) {
-        const one = await supabase.from(table).select(column).eq(column, v).limit(0);
+        const one = await untyped(supabase).from(table).select(column).eq(column, v).limit(0);
         if (one.error?.code === "22P02") missing.push(v);
       }
       return { label: name, status: "fail", code: "22P02", detail: `Missing value${missing.length === 1 ? "" : "s"}: ${missing.join(", ") || "unknown"}.` };
@@ -421,7 +422,7 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
 
   async columns(supabase) {
     const items = await inBatches(RECENT_COLUMNS, 6, async ({ table, column }): Promise<DiagnosticItem> => {
-      const { error } = await supabase.from(table).select(column).limit(0);
+      const { error } = await untyped(supabase).from(table).select(column).limit(0);
       const label = `${table}.${column}`;
       if (!error) return { label, status: "pass" };
       return { label, status: "fail", code: errorCode(error), detail: describe(error) };
@@ -438,7 +439,7 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
   async rls_helpers(supabase) {
     const items: DiagnosticItem[] = [];
     for (const helper of RLS_HELPERS) {
-      const { data, error } = await supabase.rpc(helper.name, helper.args ?? {});
+      const { data, error } = await untyped(supabase).rpc(helper.name, helper.args ?? {});
       if (error) {
         const exists = error.code === "PGRST202" && new RegExp(`\\b${helper.name}\\b`).test(`${error.hint ?? ""}`);
         items.push(

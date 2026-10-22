@@ -1,5 +1,6 @@
 import "server-only";
 
+import { untyped } from "@/lib/supabase/untyped";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { escapeLike } from "@/components/app/data-table/params";
 import { getProfileNames } from "@/lib/data/settings";
@@ -129,7 +130,7 @@ function withVerifierNames<T extends { verified_by?: string | null }>(rows: T[],
 
 export async function getLawSummary(supabase: ServerSupabase, today: string): Promise<LawSummary> {
   const count = async (table: string, scoped: boolean) => {
-    let q = supabase.from(table).select("id", { count: "exact", head: true }).eq("verified", false);
+    let q = untyped(supabase).from(table).select("id", { count: "exact", head: true }).eq("verified", false);
     if (scoped) q = inForce(q, today);
     const { count: n, error } = await q;
     if (error) throw error;

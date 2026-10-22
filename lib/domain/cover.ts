@@ -170,17 +170,26 @@ export type ClientViewer = {
   userId?: string | null;
 };
 
-export type ViewedClient = { id: string; ownerEmployeeId: string | null; portalUserId?: string | null };
+export type ViewedClient = {
+  id: string;
+  ownerEmployeeId: string | null;
+  portalUserId?: string | null;
+  /** `clients.deleted_at`: a client in the recycle bin is visible to Partners and Managers only. */
+  deletedAt?: Instant | null;
+};
 
 /**
  * Mirrors `can_see_client(cid)` (§4.6): Partners and Managers see every client. An Employee sees a
  * client they own or are on the team of, or one reached by a cover in force that they hold (a
  * client cover for it, or a person cover for a colleague who owns it or is on its team). A Client
  * sees only the client whose `portal_user_id` is theirs. A disabled or role-less profile sees none.
+ * A soft-deleted client is in the recycle bin, which only Partners and Managers open (§4.1, §0.1
+ * rule 11), so Employees and Clients don't see it.
  */
 export function canSeeClient(viewer: ClientViewer, client: ViewedClient, teams: readonly TeamRow[], covers: readonly CoverRecord[], now: Instant): boolean {
   if (!viewer.isActive || viewer.role === null) return false;
   if (viewer.role === "partner" || viewer.role === "manager") return true;
+  if (client.deletedAt !== null && client.deletedAt !== undefined) return false;
   if (viewer.role === "client") return !!viewer.userId && client.portalUserId === viewer.userId;
   const me = viewer.employeeId;
   if (!me) return false;
