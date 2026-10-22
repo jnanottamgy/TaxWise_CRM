@@ -4,6 +4,7 @@ import * as React from "react"
 import { BellIcon, UsersIcon } from "lucide-react"
 import { toast } from "sonner"
 import { statusOptions } from "@/lib/status"
+import { waMeUrl } from "@/lib/domain/messaging"
 import { ok } from "@/lib/result"
 import { Button } from "@/components/ui/button"
 import { DataTable, type DataTableColumn } from "@/components/app/data-table/data-table"
@@ -22,7 +23,7 @@ import { KIT_OWNERS, KIT_VIEWS, type KitClientRow } from "@/components/app/kit/s
 
 const TODAY = "2026-10-22"
 
-const kitWhatsAppUrl = (digits: string, text: string) => `https://wa.me/${digits}?text=${encodeURIComponent(text)}`
+const kitWhatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 
 const columns: DataTableColumn<KitClientRow>[] = [
   { id: "name", header: "Client", cell: (r) => r.name, sortable: true, hideable: false, mobile: "primary", width: "26%" },
@@ -102,7 +103,7 @@ export function KitTable(props: {
         caption="Clients"
         columns={columns}
         getRowId={(r) => r.id}
-        getRowHref={(r) => `/kit#${r.code}`}
+        getRowHref={(r) => `/dev/kit#${r.code}`}
         countLabel={(n, t) => `${n} ${t === 1 ? "client" : "clients"}`}
         defaultSort={{ sort: "name", dir: "asc" }}
         selectable

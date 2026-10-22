@@ -151,7 +151,7 @@ export function Wizard({
           </ol>
         </nav>
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
-          <div className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-6">
+          <div className="w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
             <h2 ref={headingRef} tabIndex={-1} className="text-lg leading-7 font-semibold text-text outline-none">
               {step?.title}
             </h2>

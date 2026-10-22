@@ -33,7 +33,7 @@ import {
   requestMeta,
   startActivityClock,
   syncAppMetadata,
-} from "@/app/(auth)/_lib/server";
+} from "@/server/auth";
 
 /**
  * Sign-in, sign-out, password and two-step sign-in actions (§4.4, §12, §13).
@@ -293,7 +293,7 @@ function passwordErrorResult(error: AuthError): ActionResult<never> | null {
 }
 
 export const setNewPassword = defineAction(
-  { name: "auth.set_password", schema: NewPasswordSchema, allowMustChangePassword: true },
+  { name: "auth.set_password", schema: NewPasswordSchema, allowMustChangePassword: true, allowPendingMfa: true },
   async ({ password }, ctx) => {
     const forced = ctx.user.mustChangePassword;
     // Without the current password, only a forced change or a fresh reset-link session may do this.
@@ -392,7 +392,7 @@ export interface MfaEnrolment {
 }
 
 export const startMfaEnrolment = defineAction(
-  { name: "auth.mfa_enrol_start", schema: z.object({}) },
+  { name: "auth.mfa_enrol_start", schema: z.object({}), allowPendingMfa: true },
   async (_input, ctx): Promise<ActionResult<MfaEnrolment>> => {
     const state = await getMfaState(ctx.supabase);
     if (state.verified.length > 0) {
@@ -421,7 +421,7 @@ export const startMfaEnrolment = defineAction(
 );
 
 export const verifyMfa = defineAction(
-  { name: "auth.mfa_verify", schema: MfaCodeSchema, allowMustChangePassword: true },
+  { name: "auth.mfa_verify", schema: MfaCodeSchema, allowMustChangePassword: true, allowPendingMfa: true },
   async ({ factorId, code, next }, ctx) => {
     const limit = await checkRateLimit({
       scope: "mfa_verify",

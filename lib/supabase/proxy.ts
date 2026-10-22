@@ -72,10 +72,20 @@ export function isStaticAsset(pathname: string): boolean {
   return pathname.startsWith("/_next/") || pathname === "/favicon.ico" || STATIC_FILE.test(pathname);
 }
 
+/**
+ * Development-only pages under /dev (the UI kit gallery at /dev/kit). Outside production they open
+ * without a session; in production the proxy treats them like any other page and the pages
+ * themselves answer 404.
+ */
+export function isDevToolPath(pathname: string, appEnv: string | undefined = process.env.APP_ENV): boolean {
+  return appEnv !== "production" && under(pathname, "/dev");
+}
+
 /** Paths anyone may open without a session (§4.4 task brief). */
 export function isPublicPath(pathname: string): boolean {
   if (isStaticAsset(pathname)) return true;
   if (PUBLIC_EXACT.has(pathname)) return true;
+  if (isDevToolPath(pathname)) return true;
   if (pathname === "/q") return false;
   return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }

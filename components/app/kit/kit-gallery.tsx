@@ -4,12 +4,13 @@ import * as React from "react"
 import Link from "next/link"
 import { ChevronRightIcon, DownloadIcon, PlusIcon, ReceiptIcon } from "lucide-react"
 import { toast } from "sonner"
+import { useTheme } from "next-themes"
+import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
 import { cn } from "@/lib/utils"
 import { STATUS_VOCABULARY, statusOptions, type StatusKind } from "@/lib/status"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { Toaster } from "@/components/app/toaster"
 import { PageHeader } from "@/components/app/page-header"
 import { SectionCard } from "@/components/app/section-card"
 import { Delta, KpiStrip } from "@/components/app/kpi-strip"
@@ -56,9 +57,9 @@ const SECTIONS = [
   { id: "keyboard", label: "Keyboard" },
 ]
 
-const kitWhatsAppUrl = (digits: string, text: string) => `https://wa.me/${digits}?text=${encodeURIComponent(text)}`
-const kitGmailUrl = (f: { to: string; cc?: string; subject: string; body: string }) =>
-  `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(f.to)}&su=${encodeURIComponent(f.subject)}&body=${encodeURIComponent(f.body)}`
+// The real hand-off builders (lib/domain/messaging.ts), so the kit shows exactly what features send.
+const kitWhatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
+const kitGmailUrl = (f: { to: string; cc?: string; bcc?: string; subject: string; body: string }) => gmailComposeUrl(f)
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -124,6 +125,7 @@ function Segmented({
 }
 
 function DisplayControls() {
+  const { setTheme } = useTheme()
   const dark = useHtmlClass("dark")
   const compact = useHtmlClass("density-compact")
   return (
@@ -135,10 +137,8 @@ function DisplayControls() {
           { value: "light", label: "Light" },
           { value: "dark", label: "Dark" },
         ]}
-        onChange={(v) => {
-          document.documentElement.classList.toggle("dark", v === "dark")
-          document.documentElement.style.colorScheme = v
-        }}
+        // Through next-themes (app/providers.tsx), which owns the class on <html>.
+        onChange={(v) => setTheme(v)}
       />
       <Segmented
         label="Density"
@@ -206,9 +206,8 @@ export function KitGallery({
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-6">
-      <Toaster />
       <PageHeader
-        breadcrumbs={[{ label: "Development", href: "/kit" }, { label: "UI kit" }]}
+        breadcrumbs={[{ label: "Development", href: "/dev/kit" }, { label: "UI kit" }]}
         title="UI kit"
         description="Every TaxWise pattern in every state, with sample content. This page doesn't exist in production."
         actions={<DisplayControls />}
@@ -325,7 +324,7 @@ export function KitGallery({
               </div>
               <div className="rounded-lg border border-dashed border-border p-4">
                 <PageHeader
-                  breadcrumbs={[{ label: "Clients", href: "/kit#headers" }, { label: "Sharma Traders" }]}
+                  breadcrumbs={[{ label: "Clients", href: "/dev/kit#headers" }, { label: "Sharma Traders" }]}
                   title="Sharma Traders"
                   meta={
                     <>
@@ -353,8 +352,8 @@ export function KitGallery({
               <KpiStrip
                 aria-label="Billing this month"
                 items={[
-                  { label: "Outstanding", value: <Money value={1234567.5} compact />, sub: "42 invoices", href: "/kit#kpis" },
-                  { label: "Overdue", value: <Money value={345600} compact />, sub: <Delta change={-3} goodDirection="down" baseline="vs last week" format={(n) => `${n} invoices`} />, href: "/kit#kpis" },
+                  { label: "Outstanding", value: <Money value={1234567.5} compact />, sub: "42 invoices", href: "/dev/kit#kpis" },
+                  { label: "Overdue", value: <Money value={345600} compact />, sub: <Delta change={-3} goodDirection="down" baseline="vs last week" format={(n) => `${n} invoices`} />, href: "/dev/kit#kpis" },
                   { label: "Collected in October", value: <Money value={287600} compact />, sub: <Delta change={-188700} baseline="vs September" format={(n) => `₹${n.toLocaleString("en-IN")}`} /> },
                   { label: "Unbilled work", value: <Money value={0} compact />, sub: <Delta change={0} baseline="vs last month" /> },
                 ]}
@@ -363,7 +362,7 @@ export function KitGallery({
                 lead
                 items={[
                   { label: "Filed on time this FY", value: "94.2%", sub: <Delta change={1.8} baseline="vs 2025-26" format={(n) => `${n} pts`} /> },
-                  { label: "Data awaited", value: "17", sub: "6 for more than a week", href: "/kit#kpis" },
+                  { label: "Data awaited", value: "17", sub: "6 for more than a week", href: "/dev/kit#kpis" },
                   { label: "Under review", value: "9", sub: <Delta change={4} previous={0} baseline="since Monday" /> },
                 ]}
               />
@@ -381,7 +380,7 @@ export function KitGallery({
 
           <Section id="cards" title="Section cards" description="Overviews show 4–6 rows and link out; an empty or failed section keeps its frame and header.">
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-              <SectionCard title="Due this week" action={<span className="num text-sm text-text-muted">20–26 Oct</span>} viewAll={{ href: "/kit#cards", label: "View all 18" }} flush>
+              <SectionCard title="Due this week" action={<span className="num text-sm text-text-muted">20–26 Oct</span>} viewAll={{ href: "/dev/kit#cards", label: "View all 18" }} flush>
                 <ul>
                   {DUE_ROWS.map((r) => (
                     <li key={r.title + r.client} className="flex min-h-14 items-center justify-between gap-4 border-t border-border/70 px-4 py-2 first:border-t-0 md:px-5">
@@ -650,7 +649,7 @@ export function KitGallery({
               <Button variant="outline" size="sm" onClick={() => setShortcuts(true)}>
                 Show shortcut sheet
               </Button>
-              <Link href="/kit#themes" className="text-primary hover:underline">
+              <Link href="/dev/kit#themes" className="text-primary hover:underline">
                 Back to top
               </Link>
             </div>

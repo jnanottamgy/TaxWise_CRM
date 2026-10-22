@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/server/admin";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { SetupSchema, type SetupInput } from "@/lib/schemas/auth";
-import { auditAuthEvent, isFirstRun, requestMeta, startActivityClock } from "@/app/(auth)/_lib/server";
+import { auditAuthEvent, isFirstRun, requestMeta, startActivityClock } from "@/server/auth";
 
 /**
  * First run (§4.3). Reachable only while `profiles` is empty. Creates the first Partner's login

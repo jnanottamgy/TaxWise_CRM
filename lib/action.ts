@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import type { z } from "zod";
 import { getSession, type CurrentUser } from "@/lib/auth/current-user";
 import type { AppRole } from "@/lib/auth/roles";
+import { mfaRequiredFor, toAal } from "@/lib/auth/mfa";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { ActionError, fail, ok, unexpectedMessage, type ActionResult, type FieldErrors } from "@/lib/result";
 import { log, logUnexpected } from "@/lib/log";
@@ -50,6 +51,30 @@ export interface ActionConfig<S extends z.ZodType> {
   roles?: readonly AppRole[];
   /** Only /set-password's action sets this: everything else refuses until the password is changed (§4.4). */
   allowMustChangePassword?: boolean;
+  /**
+   * Only the two-step sign-in actions (and the forced password change that comes before it) set this:
+   * everything else refuses a Partner or Manager, or anyone who turned two-step sign-in on, whose
+   * session hasn't been verified with the authenticator app yet (§12). The proxy refuses these too;
+   * this holds when an action is reached some other way.
+   */
+  allowPendingMfa?: boolean;
+}
+
+/**
+ * True when this session meets the two-step sign-in rule (§12): already at `aal2`, or the role doesn't
+ * require it and the person hasn't turned it on. getSession has verified the token with the Auth
+ * server, so its level is trustworthy. A failed lookup counts as not verified for the required roles.
+ */
+async function assuranceSatisfied(supabase: ServerSupabase, user: CurrentUser): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error) throw error;
+    if (toAal(data?.currentLevel) === "aal2") return true;
+    return !mfaRequiredFor(user.role) && data?.nextLevel !== "aal2";
+  } catch (err) {
+    log("error", "assurance level lookup failed", { source: "action:mfa-gate", userId: user.id, role: user.role, err });
+    return !mfaRequiredFor(user.role);
+  }
 }
 
 function zodFieldErrors(error: z.ZodError): FieldErrors {
@@ -96,6 +121,10 @@ export function defineAction<S extends z.ZodType, T>(
 
       if (user.mustChangePassword && !config.allowMustChangePassword) {
         return fail("Set your own password first.", { code: "must_change_password" });
+      }
+
+      if (!config.allowPendingMfa && !(await assuranceSatisfied(supabase, user))) {
+        return fail("Enter the code from your authenticator app first.", { code: "forbidden" });
       }
 
       const h = await headers();

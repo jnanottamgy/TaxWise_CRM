@@ -498,10 +498,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
                         </div>
                         {secondary.length ? (
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm leading-5 text-text-muted [&_a]:relative [&_a]:z-[2] [&_button]:relative [&_button]:z-[2]">
+                            {/* The separator trails its item, so a wrapped line never starts with "·". */}
                             {secondary.map((s, i) => (
                               <span key={s.id} className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap">
-                                {i > 0 ? <span aria-hidden="true">·</span> : null}
                                 {s.node}
+                                {i < secondary.length - 1 ? <span aria-hidden="true">·</span> : null}
                               </span>
                             ))}
                           </div>

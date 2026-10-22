@@ -11,7 +11,7 @@ import { SetupSchema, type SetupInput } from "@/lib/schemas/auth";
 import { cn } from "@/lib/utils";
 import { describedBy, FormField, FormMessage, PasswordChecklist, PasswordInput, SubmitButton } from "../_components/form-bits";
 import { navigateTo, useAuthForm } from "../_components/use-auth-form";
-import type { FirmDetails } from "../_lib/firm-defaults";
+import type { FirmDetails } from "@/lib/auth/firm-defaults";
 
 interface StateOption {
   code: string;

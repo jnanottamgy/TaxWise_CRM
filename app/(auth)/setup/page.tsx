@@ -6,8 +6,8 @@ import { log, logUnexpected } from "@/lib/log";
 import { stateOptions } from "@/lib/domain/india-validators";
 import { AuthCard } from "../_components/auth-card";
 import { FormMessage } from "../_components/form-bits";
-import { FIRM_DEFAULTS, type FirmDetails } from "../_lib/firm-defaults";
-import { isFirstRun, loadFirmDetailsForSetup } from "../_lib/server";
+import { FIRM_DEFAULTS, type FirmDetails } from "@/lib/auth/firm-defaults";
+import { isFirstRun, loadFirmDetailsForSetup } from "@/server/auth";
 import { SetupForm } from "./setup-form";
 
 export const metadata: Metadata = { title: "Set up TaxWise" };

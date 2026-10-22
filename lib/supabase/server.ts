@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/database.types";
 import { env } from "@/lib/env";
+import { authCookieOptions } from "@/lib/supabase/proxy";
 
 /**
  * Supabase client bound to the signed-in user's session. Every read and write through it
@@ -12,6 +13,9 @@ import { env } from "@/lib/env";
 export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient<Database>(env.supabaseUrl(), env.supabaseAnonKey(), {
+    // Same cookie options as the proxy (§12: HttpOnly, SameSite=Lax, Secure over https), so a cookie
+    // written by a Server Action (sign-in, MFA, password change) is identical to a proxy refresh.
+    cookieOptions: authCookieOptions(env.appUrl().startsWith("https://")),
     cookies: {
       getAll() {
         return cookieStore.getAll();

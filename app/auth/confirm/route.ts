@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log, logUnexpected } from "@/lib/log";
 import { safeNextPath } from "@/lib/supabase/proxy";
-import { auditAuthEvent, requestMeta, startActivityClock } from "@/app/(auth)/_lib/server";
+import { auditAuthEvent, requestMeta, startActivityClock } from "@/server/auth";
 
 /**
  * Where Supabase's emails land (§4.4): turns a one-time link into a session, then redirects.

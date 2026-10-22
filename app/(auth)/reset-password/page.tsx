@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth/current-user";
 import { getMfaState } from "@/lib/auth/mfa";
 import { log } from "@/lib/log";
-import { cameFromEmailLink } from "../_lib/server";
+import { cameFromEmailLink } from "@/server/auth";
 import { AuthCard, TroubleLine } from "../_components/auth-card";
 import { MfaCodeForm } from "../_components/mfa-code-form";
 import { NewPasswordForm } from "../_components/new-password-form";

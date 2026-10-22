@@ -6,11 +6,11 @@ import type { ServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/server/admin";
 import { log } from "@/lib/log";
 import { ACTIVITY_COOKIE, activityCookieOptions } from "@/lib/supabase/proxy";
-import { FIRM_DEFAULTS, type FirmDetails } from "./firm-defaults";
+import { FIRM_DEFAULTS, type FirmDetails } from "@/lib/auth/firm-defaults";
 
 /**
  * Server helpers shared by the sign-in, password, MFA and first-run actions and pages.
- * (Kept inside the auth route group's private folder; nothing else imports it.)
+ * Used by server/actions/auth.ts, server/actions/setup.ts, app/auth/confirm and the (auth) pages.
  */
 
 export interface RequestMeta {

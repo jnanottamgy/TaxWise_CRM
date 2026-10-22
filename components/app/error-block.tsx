@@ -50,8 +50,11 @@ export function ErrorBlock({
       role={announce ? "alert" : undefined}
       data-slot="error-block"
       className={cn(
-        "flex gap-3 text-base",
-        size === "compact" ? "items-center px-3 py-2" : "flex-col items-start px-4 py-6 sm:flex-row sm:items-start",
+        "gap-3 text-base",
+        // Phones: the icon stays beside the sentence and Retry drops under the text, aligned with it.
+        size === "compact"
+          ? "flex items-center px-3 py-2"
+          : "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-y-2 px-4 py-6 sm:grid-cols-[auto_minmax(0,1fr)_auto]",
         className
       )}
     >
@@ -72,7 +75,10 @@ export function ErrorBlock({
         type="button"
         onClick={retry}
         disabled={pending}
-        className="inline-flex h-8 flex-none cursor-pointer items-center gap-1.5 rounded-md px-2 text-sm font-medium text-primary transition-colors duration-150 hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-70 pointer-coarse:min-h-11"
+        className={cn(
+          "inline-flex h-8 flex-none cursor-pointer items-center gap-1.5 rounded-md px-2 text-sm font-medium text-primary transition-colors duration-150 hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-70 pointer-coarse:min-h-11",
+          size !== "compact" && "col-start-2 -ml-2 justify-self-start sm:col-start-3 sm:ml-0"
+        )}
       >
         <RotateCwIcon aria-hidden="true" className={cn("size-3.5", pending && "animate-spin")} />
         {pending ? "Retrying…" : "Retry"}

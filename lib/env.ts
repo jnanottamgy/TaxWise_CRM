@@ -42,4 +42,4 @@ export const env = {
 } as const;
 
 /** The schema version this build of the code expects (§0.1 rule 1). Bump with every migration. */
-export const EXPECTED_SCHEMA_VERSION = "0001";
+export const EXPECTED_SCHEMA_VERSION = "0029";

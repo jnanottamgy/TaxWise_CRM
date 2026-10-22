@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { TwMonogram } from "@/components/shell/brand";
 
 /**
  * The sign-in screen's brand moment (§3.5): a navy panel with a faint diagonal line pattern, the
@@ -6,18 +7,21 @@ import { cn } from "@/lib/utils";
  * mark at the foot. On a phone only the card shows, with the monogram and name above it.
  */
 
-/** The TW monogram: gold letters in a gold-ruled square, on navy. */
+/**
+ * The TW monogram on a navy tile: the same mark the app's sidebar band and error pages draw
+ * (components/shell/brand.tsx), so the brand reads identically before and after sign-in.
+ */
 export function TwMark({ className, size = "md" }: { className?: string; size?: "sm" | "md" }) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex flex-none select-none items-center justify-center rounded-md border border-gold/60 bg-brand-navy font-semibold tracking-[0.04em] text-gold",
-        size === "md" ? "size-11 text-base" : "size-9 text-sm",
+        "inline-flex flex-none items-center justify-center rounded-[10px] bg-brand-navy",
+        size === "md" ? "size-11" : "size-9",
         className,
       )}
     >
-      TW
+      <TwMonogram className="size-full" />
     </span>
   );
 }
@@ -37,12 +41,13 @@ export function JMark({ className }: { className?: string }) {
   );
 }
 
-export function PoweredBy({ className }: { className?: string }) {
+/** "Powered by J-TACS" with the gold J mark: on the navy panel, or (`onLight`) under the phone card. */
+export function PoweredBy({ className, onLight = false }: { className?: string; onLight?: boolean }) {
   return (
-    <p className={cn("flex items-center gap-2 text-sm", className)}>
-      <span className="text-white/70">Powered by</span>
+    <p className={cn("flex items-center gap-2", onLight ? "text-xs" : "text-sm", className)}>
+      <span className={onLight ? "text-text-muted" : "text-white/70"}>Powered by</span>
       <JMark />
-      <span className="font-semibold tracking-[0.02em] text-gold">J-TACS</span>
+      <span className={cn("font-semibold tracking-[0.02em]", onLight ? "text-gold-text" : "text-gold")}>J-TACS</span>
     </p>
   );
 }
@@ -83,7 +88,7 @@ export function BrandPanel() {
   );
 }
 
-/** Phones: the monogram and name above the card. */
+/** Phones: the monogram and name above the card (§3.5). */
 export function PhoneBrand() {
   return (
     <div className="mb-6 flex flex-col items-center gap-3 text-center md:hidden">
@@ -94,4 +99,9 @@ export function PhoneBrand() {
       </div>
     </div>
   );
+}
+
+/** Phones: the J-TACS credit under the card, since the navy panel is hidden there (§0, §3.5). */
+export function PhonePoweredBy() {
+  return <PoweredBy onLight className="mt-8 md:hidden" />;
 }
