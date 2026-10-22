@@ -1,0 +1,30 @@
+{
+  "headers": [
+    "GSTIN of Supplier",
+    "Supplier Name",
+    "Doc Type",
+    "Invoice No",
+    "Invoice Date",
+    "Taxable Value",
+    "Integrated Tax",
+    "Central Tax",
+    "State/UT Tax",
+    "Cess",
+    "Voucher No"
+  ],
+  "rows": [
+    { "GSTIN of Supplier": "29AABCK1234A1Z5", "Supplier Name": "Kaveri Traders", "Doc Type": "Invoice", "Invoice No": "inv-7", "Invoice Date": "05/09/2026", "Taxable Value": "10,000.00", "Integrated Tax": "", "Central Tax": "900.00", "State/UT Tax": "900.00", "Cess": "", "Voucher No": "P-001" },
+    { "GSTIN of Supplier": "29aabck1234a1z5", "Supplier Name": "Kaveri Traders", "Doc Type": "Tax Invoice", "Invoice No": "KT-101", "Invoice Date": "10-09-2026", "Taxable Value": 5000, "Integrated Tax": 0, "Central Tax": 450, "State/UT Tax": 450, "Cess": 0, "Voucher No": "P-002" },
+    { "GSTIN of Supplier": "29AABCK1234A1Z5", "Supplier Name": "Kaveri Traders", "Doc Type": "Invoice", "Invoice No": "KT-102", "Invoice Date": "12-Sep-2026", "Taxable Value": 20000, "Integrated Tax": 0, "Central Tax": 1700, "State/UT Tax": 1700, "Cess": 0, "Voucher No": "P-003" },
+    { "GSTIN of Supplier": "29AABCK1234A1Z5", "Supplier Name": "Kaveri Traders", "Doc Type": "Invoice", "Invoice No": "KT-110", "Invoice Date": "28-09-2026", "Taxable Value": 15000, "Integrated Tax": 0, "Central Tax": 1350, "State/UT Tax": 1350, "Cess": 0, "Voucher No": "P-004" },
+    { "GSTIN of Supplier": "27AACCM9012C1ZU", "Supplier Name": "Mahalaxmi Steel Pvt Ltd", "Doc Type": "Invoice", "Invoice No": "MSL450", "Invoice Date": "2026-09-17", "Taxable Value": 100000, "Integrated Tax": 18000, "Central Tax": "-", "State/UT Tax": "-", "Cess": 0, "Voucher No": "P-005" },
+    { "GSTIN of Supplier": "29AAECR7890E1ZX", "Supplier Name": "Raghav Rentals", "Doc Type": "Invoice", "Invoice No": "RR-12", "Invoice Date": "01-09-2026", "Taxable Value": 30000, "Integrated Tax": 0, "Central Tax": 2700, "State/UT Tax": 2700, "Cess": 0, "Voucher No": "P-006" },
+    { "GSTIN of Supplier": "29AABCK1234A1Z5", "Supplier Name": "Kaveri Traders", "Doc Type": "Credit Note", "Invoice No": "CN-05", "Invoice Date": "25-09-2026", "Taxable Value": 1000, "Integrated Tax": 0, "Central Tax": 90, "State/UT Tax": 90, "Cess": 0, "Voucher No": "D-001" },
+    { "GSTIN of Supplier": "29AAFCS5678B1Z3", "Supplier Name": "Shree Stationers", "Doc Type": "Invoice", "Invoice No": "SS-77", "Invoice Date": "08-09-2026", "Taxable Value": 2000, "Integrated Tax": 0, "Central Tax": 180, "State/UT Tax": 180, "Cess": 0, "Voucher No": "P-007" },
+    { "GSTIN of Supplier": "", "Supplier Name": "Customs (ICEGATE)", "Doc Type": "Bill of Entry", "Invoice No": "1234567", "Invoice Date": "22-09-2026", "Taxable Value": 40000, "Integrated Tax": 7200, "Central Tax": 0, "State/UT Tax": 0, "Cess": 0, "Voucher No": "P-008" },
+    { "GSTIN of Supplier": "29AAAPZ2222G1ZQ", "Supplier Name": "Prakash Electricals", "Doc Type": "Invoice", "Invoice No": "PE/55", "Invoice Date": "15-09-2026", "Taxable Value": 12000, "Integrated Tax": 0, "Central Tax": 1080, "State/UT Tax": 1080, "Cess": 0, "Voucher No": "P-009" },
+    { "GSTIN of Supplier": "", "Supplier Name": "", "Doc Type": "", "Invoice No": "", "Invoice Date": "", "Taxable Value": "", "Integrated Tax": "", "Central Tax": "", "State/UT Tax": "", "Cess": "", "Voucher No": "" },
+    { "GSTIN of Supplier": "", "Supplier Name": "Cash purchase", "Doc Type": "Invoice", "Invoice No": "X-1", "Invoice Date": "18-09-2026", "Taxable Value": 700, "Integrated Tax": 0, "Central Tax": 63, "State/UT Tax": 63, "Cess": 0, "Voucher No": "P-010" },
+    { "GSTIN of Supplier": "", "Supplier Name": "Total", "Doc Type": "", "Invoice No": "", "Invoice Date": "", "Taxable Value": "2,35,700.00", "Integrated Tax": "25,200.00", "Central Tax": "8,533.00", "State/UT Tax": "8,533.00", "Cess": "", "Voucher No": "" }
+  ]
+}

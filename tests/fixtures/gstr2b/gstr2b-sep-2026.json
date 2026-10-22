@@ -1,0 +1,228 @@
+{
+  "chksum": "synthetic-fixture",
+  "data": {
+    "gstin": "29AAKCB1111F1Z3",
+    "rtnprd": "092026",
+    "version": "1.0",
+    "gendt": "14-10-2026",
+    "docdata": {
+      "b2b": [
+        {
+          "ctin": "29AABCK1234A1Z5",
+          "trdnm": "Kaveri Traders",
+          "supfildt": "11-10-2026",
+          "supprd": "092026",
+          "inv": [
+            {
+              "inum": "INV/007",
+              "typ": "R",
+              "dt": "05-09-2026",
+              "val": 11800,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "items": [
+                { "num": 1, "rt": 18, "txval": 6000, "igst": 0, "cgst": 540, "sgst": 540, "cess": 0 },
+                { "num": 2, "rt": 18, "txval": 4000, "igst": 0, "cgst": 360, "sgst": 360, "cess": 0 }
+              ]
+            },
+            {
+              "inum": "KT-101",
+              "typ": "R",
+              "dt": "10-09-2026",
+              "val": "5900.00",
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": "5000.00",
+              "igst": 0,
+              "cgst": "450.00",
+              "sgst": "450.00",
+              "cess": 0
+            },
+            {
+              "inum": "KT-102",
+              "typ": "R",
+              "dt": "12-09-2026",
+              "val": 23600,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": 20000,
+              "igst": 0,
+              "cgst": 1800,
+              "sgst": 1800,
+              "cess": 0,
+              "items": [{ "num": 1, "rt": 18, "txval": 20000, "igst": 0, "cgst": 1700, "sgst": 1700, "cess": 0 }]
+            }
+          ]
+        },
+        {
+          "ctin": "27AACCM9012C1ZU",
+          "trdnm": "Mahalaxmi Steel",
+          "supfildt": "10-10-2026",
+          "supprd": "092026",
+          "inv": [
+            {
+              "inum": "MS/2026/0450",
+              "typ": "R",
+              "dt": "15-09-2026",
+              "val": 118000,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": 100000,
+              "igst": 18000,
+              "cgst": 0,
+              "sgst": 0,
+              "cess": 0
+            },
+            {
+              "inum": "MS/2026/0460",
+              "typ": "R",
+              "dt": "25-09-2026",
+              "val": 59000,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": 50000,
+              "igst": 9000,
+              "cgst": 0,
+              "sgst": 0,
+              "cess": 0
+            }
+          ]
+        },
+        {
+          "ctin": "33AADCT3456D1ZN",
+          "trdnm": "Tamil Logistics",
+          "supprd": "092026",
+          "inv": [
+            {
+              "inum": "TL/88",
+              "typ": "R",
+              "dt": "20-09-2026",
+              "val": 9440,
+              "pos": "33",
+              "rev": "N",
+              "itcavl": "N",
+              "rsn": "P",
+              "txval": 8000,
+              "igst": 1440,
+              "cgst": 0,
+              "sgst": 0,
+              "cess": 0
+            }
+          ]
+        },
+        {
+          "ctin": "29AAECR7890E1ZX",
+          "trdnm": "Raghav Rentals",
+          "supprd": "092026",
+          "inv": [
+            {
+              "inum": "RR-12",
+              "typ": "R",
+              "dt": "01-09-2026",
+              "val": 35400,
+              "pos": "29",
+              "rev": "Y",
+              "itcavl": "Y",
+              "txval": 30000,
+              "igst": 0,
+              "cgst": 2700,
+              "sgst": 2700,
+              "cess": 0
+            }
+          ]
+        }
+      ],
+      "b2ba": [
+        {
+          "ctin": "29AAFCS5678B1Z3",
+          "trdnm": "Shree Stationers",
+          "supprd": "092026",
+          "inv": [
+            {
+              "oinum": "SS-76",
+              "oidt": "07-09-2026",
+              "inum": "SS-77",
+              "dt": "08-09-2026",
+              "val": 2360,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": 2000,
+              "igst": 0,
+              "cgst": 180,
+              "sgst": 180,
+              "cess": 0
+            }
+          ]
+        }
+      ],
+      "cdnr": [
+        {
+          "ctin": "29AABCK1234A1Z5",
+          "trdnm": "Kaveri Traders",
+          "supprd": "092026",
+          "nt": [
+            {
+              "ntnum": "CN-5",
+              "typ": "C",
+              "suptyp": "R",
+              "dt": "25-09-2026",
+              "val": 1180,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": 1000,
+              "igst": 0,
+              "cgst": 90,
+              "sgst": 90,
+              "cess": 0
+            }
+          ]
+        },
+        {
+          "ctin": "29AAFCS5678B1Z3",
+          "trdnm": "Shree Stationers",
+          "supprd": "092026",
+          "nt": [
+            {
+              "ntnum": "DN-1",
+              "typ": "D",
+              "suptyp": "R",
+              "dt": "26-09-2026",
+              "val": 590,
+              "pos": "29",
+              "rev": "N",
+              "itcavl": "Y",
+              "txval": 500,
+              "igst": 0,
+              "cgst": 45,
+              "sgst": 45,
+              "cess": 0
+            }
+          ]
+        }
+      ],
+      "isd": [
+        {
+          "ctin": "07AAGCD4444H1ZP",
+          "trdnm": "Delhi Head Office (ISD)",
+          "supprd": "092026",
+          "doclist": [
+            { "doctyp": "ISD", "docnum": "ISD-1", "docdt": "30-09-2026", "itcelg": "Y", "igst": 500, "cgst": 0, "sgst": 0, "cess": 0 }
+          ]
+        }
+      ],
+      "impg": [
+        { "refdt": "22-09-2026", "portcode": "INMAA1", "boenum": "1234567", "boedt": "22-09-2026", "isamd": "N", "txval": 40000, "igst": 7200, "cess": 0 }
+      ],
+      "ecoa": [
+        { "etin": "29AABCE0000A1Z0", "trdnm": "Some ECO", "inv": [{ "inum": "E-1", "dt": "02-09-2026", "txval": 100 }] }
+      ]
+    }
+  }
+}
