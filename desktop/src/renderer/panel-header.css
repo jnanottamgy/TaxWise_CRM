@@ -1,0 +1,558 @@
+/*
+ * Panel header for TaxWise Desktop. Tokens follow the CRM (docs/SPEC.md §3.1, docs/DESIGN.md §2):
+ * status colours are for dots and fills; text uses the *-text variants (WCAG AA in both themes).
+ * Flat surfaces, 1px hairlines, no shadows at rest, sentence case, lucide outline icons.
+ */
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("./fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+:root {
+  --brand-navy: #14284b;
+  --primary: #1f4fd8;
+  --primary-soft: #eaf0ff;
+  --accent-gold: #b8892e;
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-2: #f1f3f8;
+  --border: #e4e7ee;
+  --text: #0f172a;
+  --text-muted: #5b6476;
+  --info: #2563eb;
+  --info-text: #2563eb;
+  --info-soft: #e9f0fe;
+  --warning: #c27803;
+  --warning-text: #8f5a02;
+  --warning-soft: #fdf3e1;
+  --danger: #d92d20;
+  --danger-text: #b42318;
+  --danger-soft: #fdecea;
+  --on-primary: #ffffff;
+
+  --header-h: 36px;
+  --splitter-w: 6px;
+  --offset-x: 0px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand-navy: #0b1630;
+    --primary: #5b8cff;
+    --primary-soft: #17254a;
+    --accent-gold: #d9ad55;
+    --bg: #0b0f17;
+    --surface: #121826;
+    --surface-2: #182033;
+    --border: #253049;
+    --text: #e6eaf2;
+    --text-muted: #9aa4b8;
+    --info: #60a5fa;
+    --info-text: #60a5fa;
+    --info-soft: #14233f;
+    --warning: #fbbf24;
+    --warning-text: #fbbf24;
+    --warning-soft: #2e2410;
+    --danger: #f87171;
+    --danger-text: #f87171;
+    --danger-soft: #331a1d;
+    --on-primary: #0b0f17;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text);
+  font: 400 14px/20px "Inter Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+  user-select: none;
+}
+
+/* While the splitter is dragged the view covers the whole window and must be see-through. */
+html.dragging,
+html.dragging body {
+  background: transparent;
+}
+
+.column {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--offset-x);
+  right: 0;
+  display: flex;
+}
+
+html.dragging .column {
+  width: calc(var(--panel-w) + var(--splitter-w));
+  right: auto;
+}
+
+html.popped .splitter {
+  display: none;
+}
+
+/* ---- splitter ---------------------------------------------------- */
+
+.splitter {
+  position: relative;
+  flex: 0 0 var(--splitter-w);
+  cursor: col-resize;
+  background: var(--bg);
+  outline: none;
+  touch-action: none;
+}
+
+.splitter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  background: var(--border);
+  transition: background-color 150ms var(--ease), width 150ms var(--ease), left 150ms var(--ease);
+}
+
+.splitter:hover::after,
+.splitter:focus-visible::after,
+html.dragging .splitter::after {
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--primary);
+}
+
+.splitter:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+/* ---- panel column ------------------------------------------------ */
+
+.panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+
+html.dragging .panel {
+  background: transparent;
+}
+
+.bar {
+  flex: 0 0 var(--header-h);
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.number {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 55%;
+}
+
+.number-static {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.number-static svg,
+.select-wrap > svg.lead {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.number-static .state {
+  flex: 0 0 auto;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.number-static span,
+.chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.select-wrap > svg.lead {
+  position: absolute;
+  left: 8px;
+  pointer-events: none;
+}
+
+.select-wrap > svg.chev {
+  position: absolute;
+  right: 6px;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+select {
+  appearance: none;
+  height: 28px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 26px 0 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease);
+}
+
+select:hover {
+  border-color: var(--text-muted);
+}
+
+select:focus-visible,
+.icon-btn:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* Status chip: dot + label, pale tint (never colour alone). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 45%;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--info-soft);
+  color: var(--info-text);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip[hidden] {
+  display: none;
+}
+
+.chip .dot {
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--info);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.icon-btn {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---- banner ------------------------------------------------------ */
+
+.banner {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 13px;
+  line-height: 18px;
+  overflow: hidden;
+}
+
+.banner[hidden] {
+  display: none;
+}
+
+.banner.link {
+  height: 88px;
+}
+
+.banner.notice {
+  height: 76px;
+  align-items: center;
+  padding: 0 4px 0 12px;
+}
+
+.banner.tone-info {
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
+.banner.tone-warning {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.banner.tone-danger {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.banner > svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--text-muted);
+}
+
+.banner.notice > svg {
+  margin-top: 0;
+  color: currentColor;
+}
+
+.banner .text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Up to three lines, so "Couldn't find '…' on the Staff office WhatsApp. Check …" reads in full at 440 px. */
+.banner.notice .text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.banner .lead-line {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.banner .sub {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+}
+
+.banner .notice-close {
+  color: currentColor;
+}
+
+/* ---- full-panel screens (WhatsApp hidden) ------------------------ */
+
+.screen {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+  overflow: auto;
+}
+
+.screen[hidden] {
+  display: none;
+}
+
+.card {
+  width: 100%;
+  max-width: 340px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.card > svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+
+.card.tone-warning > svg {
+  color: var(--warning-text);
+}
+
+.card.tone-danger > svg {
+  color: var(--danger-text);
+}
+
+.card h1 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* A one-sentence message (no heading): body size, a little weight. */
+.card .message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--text);
+  text-wrap: pretty;
+}
+
+.card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-muted);
+}
+
+.card .note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.card .hint {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+}
+
+.card .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
+}
+
+.btn:hover {
+  background: var(--surface-2);
+}
+
+.btn.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.btn.primary:hover {
+  filter: brightness(0.95);
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.loading-line {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
