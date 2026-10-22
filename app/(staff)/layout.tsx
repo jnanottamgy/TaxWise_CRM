@@ -10,6 +10,8 @@ import { DiagnosticsShell } from "@/components/shell/diagnostics-shell";
 import { fallbackStaffShellData, loadStaffShellData, type StaffShellData } from "@/components/shell/data";
 import { ShellUnavailable } from "@/components/shell/shell-unavailable";
 import { StaffShell } from "@/components/shell/staff-shell";
+import { TimerPanel } from "@/components/timesheet/timer-panel";
+import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 
 /**
  * The firm's app shell (§3.3). The guard runs first and only redirects: no session → /login, no
@@ -53,7 +55,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       unreadCount={data.unreadCount}
       fy={data.fy}
       warning={data.warning}
+      timerPanel={<TimerPanel user={user} />}
     >
+      <PresenceHeartbeat />
       {children}
     </StaffShell>
   );
