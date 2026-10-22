@@ -47,6 +47,11 @@ describe("file names", () => {
     expect(sanitizeFileName("   ")).toBe("whatsapp-file");
     expect(sanitizeFileName(`${"x".repeat(200)}.pdf`)).toMatch(/^x{116}\.pdf$/);
   });
+
+  it("drops direction controls that would disguise the real extension", () => {
+    expect(sanitizeFileName("Invoice\u202Efdp.exe")).toBe("Invoicefdp.exe");
+    expect(sanitizeFileName("\u2067report\u2069.pdf\u200F")).toBe("report.pdf");
+  });
 });
 
 function harness(role: AppRole | null, answer: DownloadChoiceId, opts: { savePath?: string | null } = {}) {

@@ -36,27 +36,46 @@ import { createDesktopApi } from "./api";
 import { resolveAppUrl } from "./app-url";
 import { contentTypeFor, PANEL_CSP, resolveBundledAsset } from "./assets";
 import { ContextService, type ContextDiff, type ContextState } from "./context";
-import { describeDevice, loadOrCreateDeviceKey } from "./device";
+import { describeDevice, DeviceKeyUnavailableError, loadOrCreateDeviceKey, osCredentialStoreAvailable, type SecretStore } from "./device";
 import { DownloadManager } from "./downloads";
 import { e2eFixtureDir, serveWhatsAppFixtures } from "./e2e";
+import { buildMode, FORBIDDEN_SWITCHES, forbiddenSwitches } from "./hardening";
 import { registerInvoke, registerSend, type SenderRules } from "./ipc";
 import { JsonFile, ensureVisible, parseDeviceState, parseWindowState } from "./local-state";
 import { createLogger } from "./log";
 import { applicationMenuTemplate, contextMenuTemplate, isToggleShortcut } from "./menu";
-import { crmShowsSignedOutPage, decideNavigation, decideWindowOpen, isAuthCookie, type NavDecision, type ViewKind } from "./navigation";
+import {
+  crmShowsSignedOutPage,
+  decideNavigation,
+  decideSubframeNavigation,
+  decideWindowOpen,
+  isAuthCookie,
+  safeExternalUrl,
+  type NavDecision,
+  type ViewKind,
+} from "./navigation";
 import { WhatsAppPanel } from "./panel";
 import { partitionsToWipe, wipeWhatsAppPartitions } from "./partitions";
 import { installPermissionHandlers, type PermissionPolicy } from "./permissions";
 import { ViewRegistry } from "./registry";
-import { startUpdater } from "./updater";
+import { startUpdater, updateTrustProblem } from "./updater";
 import { applyWhatsAppUserAgent, chromeUserAgent } from "./user-agent";
 import { secureWebPreferences } from "./web-preferences";
+import { originOf } from "../shared/url";
 
-const isDev = !app.isPackaged;
+// Locked down for a release bundle or a packaged app, whatever the executable is called (hardening.ts).
+const mode = buildMode(__TAXWISE_RELEASE__, app.isPackaged);
+const isDev = mode.devTools;
 const isMac = process.platform === "darwin";
 
-// Development and end-to-end runs may keep their data elsewhere; a packaged app never reads this.
-if (isDev && process.env.TAXWISE_USER_DATA_DIR) app.setPath("userData", process.env.TAXWISE_USER_DATA_DIR);
+// A locked-down run refuses debugging and security-off switches (e.g. --remote-debugging-port,
+// which would let whoever starts the app script WhatsApp's page and read every chat).
+const refusedSwitches = mode.lockedDown
+  ? [...new Set([...forbiddenSwitches(process.argv), ...FORBIDDEN_SWITCHES.filter((name) => app.commandLine.hasSwitch(name))])]
+  : [];
+
+// Development and end-to-end runs may keep their data elsewhere; a locked-down run never reads this.
+if (mode.envOverrides && process.env.TAXWISE_USER_DATA_DIR) app.setPath("userData", process.env.TAXWISE_USER_DATA_DIR);
 
 protocol.registerSchemesAsPrivileged([{ scheme: PANEL_SCHEME, privileges: { standard: true, secure: true } }]);
 app.enableSandbox();
@@ -73,14 +92,21 @@ app.on("web-contents-created", (_e, wc) => {
   });
 });
 
-if (!app.requestSingleInstanceLock()) {
+if (refusedSwitches.length > 0) {
+  // Before any window or page exists.
+  console.error(`TaxWise Desktop refuses to start with: ${refusedSwitches.map((name) => `--${name}`).join(", ")}`);
+  app.exit(1);
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.setAppUserModelId(APP_ID);
-  app.whenReady().then(start, (err: unknown) => {
-    dialog.showErrorBox("TaxWise Desktop", `TaxWise Desktop couldn't start: ${String(err)}`);
-    app.quit();
-  });
+  app
+    .whenReady()
+    .then(start)
+    .catch((err: unknown) => {
+      dialog.showErrorBox("TaxWise Desktop", `TaxWise Desktop couldn't start: ${err instanceof Error ? err.message : String(err)}`);
+      app.quit();
+    });
 }
 
 function readOrNull(file: string): Buffer | null {
@@ -92,7 +118,7 @@ function readOrNull(file: string): Buffer | null {
 }
 
 async function start(): Promise<void> {
-  const urlResult = resolveAppUrl(__TAXWISE_APP_URL__, process.env.TAXWISE_APP_URL, app.isPackaged);
+  const urlResult = resolveAppUrl(__TAXWISE_APP_URL__, process.env.TAXWISE_APP_URL, mode.lockedDown);
   if (!urlResult.ok) {
     dialog.showErrorBox("TaxWise Desktop", urlResult.error);
     app.quit();
@@ -115,12 +141,28 @@ async function start(): Promise<void> {
   const deviceState = deviceFile.load();
 
   const keyFile = path.join(userData, "device-key.json");
-  const deviceKey = loadOrCreateDeviceKey(safeStorage, {
-    read: () => readOrNull(keyFile),
-    write: (data) => fs.writeFileSync(keyFile, data, { mode: 0o600 }),
-  });
+  const secretStore: SecretStore = {
+    isEncryptionAvailable: () =>
+      osCredentialStoreAvailable(process.platform, safeStorage.isEncryptionAvailable(), process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : null),
+    encryptString: (plain) => safeStorage.encryptString(plain),
+    decryptString: (encrypted) => safeStorage.decryptString(encrypted),
+  };
+  let deviceKey: ReturnType<typeof loadOrCreateDeviceKey>;
+  try {
+    deviceKey = loadOrCreateDeviceKey(
+      secretStore,
+      { read: () => readOrNull(keyFile), write: (data) => fs.writeFileSync(keyFile, data, { mode: 0o600 }) },
+      { allowPlain: !mode.lockedDown },
+    );
+  } catch (err) {
+    if (!(err instanceof DeviceKeyUnavailableError)) throw err;
+    log("device: the OS credential store is unavailable; not starting");
+    dialog.showErrorBox("TaxWise Desktop", err.message);
+    app.quit();
+    return;
+  }
   if (deviceKey.created) log("device: new device key created");
-  if (!deviceKey.encrypted) log("device: the OS credential store is unavailable; the key is protected by file permissions only");
+  if (!deviceKey.encrypted) log("device: development run without an OS credential store; the key is in a plain file");
 
   /* ---- sessions --------------------------------------------------- */
 
@@ -240,13 +282,19 @@ async function start(): Promise<void> {
       return canceled || !filePath ? null : filePath;
     },
     sendToCrm: (payload) => {
+      // The file's bytes go to the CRM page only while the CRM view shows the CRM.
+      if (originOf(crmView.webContents.getURL()) !== appOrigin) {
+        log("download: the CRM page isn't showing; file discarded");
+        downloads.complete(payload.id);
+        return;
+      }
       crmView.webContents.send(PUSH.crmDownload, payload);
       crmView.webContents.focus();
     },
     log,
   });
 
-  const fixtures = e2eFixtureDir(app.isPackaged, process.env);
+  const fixtures = e2eFixtureDir(mode.lockedDown, process.env);
   const userAgent = chromeUserAgent(process.versions.chrome, process.platform);
   const prepared = new WeakSet<Session>();
   const prepareWhatsAppSession = (ses: Session) => {
@@ -260,9 +308,11 @@ async function start(): Promise<void> {
 
   const act = (kind: ViewKind, d: NavDecision) => {
     switch (d.action) {
-      case "external":
-        if (d.url.startsWith("https:")) void shell.openExternal(d.url);
+      case "external": {
+        const url = safeExternalUrl(d.url);
+        if (url) void shell.openExternal(url);
         break;
+      }
       case "whatsapp-send":
         if (kind === "crm") panel?.openHandoff(d.url, d.phone);
         break;
@@ -290,11 +340,27 @@ async function start(): Promise<void> {
       }
     });
     wc.on("will-redirect", (e) => {
-      if (!e.isMainFrame) return;
+      if (!e.isMainFrame) {
+        const f = decideSubframeNavigation(kind, e.url, opts);
+        if (f.action !== "allow") {
+          e.preventDefault();
+          log("frame redirect refused", { view: kind, reason: f.reason });
+        }
+        return;
+      }
       const d = decideNavigation(kind, e.url, opts);
       if (d.action !== "allow") {
         e.preventDefault();
         act(kind, d);
+      }
+    });
+    // will-navigate covers the main frame; iframes navigate through will-frame-navigate.
+    wc.on("will-frame-navigate", (e) => {
+      if (e.isMainFrame) return;
+      const f = decideSubframeNavigation(kind, e.url, opts);
+      if (f.action !== "allow") {
+        e.preventDefault();
+        log("frame navigation refused", { view: kind, reason: f.reason });
       }
     });
     wc.setWindowOpenHandler(({ url }) => {
@@ -305,7 +371,10 @@ async function start(): Promise<void> {
       if (isToggleShortcut(input, isMac)) {
         e.preventDefault();
         panel?.toggle();
+        return;
       }
+      // Typing into WhatsApp before a hand-off's chat opened ends that hand-off (handoff.ts).
+      if (kind === "whatsapp") panel?.onWhatsAppInput(wc.id, input);
     });
     wc.on("context-menu", (_e, params) => {
       const template = contextMenuTemplate(params, { isDev }, {
@@ -359,6 +428,8 @@ async function start(): Promise<void> {
     deviceState.pendingLinkReports = [];
     deviceFile.saveNow(deviceState);
     downloads.discardAll();
+    // No WhatsApp page may still be writing to a partition while it is cleared.
+    await panel?.whenWhatsAppClosed();
     let onDisk: string[] = [];
     try {
       onDisk = fs.readdirSync(path.join(userData, "Partitions"));
@@ -371,9 +442,10 @@ async function start(): Promise<void> {
   }
 
   function onContext(state: ContextState, diff: ContextDiff, error: string | null): void {
-    if (state.kind === "revoked") void wipeAll();
     if (state.kind === "signed-out") downloads.discardAll();
+    // A removed PC: the panel drops every WhatsApp view first, then the partitions are wiped.
     panel?.onContext(state, diff, error);
+    if (state.kind === "revoked") void wipeAll();
     if (state.kind === "signed-in") {
       if (!checkedIn) void checkin();
       void panel?.flushLinkReports();
@@ -442,7 +514,13 @@ async function start(): Promise<void> {
 
   /* ---- menu, updates, window state -------------------------------- */
 
-  const updater = startUpdater({ updater: autoUpdater, isPackaged: app.isPackaged, log });
+  const updateConfig = app.isPackaged ? readOrNull(path.join(process.resourcesPath, "app-update.yml")) : null;
+  const updater = startUpdater({
+    updater: autoUpdater,
+    isPackaged: app.isPackaged,
+    trustProblem: app.isPackaged ? updateTrustProblem(process.platform, updateConfig ? updateConfig.toString("utf8") : null) : null,
+    log,
+  });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       applicationMenuTemplate(

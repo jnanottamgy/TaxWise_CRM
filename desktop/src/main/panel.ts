@@ -8,12 +8,13 @@ import { randomUUID } from "node:crypto";
 import { BaseWindow, WebContentsView, session, type Session, type WebContents } from "electron";
 import { ARG, PUSH } from "../shared/channels";
 import { normalizeTitle } from "../shared/chat-rules";
-import { HANDOFF_ADOPT_MS, PANEL, SELECTOR_CHECK_MS, WHATSAPP_HOME } from "../shared/config";
+import { HANDOFF_ADOPT_MS, PANEL, POLICY_RECHECK_MS, SELECTOR_CHECK_MS, WHATSAPP_HOME } from "../shared/config";
 import { COPY } from "../shared/copy";
 import type { DesktopContext, OpenChatResult, PanelViewState, WhatsAppConfig, WhatsAppPageState } from "../shared/types";
 import type { DesktopApi } from "./api";
 import { buildClientModePolicy, chatsToClose, clientForTitle, effectiveClientMode, type ContextDiff, type ContextService, type ContextState } from "./context";
 import type { OpenClient } from "./downloads";
+import { acceptAdoption, inputCancelsHandoff, type PendingHandoff } from "./handoff";
 import { bannerHeight, clampPanelWidth, dockedLayout, hiddenLayout, poppedLayout, widthFromScreenX } from "./layout";
 import type { DeviceState, JsonFile, WindowState } from "./local-state";
 import type { Logger } from "./log";
@@ -25,7 +26,7 @@ import { waPartition } from "./partitions";
 import type { ViewRegistry } from "./registry";
 import { clearCacheAndReload, userAgentMatches } from "./user-agent";
 import { secureWebPreferences } from "./web-preferences";
-import { clientModeCss } from "../whatsapp/client-mode-css";
+import { clientModeCss, clientModeGuardCss } from "../whatsapp/client-mode-css";
 import { inviteFallbackUrl } from "../whatsapp/open-chat";
 
 export interface PanelDeps {
@@ -82,7 +83,7 @@ export class WhatsAppPanel {
   private lastPolicyKey = "";
 
   private readonly sessionChats = new Set<string>();
-  private pendingHandoff: { phoneDigits: string; expiresAt: number } | null = null;
+  private pendingHandoff: PendingHandoff | null = null;
   private deniedNotice: "not-allowed" | null = null;
   private readonly opened = new Map<string, { clientId: string; clientName: string }>();
   /** Chats the app itself is closing because a context refresh removed them (not an access attempt). */
@@ -91,6 +92,10 @@ export class WhatsAppPanel {
   private readonly openWaiters = new Map<string, Waiter<{ ok: boolean; reason: string | null }>>();
   private readonly titleWaiters = new Map<string, Waiter<string | null>>();
   private readonly reporter: ClientModeReporter;
+  /** WhatsApp webContents not yet destroyed (a removed PC's wipe waits for them). */
+  private readonly liveContents = new Set<WebContents>();
+  private readonly closedWaiters: Array<() => void> = [];
+  private readonly recheckTimer: ReturnType<typeof setInterval>;
 
   constructor(private readonly d: PanelDeps) {
     this.visible = d.windowState.state.panelVisible;
@@ -99,6 +104,9 @@ export class WhatsAppPanel {
     this.reporter = new ClientModeReporter(d.api, (kind) => this.handleAuthResult(kind));
     d.win.on("resize", () => this.layout());
     d.headerView.webContents.on("did-finish-load", () => this.refresh());
+    // Client mode fails closed once the context is stale (§7.25.5 covers end within minutes):
+    // re-check on a short timer, not only when a refresh result arrives.
+    this.recheckTimer = setInterval(() => this.pushPolicy(false, true), POLICY_RECHECK_MS);
   }
 
   /* ---------------------------------------------------------------- */
@@ -232,7 +240,12 @@ export class WhatsAppPanel {
     this.d.registry.add("whatsapp", wc.id, numberId);
     this.d.guardWebContents("whatsapp", wc);
     const id = wc.id;
-    wc.once("destroyed", () => this.d.registry.remove(id));
+    this.liveContents.add(wc);
+    wc.once("destroyed", () => {
+      this.d.registry.remove(id);
+      this.liveContents.delete(wc);
+      if (this.liveContents.size === 0) for (const resolve of this.closedWaiters.splice(0)) resolve();
+    });
     wc.on("render-process-gone", () => {
       this.d.log("whatsapp: renderer gone", { numberId });
       this.destroyView(numberId);
@@ -243,6 +256,12 @@ export class WhatsAppPanel {
     // !important rules can't override them. They match only while the preload marks <html>.
     wc.on("dom-ready", () => {
       void wc.insertCSS(clientModeCss(), { cssOrigin: "user" }).catch(() => undefined);
+      // In client mode the page stays hidden until the preload is running on it (fail closed).
+      if (clientMode) void wc.insertCSS(clientModeGuardCss(), { cssOrigin: "user" }).catch(() => undefined);
+    });
+    wc.on("did-navigate", () => {
+      // The page a hand-off loaded is now the one showing (handoff.ts: only it may adopt).
+      if (this.pendingHandoff && this.pendingHandoff.numberId === numberId) this.pendingHandoff.committed = true;
     });
     wc.on("did-start-navigation", (e) => {
       // A new document: its preload reports again once it has settled.
@@ -287,7 +306,13 @@ export class WhatsAppPanel {
   private policy() {
     return buildClientModePolicy(
       this.ctx,
-      { sessionChats: [...this.sessionChats], pendingHandoff: this.pendingHandoff, notice: this.deniedNotice },
+      {
+        sessionChats: [...this.sessionChats],
+        pendingHandoff: this.pendingHandoff
+          ? { phoneDigits: this.pendingHandoff.phoneDigits, expiresAt: this.pendingHandoff.expiresAt, armedAt: this.pendingHandoff.armedAt }
+          : null,
+        notice: this.deniedNotice,
+      },
       this.d.context.lastGoodAt,
       Date.now(),
     );
@@ -641,8 +666,25 @@ export class WhatsAppPanel {
   }
 
   onAdopt(webContentsId: number, title: string): void {
+    const v = this.viewFor(webContentsId);
+    if (!v) return;
+    const ok = acceptAdoption(this.pendingHandoff, v.numberId, title, this.policy(), Date.now());
+    // Single use either way: the page proposed a chat for this hand-off.
+    this.pendingHandoff = null;
+    if (ok) {
+      this.sessionChats.add(title);
+      this.pushPolicy();
+      return;
+    }
+    // Refused: resend the policy so the page drops the chat it adopted and closes it.
+    this.d.log("client mode: refused a hand-off adoption", { numberId: v.numberId });
+    this.pushPolicy(true);
+  }
+
+  /** Keyboard input reached a WhatsApp view (before-input-event): a pending hand-off ends here. */
+  onWhatsAppInput(webContentsId: number, input: { type: string }): void {
+    if (!this.pendingHandoff || !inputCancelsHandoff(input)) return;
     if (!this.viewFor(webContentsId)) return;
-    this.sessionChats.add(title);
     this.pendingHandoff = null;
     this.pushPolicy();
   }
@@ -850,7 +892,8 @@ export class WhatsAppPanel {
     this.activeNumberId = numberId;
     this.linkingNumberId = null;
     if (effectiveClientMode(ctx)) {
-      this.pendingHandoff = { phoneDigits: phone, expiresAt: Date.now() + HANDOFF_ADOPT_MS };
+      const armedAt = Date.now();
+      this.pendingHandoff = { numberId, phoneDigits: phone, armedAt, expiresAt: armedAt + HANDOFF_ADOPT_MS, committed: false };
       this.pushPolicy();
     }
     this.show();
@@ -873,7 +916,20 @@ export class WhatsAppPanel {
     v?.view.webContents.focus();
   }
 
+  /** Resolves once every WhatsApp page has been torn down (or after timeoutMs). */
+  whenWhatsAppClosed(timeoutMs = 5000): Promise<void> {
+    if (this.liveContents.size === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+      this.closedWaiters.push(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+
   closeAll(): void {
+    clearInterval(this.recheckTimer);
     this.destroyAllViews();
     if (this.popout && !this.popout.isDestroyed()) this.popout.destroy();
     this.popout = null;

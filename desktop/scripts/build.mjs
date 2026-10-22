@@ -3,7 +3,8 @@
  *
  * Sandboxed preloads can't require local files, so each preload is bundled into one file.
  * TAXWISE_APP_URL (§17) is baked into the main process here. With --release, the build refuses to
- * run unless TAXWISE_APP_URL and TAXWISE_UPDATE_URL are https:// addresses.
+ * run unless TAXWISE_APP_URL and TAXWISE_UPDATE_URL are https:// addresses, and the bundle is marked
+ * as a release (__TAXWISE_RELEASE__): it then runs locked down whatever the executable is called.
  */
 
 import { build } from "esbuild";
@@ -49,7 +50,7 @@ await build({
   format: "cjs",
   target: "node22",
   external: ["electron", "electron-updater"],
-  define: { __TAXWISE_APP_URL__: JSON.stringify(appUrl) },
+  define: { __TAXWISE_APP_URL__: JSON.stringify(appUrl), __TAXWISE_RELEASE__: JSON.stringify(release) },
 });
 
 for (const name of ["crm", "whatsapp", "panel"]) {

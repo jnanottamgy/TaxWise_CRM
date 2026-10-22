@@ -44,6 +44,8 @@ export const WINDOW = {
 export const CONTEXT_REFRESH_MS = 5 * 60 * 1000;
 /** After this long without a good context, client mode allows nothing (fails closed). */
 export const CONTEXT_STALE_MS = 2 * CONTEXT_REFRESH_MS;
+/** How often the main process re-checks client mode's policy (so a stale context closes chats on time). */
+export const POLICY_RECHECK_MS = 30 * 1000;
 export const SELECTOR_CHECK_MS = 10 * 60 * 1000;
 export const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;
 export const DOWNLOAD_TTL_MS = 10 * 60 * 1000;

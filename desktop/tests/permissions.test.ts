@@ -83,6 +83,12 @@ describe("WhatsApp partitions", () => {
     expect(wa("media", partner, { origin: "http://web.whatsapp.com", mediaTypes: ["audio"] })).toBe(false);
   });
 
+  it("denies a blob: document whose creator was WhatsApp (its content is a file, not WhatsApp)", () => {
+    expect(wa("notifications", partner, { origin: "blob:https://web.whatsapp.com/6a1f0c4e" })).toBe(false);
+    expect(wa("media", partner, { origin: "blob:https://web.whatsapp.com/6a1f0c4e", mediaTypes: ["audio"] })).toBe(false);
+    expect(decidePermission({ partition: "crm", permission: "notifications", origin: `blob:${APP}/x` }, partner, APP)).toBe(false);
+  });
+
   it("denies everything when nobody is signed in", () => {
     expect(wa("notifications", nobody)).toBe(false);
     expect(wa("clipboard-sanitized-write", nobody)).toBe(false);

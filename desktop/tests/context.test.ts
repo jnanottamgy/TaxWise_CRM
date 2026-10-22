@@ -91,6 +91,20 @@ describe("client mode policy", () => {
     expect(p.sessionChats).toEqual([]);
   });
 
+  it("fails closed at exactly the stale limit, and with no good load at all", () => {
+    expect(buildClientModePolicy(employeeContext([xyz]), session, now - CONTEXT_STALE_MS, now).allowedGroupNames).toEqual([]);
+    expect(buildClientModePolicy(employeeContext([xyz]), session, now - CONTEXT_STALE_MS + 1, now).allowedGroupNames).toEqual([XYZ]);
+    expect(buildClientModePolicy(employeeContext([xyz]), session, 0, now).allowedGroupNames).toEqual([]);
+  });
+
+  it("is re-checked on a timer shorter than the refresh, so staleness bites on time", async () => {
+    const { POLICY_RECHECK_MS } = await import("../src/shared/config");
+    expect(POLICY_RECHECK_MS).toBeLessThan(CONTEXT_REFRESH_MS);
+    const { readFileSync } = await import("node:fs");
+    const panel = readFileSync(new URL("../src/main/panel.ts", import.meta.url), "utf8");
+    expect(panel).toMatch(/setInterval\(\(\) => this\.pushPolicy\(false, true\), POLICY_RECHECK_MS\)/);
+  });
+
   it("is off with no context", () => {
     expect(buildClientModePolicy(null, session, 0, now).enabled).toBe(false);
   });

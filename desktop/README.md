@@ -41,8 +41,23 @@ TAXWISE_APP_URL=http://localhost:3000 npm start   # a local CRM (development bui
 npm run e2e                 # Playwright + Electron; on Linux run under xvfb-run
 ```
 
-A development build may load `http://localhost` or `http://127.0.0.1`; a packaged build only loads the baked
-`https://` URL. Development builds keep DevTools; packaged builds have none, and no "Inspect" menu.
+A development build may load `http://localhost` or `http://127.0.0.1`; a release build only loads the baked
+`https://` URL. Development builds keep DevTools; release builds have none, and no "Inspect" menu.
+
+**Locked down.** A bundle built with `--release` (`npm run build:release`, used by every `dist*` and `release`
+script) runs locked down whatever its executable is called, and so does any packaged app
+(`src/main/hardening.ts`). Locked down means: no DevTools or Inspect menu, `TAXWISE_APP_URL`,
+`TAXWISE_USER_DATA_DIR` and `TAXWISE_E2E_WHATSAPP_FIXTURES` are ignored, and the app refuses to start with a
+debugging or security-off switch (`--remote-debugging-port`, `--remote-debugging-pipe`, `--inspect*`,
+`--js-flags`, `--disable-web-security`, `--ignore-certificate-errors`, `--host-resolver-rules`, …). Electron's
+own `app.isPackaged` is decided from the executable's file name, so it is not trusted alone: a copy of the
+installed app renamed to `electron.exe` would otherwise get DevTools on the WhatsApp panel. Playwright always
+starts Electron with `--remote-debugging-port`, so `npm run e2e` uses a development build.
+
+**Device key.** Kept only in the OS credential store (`safeStorage`: the Windows user profile's DPAPI, the macOS
+Keychain). A release build that can't open the store shows an error and doesn't start; it never writes the key
+in clear and never replaces an encrypted key while the store is locked. A development run without a store (Linux
+with no keyring) falls back to a plain file.
 
 ## Build installers
 
@@ -72,8 +87,14 @@ Windows, upgrade electron-builder (it embeds the hash) rather than turning the f
 
 1. Buy a code-signing certificate (OV, EV, or Azure Trusted Signing) **before rolling out to every PC**.
 2. Put it in CI secrets (`WIN_CSC_LINK` as a base64 `.pfx` or a path, `WIN_CSC_KEY_PASSWORD`).
-3. `npm run dist:win`. electron-builder signs the app, the installer and the uninstaller.
-   `verifyUpdateCodeSignature` makes the updater refuse an update not signed by the same publisher.
+3. `npm run dist:win`. electron-builder signs the app, the installer and the uninstaller, and writes the
+   certificate's publisher name into `app-update.yml`. The updater then refuses an update not signed by that
+   publisher (`verifyUpdateCodeSignature`).
+
+   electron-updater **skips** that check when `app-update.yml` names no publisher, which is what an unsigned build
+   writes. So an unsigned build never auto-updates (`updateTrustProblem` in `src/main/updater.ts`; the log says
+   "updater: off"), and `npm run release` passes `--config.forceCodeSigning=true`, so an unsigned build can't be
+   published to the update feed. Unsigned trial installers from `npm run dist:win` must be replaced by hand.
 
 ### Notarise (macOS)
 
@@ -83,7 +104,9 @@ Windows, upgrade electron-builder (it embeds the hash) rather than turning the f
 
 ### Updates
 
-electron-updater checks **at start and every 6 hours**, downloads in the background and installs on quit.
+electron-updater checks **at start and every 6 hours**, downloads in the background and installs on quit, on
+signed Windows builds and on signed, notarised macOS builds (Squirrel.Mac checks the Developer ID). Elsewhere it
+doesn't run, because nothing would check the update's signature.
 Host the files electron-builder writes to `release/` (`latest.yml`, the installer, its blockmap) at
 `TAXWISE_UPDATE_URL`. To use GitHub Releases instead (a public releases repository, or a token):
 
@@ -113,6 +136,10 @@ Try it on the Staff office number first (§7.25.9). Watch for any warning from W
    - Reach any other chat (search is hidden; try a forwarded message or a notification): it closes with
      **Not one of your clients**, and the audit log shows `access_denied` once for that chat today.
    - A WhatsApp hand-off from a task (Data awaited → WhatsApp) opens the one-to-one chat in the panel and stays open.
+     A hand-off allows only the first chat that opens after it, within a minute, on the same number; typing into
+     WhatsApp before that chat appears cancels it. Try a hand-off to a number that isn't on WhatsApp, then press
+     WhatsApp's next-chat keyboard shortcut: the chat it reaches must close with **Not one of your clients**.
+   - Start the installed app with `--remote-debugging-port=9222`: it must refuse to start.
    - Download a PDF from the client's group: the prompt offers *Save to XYZ Traders documents* and
      *Save to another client…*, never *Save to this PC*; the CRM's upload dialog opens pre-filled.
    - Give the Employee a short cover on another client: its group opens; after the cover ends, an open chat closes
@@ -159,7 +186,10 @@ reads WhatsApp's page. When Partners get "client mode can't run on <PC>":
 3. Update `selectors.ts`, update `tests/fixtures/*.html` to the new structure, run `npm test`, release.
 
 The self-check runs on load and every 10 minutes. Client mode fails **closed**: a cover hides the whole page
-unless an allowed conversation is open, so a broken selector can only hide too much, never too little.
+unless an allowed conversation is open, so a broken selector can only hide too much, never too little. If the
+WhatsApp preload doesn't run on a page at all, a stylesheet the main process injects keeps that page blank; an
+unexpected error while checking a chat shows the "unavailable" cover; and if the context can't be refreshed for
+10 minutes, no chat is allowed (re-checked every 30 seconds).
 
 ## What the app never does
 
@@ -247,3 +277,6 @@ interface TaxwiseDesktop {
 - `wa.me` / `api.whatsapp.com/send` links keep working unchanged: the app opens them in its panel.
 - In the app, links to other sites open in the system browser (https only; `mailto:` is refused), and
   `window.open` of a CRM page loads it in the CRM view. Prefer downloads (`Content-Disposition: attachment`) to pop-ups.
+- A `blob:` (or `data:`) URL never replaces the CRM page, by navigation or `window.open`: its content is a file,
+  not the CRM, and must not get `window.taxwiseDesktop`. Preview files in an `<iframe>` or `<object>` on the page
+  (allowed for `https:`, `blob:` and `data:`), or download them.

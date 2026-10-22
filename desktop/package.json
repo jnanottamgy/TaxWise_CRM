@@ -18,7 +18,7 @@
     "dist": "npm run build:release && electron-builder --publish never",
     "dist:win": "npm run build:release && electron-builder --win nsis --publish never",
     "dist:mac": "npm run build:release && electron-builder --mac dmg --publish never",
-    "release": "npm run build:release && electron-builder --publish always"
+    "release": "npm run build:release && electron-builder --publish always --config.forceCodeSigning=true"
   },
   "dependencies": {
     "electron-updater": "^6.8.9"

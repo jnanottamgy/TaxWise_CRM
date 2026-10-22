@@ -76,7 +76,7 @@ export function buildClientModePolicy(ctx: DesktopContext | null, session: Sessi
   if (!ctx || !effectiveClientMode(ctx)) {
     return { enabled: false, allowedGroupNames: [], sessionChats: [], pendingHandoff: null, notice: null };
   }
-  const stale = now - lastGoodAt > CONTEXT_STALE_MS;
+  const stale = lastGoodAt <= 0 || now - lastGoodAt >= CONTEXT_STALE_MS;
   return {
     enabled: true,
     allowedGroupNames: stale ? [] : (ctx.allowedGroups ?? []).map((g) => g.groupName),

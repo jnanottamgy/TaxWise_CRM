@@ -60,9 +60,14 @@ export function downloadChoices(input: ChoiceInput): { choices: DownloadChoice[]
 
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 
+/**
+ * A safe local file name. Besides path and Windows-reserved characters, it drops Unicode direction
+ * controls: "Invoice\u202Efdp.exe" would otherwise show as "Invoiceexe.pdf" in the save prompt.
+ */
 export function sanitizeFileName(name: string): string {
   let n = name
     .normalize("NFC")
+    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\u061c\ufeff]/g, "")
     .replace(/[\u0000-\u001f\u007f<>:"/\\|?*]/g, "_")
     .replace(/^[.\s]+|[.\s]+$/g, "")
     .trim();

@@ -107,8 +107,10 @@ export class Shield {
   }
 
   show(state: Exclude<ShieldState, "hidden">, openingName: string | null = null): void {
+    // Before <html> exists the cover can't be built yet; render it fully once it can.
+    const hadCover = this.cover !== null;
     this.ensureAttached();
-    if (state === this.current && openingName === this.openingName) return;
+    if (hadCover && state === this.current && openingName === this.openingName) return;
     this.current = state;
     this.openingName = openingName;
     this.render();

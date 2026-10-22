@@ -8,6 +8,10 @@
  * - wa.me and api.whatsapp.com/send links from the CRM become
  *   https://web.whatsapp.com/send?phone=…&text=… in the WhatsApp panel.
  * - No view may open a new Electron window.
+ * - A view's main frame never shows a blob:, data: or filesystem: document, even one whose
+ *   creator was the CRM or WhatsApp: that content is a file, not the app (see shared/url.ts).
+ * - Subframes (iframes) may load web pages and in-page previews, never local files, the panel's
+ *   own scheme or another app's protocol.
  */
 
 import { PANEL_ORIGIN, WHATSAPP_ORIGIN } from "../shared/config";
@@ -83,8 +87,19 @@ function isWhatsAppHost(host: string): boolean {
   return h === "web.whatsapp.com" || h === "api.whatsapp.com" || h === "wa.me" || h === "www.wa.me";
 }
 
+/**
+ * The URL to hand to shell.openExternal, or null. https: only (never file:, javascript:, a custom
+ * protocol or plain http:), with no user name or password, re-serialised from the parsed URL.
+ */
+export function safeExternalUrl(raw: string): string | null {
+  const u = parse(raw);
+  if (!u || u.protocol !== "https:" || !u.hostname || u.username || u.password) return null;
+  return u.href;
+}
+
 function externalOrDeny(u: URL): NavDecision {
-  if (u.protocol === "https:") return { action: "external", url: u.href };
+  const url = safeExternalUrl(u.href);
+  if (url) return { action: "external", url };
   return { action: "deny", reason: `refused ${u.protocol} link` };
 }
 
@@ -94,7 +109,7 @@ export function decideNavigation(view: ViewKind, raw: string, opts: NavOptions):
   if (!u) return { action: "deny", reason: "not a URL" };
 
   if (view === "crm") {
-    if (u.origin === opts.appOrigin) return { action: "allow" };
+    if (originOf(raw) === opts.appOrigin) return { action: "allow" };
     const handoff = rewriteWhatsAppLink(raw);
     if (handoff) return { action: "whatsapp-send", url: handoff.url, phone: handoff.phone };
     if (u.protocol === "https:" && isWhatsAppHost(u.hostname)) return { action: "show-whatsapp" };
@@ -102,7 +117,7 @@ export function decideNavigation(view: ViewKind, raw: string, opts: NavOptions):
   }
 
   if (view === "whatsapp") {
-    if (u.origin === WHATSAPP_ORIGIN) return { action: "allow" };
+    if (originOf(raw) === WHATSAPP_ORIGIN) return { action: "allow" };
     return externalOrDeny(u);
   }
 
@@ -124,6 +139,24 @@ export function crmShowsSignedOutPage(raw: string, appOrigin: string): boolean {
 /** Supabase's session cookie (sb-<project>-auth-token, possibly split into .0, .1 …). */
 export function isAuthCookie(name: string): boolean {
   return /^sb-[A-Za-z0-9]+-auth-token(\.\d+)?$/.test(name);
+}
+
+/**
+ * Decision for a subframe navigation (will-frame-navigate with isMainFrame false). Subframes get no
+ * preload and are refused as IPC senders, so this is defence in depth: web pages (https:), blank
+ * and srcdoc frames, and in-page previews (blob:, data:) only. Never file:, never the panel's
+ * taxwise: scheme, never http: (except the CRM's own origin in a development run), never another
+ * app's protocol. The panel header has no frames at all.
+ */
+export function decideSubframeNavigation(view: ViewKind, raw: string, opts: NavOptions): { action: "allow" } | { action: "deny"; reason: string } {
+  const u = parse(raw);
+  if (!u) return { action: "deny", reason: "not a URL" };
+  if (u.protocol === "about:" && (u.pathname === "blank" || u.pathname === "srcdoc")) return { action: "allow" };
+  if (view === "panel") return { action: "deny", reason: "the panel header has no frames" };
+  if (u.protocol === "https:") return { action: "allow" };
+  if (u.protocol === "blob:" || u.protocol === "data:") return { action: "allow" };
+  if (view === "crm" && u.protocol === "http:" && originOf(raw) === opts.appOrigin) return { action: "allow" };
+  return { action: "deny", reason: `refused ${u.protocol} frame` };
 }
 
 /** Decision for window.open / target=_blank (setWindowOpenHandler). Never a new Electron window. */

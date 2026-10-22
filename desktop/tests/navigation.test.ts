@@ -3,9 +3,11 @@ import {
   buildWhatsAppSendUrl,
   crmShowsSignedOutPage,
   decideNavigation,
+  decideSubframeNavigation,
   decideWindowOpen,
   isAuthCookie,
   rewriteWhatsAppLink,
+  safeExternalUrl,
 } from "../src/main/navigation";
 
 const opts = { appOrigin: "https://app.twchartered.com" };
@@ -144,5 +146,76 @@ describe("sign-out detection", () => {
     expect(isAuthCookie("sb-abcdefgh-auth-token.0")).toBe(true);
     expect(isAuthCookie("sb-abcdefgh-auth-token-code-verifier")).toBe(false);
     expect(isAuthCookie("theme")).toBe(false);
+  });
+});
+
+describe("blob:, data: and filesystem: documents never replace a view's page", () => {
+  it("refuses them in the CRM and WhatsApp main frames, even when their creator was that origin", () => {
+    for (const url of [
+      "blob:https://app.twchartered.com/6a1f0c4e-1111-4000-8000-000000000001",
+      "filesystem:https://app.twchartered.com/temporary/x.html",
+      "data:text/html,<script>alert(1)</script>",
+    ]) {
+      expect(decideNavigation("crm", url, opts).action, url).toBe("deny");
+      expect(decideWindowOpen("crm", url, opts).action, url).toBe("deny");
+    }
+    for (const url of ["blob:https://web.whatsapp.com/6a1f0c4e-1111-4000-8000-000000000001", "filesystem:https://web.whatsapp.com/temporary/x"]) {
+      expect(decideNavigation("whatsapp", url, opts).action, url).toBe("deny");
+      expect(decideWindowOpen("whatsapp", url, opts).action, url).toBe("deny");
+    }
+  });
+});
+
+describe("subframe navigation (will-frame-navigate)", () => {
+  it("lets iframes load web pages and in-page previews", () => {
+    for (const url of ["https://www.youtube.com/embed/x", "about:blank", "about:srcdoc", "blob:https://app.twchartered.com/abc", "data:application/pdf;base64,JVBERi0="]) {
+      expect(decideSubframeNavigation("crm", url, opts).action, url).toBe("allow");
+    }
+    expect(decideSubframeNavigation("whatsapp", "https://web.whatsapp.com/frame", opts).action).toBe("allow");
+  });
+
+  it("refuses local files, the panel's scheme, plain http and other apps' protocols", () => {
+    for (const url of [
+      "file:///C:/Windows/System32/calc.exe",
+      "taxwise://panel/panel-header.html",
+      "http://example.com/",
+      "ms-msdt:/id PCWDiagnostic",
+      "search-ms:query=x",
+      "chrome://settings",
+      "devtools://devtools/bundled/inspector.html",
+      "not a url",
+    ]) {
+      expect(decideSubframeNavigation("crm", url, opts).action, url).toBe("deny");
+      expect(decideSubframeNavigation("whatsapp", url, opts).action, url).toBe("deny");
+    }
+  });
+
+  it("allows http only for the CRM's own development origin, and gives the panel header no frames", () => {
+    const dev = { appOrigin: "http://localhost:3000" };
+    expect(decideSubframeNavigation("crm", "http://localhost:3000/preview", dev).action).toBe("allow");
+    expect(decideSubframeNavigation("whatsapp", "http://localhost:3000/preview", dev).action).toBe("deny");
+    expect(decideSubframeNavigation("panel", "https://example.com/", opts).action).toBe("deny");
+    expect(decideSubframeNavigation("panel", "about:blank", opts).action).toBe("allow");
+  });
+});
+
+describe("shell.openExternal input", () => {
+  it("is https only, without credentials, re-serialised", () => {
+    expect(safeExternalUrl("https://www.gst.gov.in/")).toBe("https://www.gst.gov.in/");
+    expect(safeExternalUrl("HTTPS://WWW.GST.GOV.IN/a b")).toBe("https://www.gst.gov.in/a%20b");
+    for (const bad of [
+      "http://example.com/",
+      "file:///C:/Windows/System32/calc.exe",
+      "javascript:alert(1)",
+      "ms-msdt:/id PCWDiagnostic",
+      "search-ms:query=x",
+      "mailto:ca@twchartered.com",
+      "https://user:pw@example.com/",
+      "https://",
+      "not a url",
+    ]) {
+      expect(safeExternalUrl(bad), bad).toBeNull();
+    }
+    expect(decideNavigation("crm", "https://user:pw@example.com/", opts).action).toBe("deny");
   });
 });

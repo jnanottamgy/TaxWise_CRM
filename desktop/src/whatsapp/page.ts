@@ -14,11 +14,19 @@ export function qa(root: ParentNode, name: SelectorName): Element[] {
   return Array.from(root.querySelectorAll(SELECTORS[name].css));
 }
 
+/** WhatsApp's "update your browser" page is a handful of elements; a page with chats has thousands. */
+const UNSUPPORTED_PAGE_MAX_ELEMENTS = 400;
+
 export function detectPageState(doc: Document): WhatsAppPageState {
   if (q(doc, "chatList") || q(doc, "sidePane")) return "chats";
   if (q(doc, "qrCode")) return "qr";
-  const text = doc.body?.textContent ?? "";
-  if (text.length < 20000 && UNSUPPORTED_BROWSER_TEXT.test(text)) return "unsupported";
+  // Look for the unsupported-browser sentence only on a small page with no conversation, so the
+  // page's text is never read where it could hold messages (even if WhatsApp renamed #pane-side).
+  const body = doc.body;
+  if (body && !q(doc, "conversation") && body.getElementsByTagName("*").length <= UNSUPPORTED_PAGE_MAX_ELEMENTS) {
+    const text = body.textContent ?? "";
+    if (text.length < 20000 && UNSUPPORTED_BROWSER_TEXT.test(text)) return "unsupported";
+  }
   return "loading";
 }
 

@@ -12,6 +12,17 @@ import { ALLOWED_MARK, HIDDEN_IN_CLIENT_MODE, SELECTORS } from "./selectors";
 export const CLIENT_MODE_ATTR = "data-taxwise-client-mode";
 /** On <html> while a chat is being opened (the search box must stay focusable; the cover hides it). */
 export const OPENING_ATTR = "data-taxwise-opening";
+/** On <html> once the WhatsApp preload is running on this page (in every mode). */
+export const READY_ATTR = "data-taxwise-ready";
+
+/**
+ * For a view created in client mode, injected by the main process: nothing on the page shows
+ * until the preload has marked it, so a preload that failed to load or start fails closed
+ * (an empty panel) instead of showing every chat.
+ */
+export function clientModeGuardCss(): string {
+  return `html:not([${READY_ATTR}]) > :not(head) { display: none !important; }`;
+}
 
 export function clientModeCss(): string {
   const hidden = HIDDEN_IN_CLIENT_MODE.map((n) => SELECTORS[n].css).join(", ");

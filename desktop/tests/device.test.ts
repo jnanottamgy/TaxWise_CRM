@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { describeDevice, generateDeviceKey, isValidDeviceKey, loadOrCreateDeviceKey, type SecretStore } from "../src/main/device";
+import {
+  describeDevice,
+  DeviceKeyUnavailableError,
+  generateDeviceKey,
+  isValidDeviceKey,
+  loadOrCreateDeviceKey,
+  osCredentialStoreAvailable,
+  type SecretStore,
+} from "../src/main/device";
 
 /** Stands in for safeStorage (the OS credential store). */
 function fakeStore(available = true): SecretStore & { encrypted: string[] } {
@@ -65,11 +73,48 @@ describe("device key (§5.13)", () => {
     expect(loadOrCreateDeviceKey(fakeStore(), junk).created).toBe(true);
   });
 
-  it("falls back to a plain file only where the OS has no credential store", () => {
+  it("falls back to a plain file only in a development run where the OS has no credential store", () => {
     const file = memoryFile();
-    const r = loadOrCreateDeviceKey(fakeStore(false), file);
+    const r = loadOrCreateDeviceKey(fakeStore(false), file, { allowPlain: true });
     expect(r.encrypted).toBe(false);
     expect(JSON.parse(file.get()!.toString())).toMatchObject({ enc: "plain", data: r.key });
+  });
+
+  it("a locked-down run never writes the key in clear (§5.13: the OS credential store)", () => {
+    const file = memoryFile();
+    expect(() => loadOrCreateDeviceKey(fakeStore(false), file)).toThrow(DeviceKeyUnavailableError);
+    expect(file.get()).toBeNull();
+    const plain = memoryFile(Buffer.from(JSON.stringify({ v: 1, enc: "plain", data: "ab".repeat(32) })));
+    expect(() => loadOrCreateDeviceKey(fakeStore(false), plain)).toThrow(DeviceKeyUnavailableError);
+  });
+
+  it("never replaces an encrypted key while the credential store is locked (no new PC, no clear-text downgrade)", () => {
+    const store = fakeStore();
+    const file = memoryFile();
+    const first = loadOrCreateDeviceKey(store, file);
+    const before = file.get()!.toString();
+    const locked = fakeStore(false);
+    expect(() => loadOrCreateDeviceKey(locked, file, { allowPlain: true })).toThrow(DeviceKeyUnavailableError);
+    expect(file.get()!.toString()).toBe(before);
+    expect(loadOrCreateDeviceKey(store, file).key).toBe(first.key);
+  });
+
+  it("encrypts a plain key from an earlier run as soon as the store is available", () => {
+    const key = "cd".repeat(32);
+    const file = memoryFile(Buffer.from(JSON.stringify({ v: 1, enc: "plain", data: key })));
+    const r = loadOrCreateDeviceKey(fakeStore(), file);
+    expect(r).toEqual({ key, created: false, encrypted: true });
+    expect(JSON.parse(file.get()!.toString()).enc).toBe("safeStorage");
+    expect(file.get()!.toString()).not.toContain(key);
+  });
+
+  it("doesn't count Linux's hard-coded-password fallback as a credential store", () => {
+    expect(osCredentialStoreAvailable("win32", true, null)).toBe(true);
+    expect(osCredentialStoreAvailable("darwin", true, null)).toBe(true);
+    expect(osCredentialStoreAvailable("win32", false, null)).toBe(false);
+    expect(osCredentialStoreAvailable("linux", true, "gnome_libsecret")).toBe(true);
+    expect(osCredentialStoreAvailable("linux", true, "basic_text")).toBe(false);
+    expect(osCredentialStoreAvailable("linux", true, "unknown")).toBe(false);
   });
 
   it("describes the PC for check-in", () => {

@@ -3,7 +3,8 @@ import { buildClientModePolicy, chatsToClose, diffContext } from "../src/main/co
 import { ClientModeReporter } from "../src/main/reporters";
 import { decideChat } from "../src/shared/chat-rules";
 import { COPY } from "../src/shared/copy";
-import { CLIENT_MODE_ATTR, ClientModeController, clientModeCss, DISABLED_POLICY, OPENING_ATTR } from "../src/whatsapp/client-mode";
+import { CLIENT_MODE_ATTR, ClientModeController, clientModeCss, DISABLED_POLICY, OPENING_ATTR, READY_ATTR } from "../src/whatsapp/client-mode";
+import { clientModeGuardCss } from "../src/whatsapp/client-mode-css";
 import { checkSelectors, detectPageState } from "../src/whatsapp/page";
 import { ALLOWED_MARK } from "../src/whatsapp/selectors";
 import type { ClientModePolicy } from "../src/shared/types";
@@ -78,6 +79,25 @@ describe("page state and selector self-check against fixtures", () => {
       windows.push(window as never);
       expect(detectPageState(doc), f).toBe(state);
     }
+  });
+
+  it("recognises the unsupported-browser page without ever reading a page that could hold messages", () => {
+    const { window, doc } = loadFixture("changed-everything.html");
+    windows.push(window as never);
+    doc.body.innerHTML = "<div id='app'><h1>WhatsApp works with Google Chrome 85+</h1><a href='#'>Update Google Chrome</a></div>";
+    expect(detectPageState(doc)).toBe("unsupported");
+
+    // WhatsApp renamed the chat list: a page full of chats looks like "loading". Its text is not read.
+    const rows = Array.from({ length: 500 }, (_, i) => `<div role='row'><span>Message ${i}</span></div>`).join("");
+    doc.body.innerHTML = `<div id='app'>${rows}<p>WhatsApp works with Google Chrome</p></div>`;
+    const reads: string[] = [];
+    const body = doc.body as unknown as { textContent: string };
+    const original = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(body), "textContent");
+    Object.defineProperty(body, "textContent", { configurable: true, get: () => (reads.push("body"), original?.get?.call(body) ?? "") });
+    expect(detectPageState(doc)).toBe("loading");
+    doc.body.innerHTML = "<div id='app'><div id='main'><header><span dir='auto' title='X'>X</span></header>WhatsApp works with Google Chrome</div></div>";
+    expect(detectPageState(doc)).toBe("loading");
+    expect(reads).toEqual([]);
   });
 
   it("passes on the current WhatsApp structure", () => {
@@ -201,6 +221,71 @@ describe("client mode on WhatsApp Web fixtures (§7.25.5, §18.3 Employee 8)", (
     expect(rec.denied).toEqual(["Someone Else"]);
   });
 
+  it("a hand-off is used up by the first chat that opens: a refused chat leaves nothing to adopt", async () => {
+    const now = new FakeTimers().now();
+    const p = policy({ pendingHandoff: { phoneDigits: "919845012345", expiresAt: now + 60_000 } });
+    const { window, doc } = loadFixture("one-to-one-open.html");
+    windows.push(window as never);
+    escapeClosesChat(doc);
+    const title = doc.querySelector("#main header span[dir='auto']")!;
+    // The hand-off's number wasn't on WhatsApp, and another unsaved number's chat shows first…
+    title.setAttribute("title", "+91 99999 00000");
+    title.textContent = "+91 99999 00000";
+    const { bridge, rec } = recordingBridge();
+    const c = new ClientModeController({ doc, bridge, timers: new FakeTimers(), selectorCheckMs: 10 * 60 * 1000 });
+    c.start(p);
+    await flush();
+    expect(rec.denied).toEqual(["+91 99999 00000"]);
+    expect(main(doc)).toBeNull(); // closed with Escape
+    // …then, within the hand-off's minute, the user jumps to another client's group with
+    // WhatsApp's next-chat keyboard shortcut.
+    doc.querySelector("#app .two")!.insertAdjacentHTML("beforeend", `<div id='main'><header><div role='button'><span dir='auto' title='${PATEL}'>${PATEL}</span></div></header></div>`);
+    await flush();
+    expect(rec.adopted).toEqual([]);
+    expect(rec.denied).toContain(PATEL);
+  });
+
+  it("a page that was already open when the hand-off started can't adopt (only the page the hand-off loads can)", async () => {
+    const { doc, c, rec, timers } = setup("group-open.html", policy());
+    await flush();
+    expect(c.shieldState).toBe("hidden");
+    // The CRM starts a hand-off; before its page loads, a chat is opened from the group still showing.
+    timers.advance(1000);
+    c.setPolicy(policy({ pendingHandoff: { phoneDigits: "919845012345", armedAt: timers.now(), expiresAt: timers.now() + 60_000 } }));
+    const title = doc.querySelector("#main header span[dir='auto']")!;
+    title.setAttribute("title", "Ramesh (group member)");
+    title.textContent = "Ramesh (group member)";
+    await flush();
+    expect(rec.adopted).toEqual([]);
+    expect(rec.denied).toEqual(["Ramesh (group member)"]);
+  });
+
+  it("fails closed if anything unexpected goes wrong while checking a chat", async () => {
+    const { window, doc } = loadFixture("group-open.html");
+    windows.push(window as never);
+    const timers = new FakeTimers();
+    const { bridge, rec } = recordingBridge();
+    let broken = false;
+    const c = new ClientModeController({
+      doc,
+      bridge: { ...bridge, openTitle: (t, v) => (broken ? (() => { throw new Error("boom"); })() : bridge.openTitle(t, v)) },
+      timers,
+      selectorCheckMs: 10 * 60 * 1000,
+    });
+    c.start(policy());
+    await flush();
+    expect(c.shieldState).toBe("hidden");
+    expect(main(doc)?.hasAttribute(ALLOWED_MARK)).toBe(true);
+    broken = true;
+    const title = doc.querySelector("#main header span[dir='auto']")!;
+    title.setAttribute("title", SHARMA);
+    title.textContent = SHARMA;
+    expect(() => c.evaluate()).not.toThrow();
+    expect(c.shieldState).toBe("unavailable");
+    expect(main(doc)?.hasAttribute(ALLOWED_MARK)).toBe(false);
+    expect(rec.selectors.at(-1)).toEqual({ ok: false, failing: ["client-mode"] });
+  });
+
   it("a one-to-one chat the CRM did not open is refused", async () => {
     const { rec } = setup("one-to-one-open.html", policy());
     await flush();
@@ -266,6 +351,62 @@ describe("client mode on WhatsApp Web fixtures (§7.25.5, §18.3 Employee 8)", (
     expect(rec.titles).toEqual([]);
     expect(rec.denied).toEqual([]);
     expect(main(doc)).not.toBeNull();
+  });
+});
+
+describe("client mode fails closed if the preload never runs", () => {
+  it("the main process's guard hides the whole page until the preload has marked it", async () => {
+    const { window, doc } = loadFixture("other-chat-open.html");
+    windows.push(window as never);
+    const style = doc.createElement("style");
+    style.textContent = clientModeGuardCss();
+    doc.head.appendChild(style);
+    const shown = () => (window as unknown as Window).getComputedStyle(doc.body as unknown as Element).display !== "none";
+    expect(shown()).toBe(false);
+
+    const timers = new FakeTimers();
+    const { bridge } = recordingBridge();
+    const c = new ClientModeController({ doc, bridge, timers, selectorCheckMs: 10 * 60 * 1000 });
+    c.start(policy());
+    await flush();
+    expect(doc.documentElement.hasAttribute(READY_ATTR)).toBe(true);
+    expect(shown()).toBe(true);
+    expect(c.shieldState).toBe("denied"); // the preload's own rules now apply
+  });
+
+  it("starting at document start, before <html> exists, is not an error (no false 'WhatsApp changed its page')", async () => {
+    for (const start of ["pending", policy(), DISABLED_POLICY] as const) {
+      const { window, doc } = loadFixture("chats.html");
+      windows.push(window as never);
+      const html = doc.documentElement;
+      doc.removeChild(html);
+      expect(doc.documentElement).toBeNull();
+      const { bridge, rec } = recordingBridge();
+      const c = new ClientModeController({ doc, bridge, timers: new FakeTimers(), selectorCheckMs: 10 * 60 * 1000 });
+      expect(() => c.start(start)).not.toThrow();
+      expect(rec.selectors).toEqual([]);
+      doc.appendChild(html);
+      await flush();
+      expect(doc.documentElement.hasAttribute(READY_ATTR)).toBe(true);
+      expect(rec.selectors.some((r) => !r.ok)).toBe(false);
+      if (start !== DISABLED_POLICY) {
+        expect(c.shield.covering).toBe(true);
+        expect(c.shield.text.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("the preload marks the page in every mode, so Partners' pages show too", async () => {
+    const { doc } = setup("other-chat-open.html", DISABLED_POLICY);
+    await flush();
+    expect(doc.documentElement.hasAttribute(READY_ATTR)).toBe(true);
+    expect(clientModeGuardCss()).toBe(`html:not([${READY_ATTR}]) > :not(head) { display: none !important; }`);
+  });
+
+  it("the guard is injected for every view created in client mode", async () => {
+    const { readFileSync } = await import("node:fs");
+    const panel = readFileSync(new URL("../src/main/panel.ts", import.meta.url), "utf8");
+    expect(panel).toMatch(/if \(clientMode\) void wc\.insertCSS\(clientModeGuardCss\(\), \{ cssOrigin: "user" \}\)/);
   });
 });
 

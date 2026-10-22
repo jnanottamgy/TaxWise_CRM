@@ -1,15 +1,16 @@
 /**
  * End-to-end test support (§14: "client mode, against saved WhatsApp Web page fixtures, never the
- * live WhatsApp in CI"). Only an unpackaged build started with TAXWISE_E2E_WHATSAPP_FIXTURES
- * serves a local fixture as https://web.whatsapp.com/; a packaged app never does.
+ * live WhatsApp in CI"). Only a development run started with TAXWISE_E2E_WHATSAPP_FIXTURES serves
+ * a local fixture as https://web.whatsapp.com/; a locked-down run (release bundle or packaged app)
+ * never does.
  */
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Session } from "electron";
 
-export function e2eFixtureDir(isPackaged: boolean, env: NodeJS.ProcessEnv): string | null {
-  if (isPackaged) return null;
+export function e2eFixtureDir(lockedDown: boolean, env: NodeJS.ProcessEnv): string | null {
+  if (lockedDown) return null;
   const dir = env.TAXWISE_E2E_WHATSAPP_FIXTURES;
   return dir && dir.trim() ? dir : null;
 }

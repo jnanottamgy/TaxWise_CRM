@@ -25,6 +25,12 @@ describe("IPC sender validation (§7.25.3)", () => {
     expect(isAllowedSender("panel", { url: "file:///panel-header.html", isMainFrame: true, webContentsId: 3 }, rules)).toBe(false);
   });
 
+  it("refuses a blob: document in the right view, though its creator was that origin", () => {
+    expect(isAllowedSender("crm", { url: `blob:${APP}/6a1f0c4e-1111-4000-8000-000000000001`, isMainFrame: true, webContentsId: 1 }, rules)).toBe(false);
+    expect(isAllowedSender("whatsapp", { url: "blob:https://web.whatsapp.com/6a1f0c4e", isMainFrame: true, webContentsId: 2 }, rules)).toBe(false);
+    expect(isAllowedSender("crm", { url: `filesystem:${APP}/temporary/x`, isMainFrame: true, webContentsId: 1 }, rules)).toBe(false);
+  });
+
   it("refuses subframes (an iframe in the CRM or in WhatsApp)", () => {
     expect(isAllowedSender("crm", { url: `${APP}/`, isMainFrame: false, webContentsId: 1 }, rules)).toBe(false);
     expect(isAllowedSender("whatsapp", { url: "https://web.whatsapp.com/", isMainFrame: false, webContentsId: 2 }, rules)).toBe(false);

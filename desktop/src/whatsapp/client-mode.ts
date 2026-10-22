@@ -17,11 +17,11 @@ import { decideChat, normalizeTitle, type ChatVerdict } from "../shared/chat-rul
 import { COPY } from "../shared/copy";
 import type { ClientModePolicy, WhatsAppPageState } from "../shared/types";
 import { checkSelectors, detectPageState, q, readConversationTitle, SelectorError } from "./page";
-import { CLIENT_MODE_ATTR, clientModeCss, OPENING_ATTR } from "./client-mode-css";
+import { CLIENT_MODE_ATTR, clientModeCss, OPENING_ATTR, READY_ATTR } from "./client-mode-css";
 import { ALLOWED_MARK } from "./selectors";
 import { Shield, type ShieldState } from "./shield";
 
-export { COPY, clientModeCss, CLIENT_MODE_ATTR, OPENING_ATTR };
+export { COPY, clientModeCss, CLIENT_MODE_ATTR, OPENING_ATTR, READY_ATTR };
 
 export interface ClientModeBridge {
   pageState(state: WhatsAppPageState): void;
@@ -180,9 +180,37 @@ export class ClientModeController {
     this.evaluate();
   }
 
-  /** Re-check everything now. Runs synchronously from the MutationObserver, before the next paint. */
+  /**
+   * Re-check everything now. Runs synchronously from the MutationObserver, before the next paint.
+   * Any unexpected error fails closed: the page stays covered and no conversation is marked allowed.
+   */
   evaluate(): void {
+    try {
+      this.evaluateOnce();
+    } catch {
+      if (!this.policy.enabled) return;
+      try {
+        this.unmark();
+        this.shield.show("unavailable");
+      } catch {
+        // nothing more can be done from here; the main process still hides an unavailable panel
+      }
+      if (!this.failing) {
+        this.failing = ["client-mode"];
+        try {
+          this.opts.bridge.selectors(false, this.failing);
+        } catch {
+          // reported again by the next self-check
+        }
+      }
+    }
+  }
+
+  private evaluateOnce(): void {
     const { doc, bridge } = this.opts;
+    // The main process's guard stylesheet keeps the page hidden until this is set (fail closed).
+    const root = doc.documentElement;
+    if (root && !root.hasAttribute(READY_ATTR)) root.setAttribute(READY_ATTR, "");
     const state = detectPageState(doc);
     if (state !== this.lastState) {
       this.lastState = state;
@@ -236,7 +264,10 @@ export class ClientModeController {
 
     let verdict = decideChat(title, this.policy, this.opts.timers.now());
     if (verdict === "adopt") {
-      if (this.adoptConsumed || title === null) {
+      const armedAt = this.policy.pendingHandoff?.armedAt;
+      // Only the page the hand-off loaded may adopt: one already open when it started can't.
+      const pageOlderThanHandoff = armedAt !== undefined && this.startedAt < armedAt;
+      if (this.adoptConsumed || title === null || pageOlderThanHandoff) {
         verdict = "deny";
       } else {
         this.adoptConsumed = true;
@@ -244,6 +275,10 @@ export class ClientModeController {
         bridge.adopt(title);
         verdict = "allow";
       }
+    } else if (verdict === "deny" && this.policy.pendingHandoff) {
+      // A hand-off adopts the first chat that opens, or nothing: a refused chat uses it up.
+      this.adoptConsumed = true;
+      this.policy = { ...this.policy, pendingHandoff: null };
     }
 
     const isNew = this.report(title, verdict);
@@ -330,6 +365,9 @@ export class ClientModeController {
   private ensureStyle(): void {
     const doc = this.opts.doc;
     const root = doc.documentElement;
+    // At document start (where the preload runs) <html> may not exist yet; the
+    // MutationObserver calls evaluate() again as soon as it does.
+    if (!root) return;
     if (!root.hasAttribute(CLIENT_MODE_ATTR)) root.setAttribute(CLIENT_MODE_ATTR, "");
     if (this.opening !== null) {
       if (!root.hasAttribute(OPENING_ATTR)) root.setAttribute(OPENING_ATTR, "");
@@ -357,6 +395,7 @@ export class ClientModeController {
   /** Client mode off: drop the attributes (the scoped CSS then matches nothing). */
   private removeStyle(): void {
     const root = this.opts.doc.documentElement;
+    if (!root) return;
     root.removeAttribute(CLIENT_MODE_ATTR);
     root.removeAttribute(OPENING_ATTR);
   }

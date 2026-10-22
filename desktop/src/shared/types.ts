@@ -83,8 +83,11 @@ export interface ClientModePolicy {
   allowedGroupNames: string[];
   /** One-to-one chats the CRM opened in this session (hand-offs), by conversation title. */
   sessionChats: string[];
-  /** A hand-off the CRM just started: the next one-to-one chat that opens is adopted. */
-  pendingHandoff: { phoneDigits: string; expiresAt: number } | null;
+  /**
+   * A hand-off the CRM just started: the first chat that opens in the page the hand-off loaded is
+   * adopted. `armedAt` is when it started; a page that was already open then can't adopt.
+   */
+  pendingHandoff: { phoneDigits: string; expiresAt: number; armedAt?: number } | null;
   /** A message to keep showing after a reload (e.g. "Not one of your clients"). */
   notice: "not-allowed" | null;
 }

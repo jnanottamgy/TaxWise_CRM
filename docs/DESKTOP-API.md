@@ -68,3 +68,9 @@ How CRM pages should use it:
 (e) Keep emitting wa.me hand-off links unchanged; the app opens them in its panel.
 (f) Inside the app, external links open in the system browser and only https works (mailto: is refused, so prefer the Gmail compose URL). window.open of a CRM URL loads it in the CRM view, so prefer Content-Disposition: attachment downloads to pop-ups.
 (g) Signed-out pages (/login, /set-password, /no-access, …) hide the panel immediately; signing out must remove the sb-*-auth-token cookies.
+
+## Additions from the desktop security review
+
+1. Every `/api/desktop/*` route checks `X-TaxWise-Device` for revocation **before** the session check, so a removed PC is refused (403 `device_revoked`) and wipes its WhatsApp data at its next start even when nobody is signed in (§18.3 Partner 13).
+2. `/api/desktop/access-denied` and the extra context fields (`user.employeeId`, `numbers[].usableBy`, `numbers[].ownerEmployeeId`) are part of the contract.
+3. Inside TaxWise Desktop, navigating to `blob:`/`data:` URLs and `window.open(blob:)` are refused, and `mailto:` is refused: previews must use an iframe/object or a download, and email hand-offs must prefer the Gmail compose URL when `window.taxwiseDesktop` exists.

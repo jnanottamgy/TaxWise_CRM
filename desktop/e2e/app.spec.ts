@@ -143,6 +143,19 @@ test.describe("navigation and new-window guards (§7.25.3)", () => {
     expect(h.crm.url().startsWith(h.crmUrl)).toBe(true);
   });
 
+  test("a blob: document can't replace the CRM page or open in it", async () => {
+    h = await launch();
+    await h.crm.evaluate(() => {
+      const url = URL.createObjectURL(new Blob(["<h1>not the CRM</h1>"], { type: "text/html" }));
+      window.open(url);
+      location.href = url;
+    });
+    await h.crm.waitForTimeout(500);
+    expect(h.crm.url().startsWith(h.crmUrl)).toBe(true);
+    expect(await h.crm.evaluate(() => typeof (window as unknown as { taxwiseDesktop?: unknown }).taxwiseDesktop)).toBe("object");
+    expect(await opened(h.app)).toEqual([]);
+  });
+
   test("WhatsApp can't navigate away from web.whatsapp.com", async () => {
     h = await launch();
     const wa = await pageWhere(h.app, isWhatsApp);
