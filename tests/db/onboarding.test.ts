@@ -36,6 +36,7 @@ import {
   DEFAULT_SCALE_CONTEXT,
   calendarProfileFor,
   emptyOnboardingValues,
+  isPresumptiveNature,
   mergeChecklist,
   newServiceEntry,
   onboardingSchema,
@@ -553,6 +554,58 @@ describe("clients_list and client_groups_overview", () => {
       await s.as(U.M1);
       expect(await s.value<boolean>("select unreachable from clients_list where id = $1", [C.B])).toBe(true);
       expect(await s.value<boolean>("select unreachable from clients_list where id = $1", [C.A])).toBe(false);
+    });
+  });
+});
+
+// -------------------------------------------------------------------------------------------------
+// Income nature (0141): what the preview planned is what every later generation plans
+// -------------------------------------------------------------------------------------------------
+
+describe("clients.income_nature (0141)", () => {
+  it("a presumptive (s.44AD) client keeps its income nature, so regenerating adds no advance-tax instalments", async () => {
+    await db.asRole(U.M1, async (s) => {
+      const values = wizard({
+        display_name: "Lakshmi Provision Stores",
+        legal_name: "",
+        entity_type: "proprietorship",
+        pan: "ABCPL1234K",
+        gst_registration: "unregistered",
+        gstin: "",
+        annual_turnover: "80,00,000",
+        income_nature: "presumptive_44ad",
+        services: [newServiceEntry("income_tax", "monthly")],
+      });
+      const { clientId, payload, events } = await payloadFor(s, values);
+      const instalments = (list: CalendarEvent[]) => list.filter((e) => e.formCode === "Advance tax").map((e) => e.dedupeKey).sort();
+      // The preview: only the 15 March instalment(s) for a presumptive case.
+      expect(instalments(events).length).toBeGreaterThan(0);
+      expect(events.filter((e) => e.formCode === "Advance tax").every((e) => e.dueDate.slice(5) === "03-15")).toBe(true);
+
+      await onboard(s, payload);
+      const stored = await s.value<string | null>("select income_nature from clients where id = $1", [clientId]);
+      expect(stored).toBe("presumptive_44ad");
+
+      // A later generation builds the profile from the stored client (server/compliance/generate.ts).
+      const e = await engine(s);
+      const again = generateEvents(
+        { ...calendarProfileFor(values, clientId), isPresumptive: isPresumptiveNature(stored) },
+        e.rules,
+        e.overrides,
+        { today: TODAY, params: e.params },
+      );
+      expect(instalments(again)).toEqual(instalments(events));
+      // Without the stored nature it would have planned the June, September and December instalments too.
+      const forgetful = generateEvents({ ...calendarProfileFor(values, clientId), isPresumptive: false }, e.rules, e.overrides, { today: TODAY, params: e.params });
+      expect(instalments(forgetful).length).toBeGreaterThan(instalments(events).length);
+    });
+  });
+
+  it("refuses a value that isn't an income nature", async () => {
+    await db.asRole(U.M1, async (s) => {
+      await s.as("super");
+      const err = await s.fails("update clients set income_nature = 'salary' where id = $1", [C.A]);
+      expect(err.code).toBe("23514");
     });
   });
 });

@@ -25,6 +25,7 @@ import {
 } from "@/lib/schemas/onboarding";
 import { readWhatsAppSignaturePreference } from "@/lib/schemas/profile";
 import { todayIST, type DateString } from "@/lib/domain/fy";
+import { paiseToDecimalString, sumPaise, toPaise } from "@/lib/domain/money";
 
 /**
  * Reads for the client list (§7.3.1), the onboarding wizard (§7.3.2) and the import/export
@@ -599,7 +600,7 @@ export async function getClientsBrief(
 }
 
 /** Unpaid issued invoices of a client (the delete guard's message, §7.3.4). Partner/Manager only. */
-export async function getUnpaidInvoices(supabase: ServerSupabase, clientId: string): Promise<{ count: number; outstanding: number }> {
+export async function getUnpaidInvoices(supabase: ServerSupabase, clientId: string): Promise<{ count: number; outstanding: string }> {
   const { data, error } = await supabase
     .from("invoices")
     .select("outstanding_amount")
@@ -610,5 +611,6 @@ export async function getUnpaidInvoices(supabase: ServerSupabase, clientId: stri
     .gt("outstanding_amount", 0);
   if (error) throw error;
   const rows = data ?? [];
-  return { count: rows.length, outstanding: rows.reduce((s, r) => s + Number(r.outstanding_amount ?? 0), 0) };
+  // Summed in integer paise, never as floats (§0.1 rule 7); a decimal string for formatMoney.
+  return { count: rows.length, outstanding: paiseToDecimalString(sumPaise(rows.map((r) => toPaise(r.outstanding_amount ?? 0)))) };
 }

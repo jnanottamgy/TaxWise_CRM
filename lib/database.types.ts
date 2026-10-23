@@ -1128,6 +1128,7 @@ export type Database = {
           gst_scheme: Database["public"]["Enums"]["gst_scheme"] | null
           gstin: string | null
           id: string
+          income_nature: string | null
           is_incorporated: boolean
           legal_name: string | null
           notes: string | null
@@ -1180,6 +1181,7 @@ export type Database = {
           gst_scheme?: Database["public"]["Enums"]["gst_scheme"] | null
           gstin?: string | null
           id?: string
+          income_nature?: string | null
           is_incorporated?: boolean
           legal_name?: string | null
           notes?: string | null
@@ -1232,6 +1234,7 @@ export type Database = {
           gst_scheme?: Database["public"]["Enums"]["gst_scheme"] | null
           gstin?: string | null
           id?: string
+          income_nature?: string | null
           is_incorporated?: boolean
           legal_name?: string | null
           notes?: string | null
@@ -7017,6 +7020,7 @@ export type Database = {
       staff_document_ids: { Args: never; Returns: string[] }
       staff_employee_id: { Args: never; Returns: string }
       staff_record_conflict: { Args: { p_name: string | null; p_at: string | null }; Returns: string }
+      staff_task_client_ids: { Args: never; Returns: string[] }
       staff_task_ids: { Args: never; Returns: string[] }
       staff_whatsapp_client_ids: { Args: never; Returns: string[] }
       staff_whatsapp_group_ids: { Args: never; Returns: string[] }

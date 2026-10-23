@@ -5,8 +5,10 @@ import {
   HandoffSchema,
   deliveryFailedMessage,
   emailOutcomeNotice,
+  handoffMoneyKind,
   messageStatusInfo,
 } from "@/lib/handoff";
+import { isMoneySideKind } from "@/server/email/policy";
 
 const CLIENT = "6f1c1d0e-8a8b-4c7d-9e0f-1a2b3c4d5e6f";
 const CONTACT = "0b7d3c1a-2f4e-4d6a-8b9c-0d1e2f3a4b5c";
@@ -74,5 +76,35 @@ describe("what the app may claim (§7.13.1)", () => {
     expect(emailOutcomeNotice({ status: "sent" }, "Sharma Traders")).toEqual({ tone: "success", message: "Emailed to Sharma Traders.", detail: null, offerHandoff: false });
     expect(emailOutcomeNotice({ status: "not_configured", error: "x" }, "Sharma Traders")).toMatchObject({ tone: "warning", offerHandoff: true, message: EMAIL_NOT_SET_UP_MESSAGE });
     expect(emailOutcomeNotice({ status: "failed", error: "Bounced" }, "Sharma Traders")).toMatchObject({ tone: "danger", offerHandoff: true, detail: "Bounced" });
+  });
+});
+
+describe("handoffMoneyKind (§4.1: a hand-off about money stays on the money side)", () => {
+  it("is the related record's type when that is money-side", () => {
+    expect(handoffMoneyKind("invoice", null)).toBe("invoice");
+    expect(handoffMoneyKind("quotation", "document_reminder")).toBe("quotation");
+    expect(handoffMoneyKind("credit_note", null)).toBe("credit_note");
+  });
+
+  it("is money-side for a payment-reminder or quotation template even without a related record", () => {
+    expect(handoffMoneyKind(null, "payment_reminder")).toBe("payment");
+    expect(handoffMoneyKind("task", "payment_reminder")).toBe("payment");
+    expect(handoffMoneyKind(undefined, "quotation")).toBe("quotation");
+  });
+
+  it("is null for everything else", () => {
+    expect(handoffMoneyKind(null, null)).toBeNull();
+    expect(handoffMoneyKind("task", "document_reminder")).toBeNull();
+    expect(handoffMoneyKind("document_request", "general")).toBeNull();
+  });
+
+  it("gives timeline event types Employees never read (money_side_kind, 0043)", () => {
+    for (const [related, template] of [["invoice", null], [null, "payment_reminder"], [null, "quotation"]] as const) {
+      const kind = handoffMoneyKind(related, template);
+      expect(kind).not.toBeNull();
+      expect(isMoneySideKind(`${kind}_message_sent`)).toBe(true);
+      expect(isMoneySideKind(`${kind}_note_added`)).toBe(true);
+    }
+    expect(isMoneySideKind("message_sent")).toBe(false);
   });
 });

@@ -413,6 +413,9 @@ export interface AbsentWithoutCover {
   rows: AbsentWithoutCoverRow[];
 }
 
+/** Ids per `in (…)` filter: they travel in the request URL, which proxies cap at a few kilobytes. */
+const CLIENT_ID_CHUNK = 150;
+
 function clock(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
@@ -489,17 +492,22 @@ export async function getAbsentWithoutCover(supabase: ServerSupabase, now: Date 
   const allClients = Array.from(new Set(Array.from(clientsOf.values()).flatMap((s) => Array.from(s))));
   if (allClients.length === 0) return out;
 
-  const { data: tasks, error: taskError } = await supabase
-    .from("tasks")
-    .select("client_id, due_date")
-    .in("client_id", allClients)
-    .is("deleted_at", null)
-    .neq("status", "filed_done")
-    .lte("due_date", dueBy)
-    .limit(10000);
-  if (taskError) throw taskError;
+  // In chunks: an absent owner can have hundreds of clients, and the ids travel in the request URL.
+  const tasks: Array<{ client_id: string; due_date: string | null }> = [];
+  for (let i = 0; i < allClients.length; i += CLIENT_ID_CHUNK) {
+    const { data, error: taskError } = await supabase
+      .from("tasks")
+      .select("client_id, due_date")
+      .in("client_id", allClients.slice(i, i + CLIENT_ID_CHUNK))
+      .is("deleted_at", null)
+      .neq("status", "filed_done")
+      .lte("due_date", dueBy)
+      .limit(10000);
+    if (taskError) throw taskError;
+    tasks.push(...(data ?? []));
+  }
   const dueByClient = new Map<string, DateString[]>();
-  for (const t of tasks ?? []) {
+  for (const t of tasks) {
     if (!t.due_date) continue;
     dueByClient.set(t.client_id, [...(dueByClient.get(t.client_id) ?? []), t.due_date]);
   }

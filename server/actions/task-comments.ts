@@ -35,7 +35,14 @@ async function validMentions(supabase: ServerSupabase, ids: readonly string[], a
   return (data ?? []).filter((d) => d.is_active && d.profile_id).map((d) => d.profile_id as string);
 }
 
-function mentionNotice(task: { id: string | null; task_number: string | null; title: string | null; client_id: string | null }, commentId: string, by: string, body: string, userIds: string[]) {
+function mentionNotice(
+  task: { id: string | null; task_number: string | null; title: string | null; client_id: string | null },
+  commentId: string,
+  by: string,
+  body: string,
+  userIds: string[],
+  dedupeKey = `task_mention:${commentId}`,
+) {
   return notify({
     to: { userIds },
     type: "info",
@@ -44,7 +51,7 @@ function mentionNotice(task: { id: string | null; task_number: string | null; ti
     linkUrl: `/work/${task.id}#comment-${commentId}`,
     entity: { type: "task", id: task.id ?? "" },
     clientId: task.client_id,
-    dedupeKey: `task_mention:${commentId}`,
+    dedupeKey,
   });
 }
 
@@ -83,7 +90,7 @@ export const editTaskComment = defineAction(
     const added = mentions.filter((m) => !(before.mentions ?? []).includes(m));
     if (added.length) {
       const task = await taskFor(ctx.supabase, before.task_id);
-      if (task) ctx.after("Tell the people you mentioned", () => mentionNotice(task, `${input.id}:${Date.now()}`, ctx.user.fullName, input.body, added));
+      if (task) ctx.after("Tell the people you mentioned", () => mentionNotice(task, input.id, ctx.user.fullName, input.body, added, `task_mention:${input.id}:${Date.now()}`));
     }
     return ok({ id: input.id });
   },

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
 import { ActionError, fail, ok, type ActionResult } from "@/lib/result";
+import { log } from "@/lib/log";
 import { LEAVE_TYPE_LABELS } from "@/lib/domain/enums";
 import { findOverlappingLeave, formatLeaveRange, overlapMessage, reassignPrompt } from "@/lib/domain/leave";
 import { todayIST } from "@/lib/domain/fy";
@@ -169,11 +170,19 @@ export interface DecisionResult {
 export const decideLeave = defineAction(
   { name: "leave.decide", schema: LeaveDecisionSchema, roles: MANAGERS },
   async (input, ctx): Promise<ActionResult<DecisionResult>> => {
+    // Read before deciding: once decide_leave has committed, a failed read must not turn the
+    // decision into an error (§0.1 rule 5).
+    const before = await getLeave(ctx.supabase, input.id);
+    if (!before) return fail("That leave request no longer exists.", { code: "not_found" });
     const { data, error } = await ctx.supabase.rpc("decide_leave", { p_leave_id: input.id, p_decision: input.decision, p_note: input.note, p_updated_at: input.updated_at });
     throwIfDbError(error);
-    const r = (data ?? {}) as { days_marked?: number };
-    const leave = await getLeave(ctx.supabase, input.id);
-    if (!leave) throw new ActionError("That leave request no longer exists.", { code: "not_found" });
+    const r = (data ?? {}) as { days_marked?: number; updated_at?: string };
+    let leave: LeaveRow = { ...before, status: input.decision, updated_at: r.updated_at ?? before.updated_at };
+    try {
+      leave = (await getLeave(ctx.supabase, input.id)) ?? leave;
+    } catch (err) {
+      log("warn", "leave read after the decision failed", { source: "action:leave.decide", userId: ctx.user.id, role: ctx.user.role, err });
+    }
 
     await ctx.audit({ event: "data_update", resourceType: "employee_leave", resourceId: input.id, action: `leave.${input.decision === "approved" ? "approve" : "decline"}`, details: { employee_id: leave.employee_id, note: input.note } });
     const range = formatLeaveRange(leave.start_date, leave.end_date, leave.half_day);

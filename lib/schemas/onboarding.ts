@@ -677,6 +677,15 @@ export type CalendarInputs = z.output<typeof CalendarInputsSchema>;
  * registered client with a valid GSTIN; until then the GST service has no statutory dates. A tax
  * audit counts only once a Partner has confirmed it ("review" is not yet an audit case).
  */
+/**
+ * Presumptive taxation (s.44AD / s.44ADA) from "Income is earned from" (§6.6). The statutory
+ * calendar plans a single 15 March advance-tax instalment for these (§6.7). The onboarding preview
+ * and every later generation (clients.income_nature, server/compliance/generate.ts) both use this.
+ */
+export function isPresumptiveNature(nature: string | null | undefined): boolean {
+  return nature === "presumptive_44ad" || nature === "presumptive_44ada";
+}
+
 export function calendarProfileFor(v: CalendarInputs, clientId: string): CalendarClientProfile {
   const gstReady = v.gst_registration === "registered" && !!v.gstin && validateGstin(v.gstin).ok;
   const services = [...new Set(v.services.map((s) => s.service_type))].filter((s) => s !== "gst" || gstReady);
@@ -688,7 +697,7 @@ export function calendarProfileFor(v: CalendarInputs, clientId: string): Calenda
     stateCode: effectiveStateCode(v),
     turnover: turnoverPaise(v.annual_turnover),
     taxAuditApplicable: v.tax_audit_decision,
-    isPresumptive: v.income_nature === "presumptive_44ad" || v.income_nature === "presumptive_44ada",
+    isPresumptive: isPresumptiveNature(v.income_nature),
     isOpc: false,
   };
 }

@@ -190,6 +190,8 @@ export function buildOnboardPayload(
       fy_end_month: Number(values.fy_end_month) || 3,
       annual_turnover: money(values.annual_turnover),
       turnover_fy: blank(values.turnover_fy),
+      // Kept so every later generation plans the same advance-tax instalments as the preview (§6.7).
+      income_nature: values.income_nature || null,
       // §6.6: keep a recorded choice only where it is honoured; otherwise derive from turnover.
       gst_scheme: values.gst_scheme_choice !== "auto" && decision.basis === "choice" ? values.gst_scheme_choice : null,
       tax_audit_applicable: indication ? (ctx.isPartner ? values.tax_audit_decision : "review") : null,

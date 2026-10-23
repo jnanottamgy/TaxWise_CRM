@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getGoToItems, getNav, getNewActions } from "@/lib/nav";
-import { APP_ROLES } from "@/lib/auth/roles";
+import { APP_ROLES, homePathFor } from "@/lib/auth/roles";
 import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
 
 /**
@@ -12,8 +12,10 @@ import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
 
 const ROOT = join(__dirname, "..", "..");
 
-/** The staff routes wave A ships (docs/CONVENTIONS.md §2): people, clients, Client 360, compliance, work, settings. */
+/** The staff routes wave A ships (docs/CONVENTIONS.md §2): home pages, people, clients, Client 360, compliance, work, settings. */
 const WAVE_A_ROUTES = [
+  "/dashboard",
+  "/my-day",
   "/profile",
   "/clients",
   "/clients/new",
@@ -39,6 +41,14 @@ describe("wave A navigation", () => {
   it("every wave A route has a page", () => {
     const missing = WAVE_A_ROUTES.filter((r) => !existsSync(pageFile(r)));
     expect(missing).toEqual([]);
+  });
+
+  it("every staff role lands on a real page after sign-in (§4.4), with its loading state", () => {
+    for (const role of ["partner", "manager", "employee"] as const) {
+      const home = homePathFor(role);
+      expect(existsSync(pageFile(home)), `${role}: ${home}`).toBe(true);
+      expect(existsSync(pageFile(home).replace(/page\.tsx$/, "loading.tsx")), `${role}: ${home} loading`).toBe(true);
+    }
   });
 
   it("every sidebar and Go to link for a wave A route resolves, for every role", () => {

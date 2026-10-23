@@ -44,7 +44,9 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ clientI
     if (user.role === "client") return json({ ok: false, error: "The compliance report is prepared by the firm. Your deadlines are on the portal's Deadlines page.", code: "forbidden" }, 403);
     if (user.mustChangePassword) return json({ ok: false, error: "Set your own password first.", code: "must_change_password" }, 403);
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (mfaRequiredFor(user.role) && toAal(aal?.currentLevel) !== "aal2") {
+    // The same gate as server actions and the file routes: required roles, and anyone who turned
+    // two-step sign-in on, must have verified this session (§12).
+    if (toAal(aal?.currentLevel) !== "aal2" && (mfaRequiredFor(user.role) || aal?.nextLevel === "aal2")) {
       return json({ ok: false, error: "Enter the code from your authenticator app first.", code: "mfa_required" }, 403);
     }
     if (!UUID.test(clientId)) return json({ ok: false, error: "That client doesn't exist.", code: "not_found" }, 404);

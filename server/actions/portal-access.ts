@@ -247,8 +247,9 @@ export const resendPortalInvite = defineAction(
       log("warn", "portal sessions not ended after a resend", { source: "action:clients.portal_resend", clientId: client.id, err });
     }
 
+    // The new password is already set: a failed stamp must not hide it from the person (§0.1 rule 5).
     const { error: stampError } = await ctx.supabase.from("clients").update({ portal_invited_at: new Date().toISOString() }).eq("id", client.id).eq("portal_user_id", profile.id);
-    throwIfDbError(stampError);
+    if (stampError) log("warn", "portal_invited_at not stamped after a resend", { source: "action:clients.portal_resend", userId: ctx.user.id, clientId: client.id, err: stampError });
 
     const neverSignedIn = !client.portal_last_seen_at;
     await ctx.audit({ event: "user_update", resourceType: "portal_user", resourceId: profile.id, action: "clients.portal_resend", details: { client_id: client.id, never_signed_in: neverSignedIn } });

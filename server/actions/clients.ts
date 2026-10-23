@@ -762,6 +762,7 @@ export const saveClientView = defineAction(
       .select("id")
       .single();
     throwIfDbError(error, { uniqueField: "name", uniqueMessage: "You already have a view with this name." });
+    await ctx.audit({ event: "data_update", resourceType: "saved_view", resourceId: data!.id, details: { page: "clients", name: input.name, shared } });
     return ok({ id: data!.id });
   },
 );
@@ -769,8 +770,9 @@ export const saveClientView = defineAction(
 export const deleteClientView = defineAction(
   { name: "clients.views.delete", schema: DeleteClientViewSchema, roles: STAFF_ROLES },
   async (input, ctx): Promise<ActionResult<{ id: string }>> => {
-    const { error } = await ctx.supabase.from("saved_views").delete().eq("id", input.id).eq("user_id", ctx.user.id);
+    const { data, error } = await ctx.supabase.from("saved_views").delete().eq("id", input.id).eq("user_id", ctx.user.id).select("id");
     throwIfDbError(error);
+    if (data?.length) await ctx.audit({ event: "data_delete", resourceType: "saved_view", resourceId: input.id, details: { page: "clients" } });
     return ok({ id: input.id });
   },
 );

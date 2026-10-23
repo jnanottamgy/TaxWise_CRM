@@ -227,6 +227,7 @@ export const addGridRow = defineAction(
       .select("id")
       .single();
     throwIfDbError(error, { uniqueMessage: "That row is already on this week." });
+    await ctx.audit({ event: "data_create", resourceType: "timesheet_week_row", resourceId: data!.id, details: { week_start: input.week_start, client_id: input.client_id, task_id: input.task_id } });
     return ok({ id: data!.id });
   },
 );
@@ -235,8 +236,9 @@ export const removeGridRow = defineAction(
   { name: "timesheet.grid.remove_row", schema: RemoveRowSchema, roles: STAFF_ROLES },
   async (input, ctx): Promise<ActionResult<{ id: string }>> => {
     const employeeId = me(ctx);
-    const { error } = await ctx.supabase.from("timesheet_week_rows").delete().eq("id", input.id).eq("employee_id", employeeId);
+    const { data, error } = await ctx.supabase.from("timesheet_week_rows").delete().eq("id", input.id).eq("employee_id", employeeId).select("id");
     throwIfDbError(error);
+    if (data?.length) await ctx.audit({ event: "data_delete", resourceType: "timesheet_week_row", resourceId: input.id });
     return ok({ id: input.id });
   },
 );
@@ -262,6 +264,7 @@ export const copyLastWeekRows = defineAction(
       .from("timesheet_week_rows")
       .insert(copy.map((r, i) => ({ employee_id: employeeId, week_start: input.week_start, client_id: r.client_id, task_id: r.task_id, billable: r.billable, sort_order: start + i })));
     throwIfDbError(error, { uniqueMessage: "Some of those rows are already on this week. Reload to see them." });
+    await ctx.audit({ event: "data_create", resourceType: "timesheet_week_row", action: "timesheet.grid.copy_last_week", details: { week_start: input.week_start, rows: copy.length } });
     return ok({ added: copy.length });
   },
 );

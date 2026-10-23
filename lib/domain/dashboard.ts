@@ -6,11 +6,14 @@
  *   - filing status by return type for the current month (filed, pending, overdue);
  *   - "at risk" clients (3+ overdue tasks, or receivables over 90 days);
  *   - "sent back to me": the task's latest status change is a reviewer's send-back;
- *   - overdue tasks by person; the setup checklist; the quotation conversion rate.
+ *   - overdue tasks by person; the setup checklist; the quotation conversion rate;
+ *   - receivable totals, at-risk clients from their rows, days waiting in a status, this week's
+ *     hours against the target, the practice-health list windows, and attendance so far today.
  */
 
-import { addMonths, compareDates, diffDays, fyStart, MONTH_ABBR, parseDateString, type DateString, type FinancialYear } from "@/lib/domain/fy";
+import { addMonths, compareDates, diffDays, fyStart, MONTH_ABBR, nowIST, parseDateString, type DateString, type FinancialYear } from "@/lib/domain/fy";
 import { fromPaise, sumPaise, type Paise } from "@/lib/domain/money";
+import { deriveAttendance, parseTimeOfDay, summariseDay, type AttendanceParams, type DaySession } from "@/lib/domain/attendance";
 
 // -------------------------------------------------------------------------------------------------
 // Receivables ageing
@@ -207,4 +210,202 @@ export function conversionRate(c: { accepted: number; rejected: number; expired:
 /** "3 days" waiting since a status change on `since` (an IST date), never negative. */
 export function daysSince(since: DateString, today: DateString): number {
   return Math.max(0, diffDays(today, since));
+}
+
+// -------------------------------------------------------------------------------------------------
+// Receivable totals (§7.2 Partner KPIs: outstanding; overdue receivables, amount and count)
+// -------------------------------------------------------------------------------------------------
+
+export type ReceivableTotals = { count: number; outstandingPaise: Paise; overdueCount: number; overduePaise: Paise };
+
+/** Outstanding and overdue (derived: Sent/Partially paid past the due date) receivables, summed in paise. */
+export function receivableTotals(rows: ReadonlyArray<{ outstandingPaise: Paise; isOverdue: boolean }>): ReceivableTotals {
+  const open = rows.filter((r) => r.outstandingPaise > 0);
+  const overdue = open.filter((r) => r.isOverdue);
+  return {
+    count: open.length,
+    outstandingPaise: sumPaise(open.map((r) => r.outstandingPaise)),
+    overdueCount: overdue.length,
+    overduePaise: sumPaise(overdue.map((r) => r.outstandingPaise)),
+  };
+}
+
+// -------------------------------------------------------------------------------------------------
+// At-risk clients, from their overdue tasks and their receivables
+// -------------------------------------------------------------------------------------------------
+
+export type AtRiskClient = {
+  clientId: string;
+  clientName: string;
+  overdueTasks: number;
+  /** Receivables more than 90 days after the invoice date (the ageing chart's 90+ bucket). */
+  receivablesOver90Paise: Paise;
+  reasons: AtRiskReason[];
+};
+
+/**
+ * Clients with 3+ overdue tasks, or receivables over 90 days (§7.2 Partner), worst first: both
+ * reasons, then the most overdue tasks, then the largest old balance, then by name.
+ */
+export function atRiskClients(
+  overdueTasks: ReadonlyArray<{ clientId: string; clientName: string | null }>,
+  receivables: ReadonlyArray<{ clientId: string; clientName: string | null; issueDate: DateString; outstandingPaise: Paise }>,
+  today: DateString,
+): AtRiskClient[] {
+  const byClient = new Map<string, { clientName: string; overdueTasks: number; old: Paise[] }>();
+  const entry = (id: string, name: string | null) => {
+    const cur = byClient.get(id) ?? { clientName: name ?? "", overdueTasks: 0, old: [] };
+    if (!cur.clientName && name) cur.clientName = name;
+    byClient.set(id, cur);
+    return cur;
+  };
+  for (const t of overdueTasks) entry(t.clientId, t.clientName).overdueTasks++;
+  for (const r of receivables) {
+    if (r.outstandingPaise > 0 && ageingBucket(diffDays(today, r.issueDate)) === "d90_plus") entry(r.clientId, r.clientName).old.push(r.outstandingPaise);
+  }
+  const out: AtRiskClient[] = [];
+  for (const [clientId, c] of byClient) {
+    const receivablesOver90Paise = sumPaise(c.old);
+    const reasons = atRiskReasons({ overdueTasks: c.overdueTasks, receivablesOver90Paise });
+    if (reasons.length) out.push({ clientId, clientName: c.clientName, overdueTasks: c.overdueTasks, receivablesOver90Paise, reasons });
+  }
+  return out.sort(
+    (a, b) =>
+      b.reasons.length - a.reasons.length ||
+      b.overdueTasks - a.overdueTasks ||
+      b.receivablesOver90Paise - a.receivablesOver90Paise ||
+      a.clientName.localeCompare(b.clientName),
+  );
+}
+
+// -------------------------------------------------------------------------------------------------
+// Waiting since a status (§7.2 Manager "Data awaited": days waiting)
+// -------------------------------------------------------------------------------------------------
+
+/** For each task, when it last moved into `status` (its latest change into it). */
+export function latestEntryInto(history: readonly StatusChange[], status: string): Map<string, StatusChange> {
+  const out = new Map<string, StatusChange>();
+  for (const h of history) {
+    if (h.to !== status) continue;
+    const prev = out.get(h.taskId);
+    if (!prev || h.at > prev.at) out.set(h.taskId, h);
+  }
+  return out;
+}
+
+// -------------------------------------------------------------------------------------------------
+// This week's hours against the target (§7.2 Employee)
+// -------------------------------------------------------------------------------------------------
+
+export type WeekHours = {
+  loggedMinutes: number;
+  targetMinutes: number;
+  /** The target for the working days up to and including today. */
+  expectedMinutes: number;
+  /** How far behind the days so far (0 when on track or ahead). */
+  behindMinutes: number;
+  /** Logged as a share of the week's target, 0–100 (null with no target this week). */
+  percent: number | null;
+};
+
+/**
+ * The week so far from the timesheet's own figures (the same per-day targets and day totals the
+ * timesheet shows, so the two never disagree): logged against the week's target, and against what
+ * the days up to today call for.
+ */
+export function weekHours(dates: readonly DateString[], dayTargets: readonly number[], dayTotals: readonly number[], today: DateString): WeekHours {
+  const loggedMinutes = dayTotals.reduce((a, b) => a + b, 0);
+  const targetMinutes = dayTargets.reduce((a, b) => a + b, 0);
+  const expectedMinutes = dates.reduce((sum, d, i) => (compareDates(d, today) <= 0 ? sum + (dayTargets[i] ?? 0) : sum), 0);
+  return {
+    loggedMinutes,
+    targetMinutes,
+    expectedMinutes,
+    behindMinutes: Math.max(0, expectedMinutes - loggedMinutes),
+    percent: targetMinutes > 0 ? Math.min(100, Math.round((loggedMinutes / targetMinutes) * 100)) : null,
+  };
+}
+
+// -------------------------------------------------------------------------------------------------
+// Practice health (§7.2 Partner). The UDIN, peer review and tax-audit ceiling rules themselves are in
+// lib/domain/ceiling.ts (udinStatus, peerReviewStatus, ceilingWarning); these are the list windows.
+// -------------------------------------------------------------------------------------------------
+
+/** SA 230: an audit file's assembly due date this close (or past) is "near". */
+export const ASSEMBLY_NEAR_DAYS = 14;
+/** DSCs, registrations and engagement letters ending this soon are listed. */
+export const EXPIRY_WINDOW_DAYS = 30;
+
+/** How many of `all` are not in `have` (e.g. active clients without a WhatsApp group). */
+export function countMissing(all: Iterable<string>, have: Iterable<string>): number {
+  const present = new Set(have);
+  let n = 0;
+  for (const id of new Set(all)) if (!present.has(id)) n++;
+  return n;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Attendance so far today (§7.2 Manager "Attendance today": present, late, absent, on leave)
+// -------------------------------------------------------------------------------------------------
+
+export type AttendanceSoFar = {
+  workingDay: boolean;
+  /** "10:15": someone not signed in by then counts as absent (the cover rule's no-show time). */
+  cutoff: string;
+  present: number;
+  late: number;
+  onLeave: number;
+  /** Not signed in by the cutoff. */
+  absent: number;
+  /** Not signed in yet, before the cutoff. */
+  notInYet: number;
+  total: number;
+};
+
+function clock(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Today's attendance while the day is running, from the day's sessions with the same rules the 11:30
+ * job applies once the day is over (lib/domain/attendance deriveAttendance, dayComplete false): On
+ * leave, Late login (first sign-in after start + grace), Present; no sign-in yet is "not in yet"
+ * until start + grace + the no-show minutes, then Absent (the Absent-without-cover rule, §4.7).
+ * Half day is only decided at the end of the day, so it never shows here. A non-working day counts
+ * nobody.
+ */
+export function attendanceSoFar(input: {
+  people: ReadonlyArray<{ id: string }>;
+  sessions: ReadonlyArray<DaySession & { employeeId: string }>;
+  onLeave: ReadonlySet<string>;
+  params: AttendanceParams;
+  isWorkingDay: boolean;
+  noShowAfterMinutes: number;
+  today: DateString;
+  now: Date;
+}): AttendanceSoFar {
+  const cutoffMinute = parseTimeOfDay(input.params.workDayStart) + input.params.lateGraceMinutes + input.noShowAfterMinutes;
+  const out: AttendanceSoFar = { workingDay: input.isWorkingDay, cutoff: clock(cutoffMinute), present: 0, late: 0, onLeave: 0, absent: 0, notInYet: 0, total: 0 };
+  if (!input.isWorkingDay) return out;
+  const sessionsBy = new Map<string, DaySession[]>();
+  for (const s of input.sessions) sessionsBy.set(s.employeeId, [...(sessionsBy.get(s.employeeId) ?? []), s]);
+  const pastCutoff = nowIST(input.now).minutesOfDay >= cutoffMinute;
+  for (const p of input.people) {
+    const day = summariseDay(sessionsBy.get(p.id) ?? [], input.today);
+    const status = deriveAttendance({
+      ...input.params,
+      firstActivity: day.firstActivity,
+      totalActiveMinutes: day.totalActiveMinutes,
+      isWorkingDay: true,
+      onApprovedLeave: input.onLeave.has(p.id),
+      dayComplete: false,
+    });
+    out.total++;
+    if (status === "on_leave") out.onLeave++;
+    else if (status === "late_login") out.late++;
+    else if (status === "present" || status === "half_day") out.present++;
+    else if (pastCutoff) out.absent++;
+    else out.notInYet++;
+  }
+  return out;
 }

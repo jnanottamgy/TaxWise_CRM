@@ -17,6 +17,7 @@ import {
   type StoredEvent,
 } from "@/lib/domain/statutory-calendar";
 import { fetchAll, loadComplianceEngine, loadServices, type ComplianceEngine, type Db } from "@/server/compliance/engine";
+import { isPresumptiveNature } from "@/lib/schemas/onboarding";
 
 /**
  * Deadline generation for one client (§7.7 "Generation", §6.7): the client's profile, its active
@@ -81,7 +82,7 @@ export async function loadClientCalendarFacts(db: Db, clientId: string, opts: { 
   const [client, services, agm, dins] = await Promise.all([
     db
       .from("clients")
-      .select("id, display_name, status, deleted_at, owner_employee_id, entity_type, gst_registration, gstin, state_code, gst_scheme, annual_turnover, tax_audit_applicable")
+      .select("id, display_name, status, deleted_at, owner_employee_id, entity_type, gst_registration, gstin, state_code, gst_scheme, annual_turnover, tax_audit_applicable, income_nature")
       .eq("id", clientId)
       .maybeSingle(),
     loadServices(db, { clientId, system: opts.system }),
@@ -125,6 +126,9 @@ export async function loadClientCalendarFacts(db: Db, clientId: string, opts: { 
       stateCode: stateCodeOf(c.gstin, c.state_code),
       turnover: toPaiseOrNull(c.annual_turnover),
       taxAuditApplicable: taxAudit(c.tax_audit_applicable),
+      // The onboarding wizard's "Income is earned from" (clients.income_nature, 0141): presumptive
+      // cases pay advance tax in one instalment, as the onboarding preview planned (§6.7).
+      isPresumptive: isPresumptiveNature(c.income_nature),
       agmDates,
       dins: dinList,
     },

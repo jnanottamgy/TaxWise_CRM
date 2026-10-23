@@ -44,7 +44,7 @@ import { OnboardingSuccess } from "@/components/clients/onboarding/onboarding-su
 import { useDeadlinePreview } from "@/components/clients/onboarding/use-deadline-preview"
 import { useChecklistUploads } from "@/components/clients/onboarding/use-checklist-uploads"
 import type { DuplicateState } from "@/components/clients/onboarding/duplicate-guard"
-import type { WizardSetup, WizardSource } from "@/components/clients/onboarding/types"
+import { draftKeyFor, type WizardSetup, type WizardSource } from "@/components/clients/onboarding/types"
 
 const STEP_INDEX: Record<OnboardingStepId, number> = Object.fromEntries(ONBOARDING_STEPS.map((s, i) => [s.id, i])) as Record<OnboardingStepId, number>
 /** Issues with no field of their own: shown in the step (and the alert), never via setError. */
@@ -74,9 +74,6 @@ function firstStepOf(paths: string[]): number | null {
   return best
 }
 
-export function draftKeyFor(source: WizardSource): string {
-  return source.kind === "new" ? "client-wizard:new" : `client-wizard:${source.kind}:${source.id}`
-}
 
 /**
  * The add-client wizard (§7.3.2) in its full-screen dialog: five steps that unlock in order with a
@@ -99,7 +96,7 @@ export function OnboardingWizard({ setup, initial, source, servicesLocked }: { s
   const control = f.control
   const values = useWatch({ control }) as OnboardingValues
   const isDirty = form.formState.isDirty
-  const draftKey = draftKeyFor(source)
+  const draftKey = draftKeyFor(source, setup.viewer.employeeId)
 
   const [step, setStep] = React.useState(0)
   const [suggestedCode, setSuggestedCode] = React.useState(setup.clientCode)

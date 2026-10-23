@@ -5,6 +5,7 @@ import { z } from "zod";
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
 import { ActionError, ok, type ActionResult } from "@/lib/result";
 import { formatDate } from "@/lib/format";
+import { logUnexpected } from "@/lib/log";
 import { compareDates, todayIST, type DateString } from "@/lib/domain/fy";
 import { applyOverride, removeOverride as unapplyOverride, type DueDateOverride, type OverridableEvent } from "@/lib/domain/statutory-calendar";
 import type { ComplianceStatus, ComplianceType, ComplianceWorkflow } from "@/lib/domain/enums";
@@ -488,7 +489,12 @@ export const addOverride = defineAction(
       await audit(ctx, "due_date_overrides", id, "law.override.applied", { moved: r.moved, mismatched: r.mismatched, via: r.viaDatabase ? "database" : "app" });
     } catch (err) {
       if (err instanceof ActionError) warnings.push(`The extension is saved, but the events didn't move: ${err.message}`);
-      else throw err;
+      else {
+        // The extension row is committed: an unexpected failure moving the events is a warning,
+        // never an error that would make the Partner enter the extension again (§0.1 rule 5).
+        const ref = logUnexpected(err, { source: "action:law.override.add:move", userId: ctx.user.id, role: ctx.user.role });
+        warnings.push(`The extension is saved, but the events didn't move. Remove it and add it again, or ask for help with Ref ${ref}.`);
+      }
     }
     if (compareDates(input.extended_due, todayIST()) < 0) {
       warnings.push(`The extended date (${formatDate(input.extended_due)}) has already passed: moved events still show as overdue.`);

@@ -29,3 +29,13 @@ export type WizardSource =
 
 /** A file picked for a checklist item in step 4, uploaded once the client exists. */
 export type QueuedFile = { itemKey: string; file: File }
+
+/**
+ * The wizard draft's key on this device: per person (§0.1 rule 15: nothing saved for one user is
+ * offered to another who signs in on the same browser; the draft holds fees and the client's
+ * details).
+ */
+export function draftKeyFor(source: WizardSource, viewerId: string | null): string {
+  const who = viewerId ?? "anyone"
+  return source.kind === "new" ? `client-wizard:${who}:new` : `client-wizard:${who}:${source.kind}:${source.id}`
+}

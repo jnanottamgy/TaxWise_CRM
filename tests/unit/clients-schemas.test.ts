@@ -37,6 +37,7 @@ import {
   type OnboardingValues,
   type PreviewEvent,
   type QuotationForOnboarding,
+  isPresumptiveNature,
 } from "@/lib/schemas/onboarding";
 
 const TODAY = "2026-10-23";
@@ -422,5 +423,17 @@ describe("checklist attachments (§5.8, §12)", () => {
     expect(sniffAttachment(pdf, "png").ok).toBe(false);
     expect(sniffAttachment(new Uint8Array([0x41, 0x2c, 0x42, 0x0a]), "csv").ok).toBe(true);
     expect(sniffAttachment(new Uint8Array([0x41, 0x00, 0x42]), "csv").ok).toBe(false);
+  });
+});
+
+describe("isPresumptiveNature (§6.6, §6.7; clients.income_nature)", () => {
+  it("is true for s.44AD and s.44ADA only", () => {
+    expect(isPresumptiveNature("presumptive_44ad")).toBe(true);
+    expect(isPresumptiveNature("presumptive_44ada")).toBe(true);
+    expect(isPresumptiveNature("business")).toBe(false);
+    expect(isPresumptiveNature("profession")).toBe(false);
+    expect(isPresumptiveNature("")).toBe(false);
+    expect(isPresumptiveNature(null)).toBe(false);
+    expect(isPresumptiveNature(undefined)).toBe(false);
   });
 });

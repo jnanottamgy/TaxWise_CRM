@@ -73,6 +73,25 @@ export const CallNoteSchema = z.object({
 });
 export type CallNoteInput = z.input<typeof CallNoteSchema>;
 
+const MONEY_SIDE_KIND = /^(lead|quotation|invoice|payment|receipt|credit_note|engagement_letter|fee|tds_credit|portal_payment_claim)/;
+
+/**
+ * Whether a hand-off or a logged note is about money, and the money-side prefix its timeline event
+ * gets (§4.1; mirrors is_money_message, 0043): the record it is about is on the money side
+ * (`invoice` → "invoice"), or it was written from a payment-reminder or quotation template
+ * ("payment", "quotation"). Null when it isn't about money. A money-side timeline event
+ * ("invoice_message_sent", "payment_message_sent") is never shown to Employees; a plain
+ * "message_sent" is, so a payment reminder logged without a related invoice must not use it: its
+ * subject names the invoice.
+ */
+export function handoffMoneyKind(relatedType: string | null | undefined, templateType: string | null | undefined): string | null {
+  const related = relatedType?.trim().toLowerCase() ?? "";
+  if (related && MONEY_SIDE_KIND.test(related)) return related;
+  if (templateType === "payment_reminder") return "payment";
+  if (templateType === "quotation") return "quotation";
+  return null;
+}
+
 /** The Communication tab's name for each channel (§5.1 message_channel). */
 export const MESSAGE_CHANNEL_LABEL: Record<string, string> = {
   email: "Email",

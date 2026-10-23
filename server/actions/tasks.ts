@@ -52,6 +52,7 @@ import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 import { logActivity, logEmployeeActivity } from "@/server/activity";
 import type { ServerSupabase } from "@/lib/supabase/server";
+import { log } from "@/lib/log";
 
 /**
  * Task mutations (§7.6): create and edit with the assignment check (§7.6.2), accept / decline
@@ -84,6 +85,19 @@ async function taskBrief(supabase: ServerSupabase, id: string): Promise<TaskBrie
     .maybeSingle();
   throwIfDbError(error);
   return data ? (data as unknown as TaskBrief) : null;
+}
+
+/**
+ * taskBrief once the save has committed: a failed read must never turn a saved change into an
+ * error (§0.1 rule 5); it only costs the client's name in the notice and timeline line.
+ */
+async function briefAfterSave(ctx: ActionContext, id: string): Promise<TaskBrief | null> {
+  try {
+    return await taskBrief(ctx.supabase, id);
+  } catch (err) {
+    log("warn", "task read after a saved change failed", { source: "action:tasks", userId: ctx.user.id, role: ctx.user.role, taskId: id, err });
+    return null;
+  }
 }
 
 async function employeeName(supabase: ServerSupabase, id: string | null): Promise<string | null> {
@@ -189,8 +203,15 @@ export const createTask = defineAction(
       },
     });
 
-    const brief = await taskBrief(ctx.supabase, r.id);
-    if (input.assigned_employee_id && brief) {
+    const brief = (await briefAfterSave(ctx, r.id)) ?? {
+      id: r.id,
+      task_number: r.task_number,
+      title: input.title,
+      client_id: input.client_id,
+      client_name: null,
+      due_date: input.due_date,
+    };
+    if (input.assigned_employee_id) {
       ctx.after("Tell the assignee", () => notifyAssigned(brief, input.assigned_employee_id!, ctx.user.fullName), "The assignee wasn't notified. Tell them about the task.");
     }
     ctx.after("Add the task to the client's timeline", async () => {
@@ -280,8 +301,15 @@ export const updateTask = defineAction(
     });
 
     if (assigneeChanged && input.assigned_employee_id) {
-      const brief = await taskBrief(ctx.supabase, input.id);
-      if (brief) ctx.after("Tell the new assignee", () => notifyAssigned(brief, input.assigned_employee_id!, ctx.user.fullName), "The new assignee wasn't notified. Tell them about the task.");
+      const brief = (await briefAfterSave(ctx, input.id)) ?? {
+        id: input.id,
+        task_number: before.task_number,
+        title: input.title,
+        client_id: input.client_id,
+        client_name: null,
+        due_date: input.due_date,
+      };
+      ctx.after("Tell the new assignee", () => notifyAssigned(brief, input.assigned_employee_id!, ctx.user.fullName), "The new assignee wasn't notified. Tell them about the task.");
     }
     if (assigneeChanged || dueChanged) {
       ctx.after("Add the change to the client's timeline", async () => {
@@ -508,7 +536,7 @@ export const changeTaskStatus = defineAction(
     throwIfDbError(error);
     const r = data as unknown as StatusResult;
     await ctx.audit({ event: "data_update", resourceType: "task", resourceId: r.task_id, details: { from: r.from_status, to: r.to_status, reason: r.reason } });
-    const brief = await taskBrief(ctx.supabase, r.task_id);
+    const brief = await briefAfterSave(ctx, r.task_id);
     afterStatusChange(ctx, r, brief?.client_name ?? null);
     return ok({ status: r.to_status });
   },
@@ -560,7 +588,7 @@ export const fileTask = defineAction(
         if (attachError) throw attachError;
       });
     }
-    const brief = await taskBrief(ctx.supabase, r.task_id);
+    const brief = await briefAfterSave(ctx, r.task_id);
     const filingNote =
       input.mode === "record"
         ? [input.filing_type, input.period, input.acknowledgement_no ? `ARN/ack ${input.acknowledgement_no}` : null].filter(Boolean).join(" · ")
@@ -745,6 +773,7 @@ export const saveWorkView = defineAction(
       .select("id")
       .single();
     throwIfDbError(error, { uniqueField: "name", uniqueMessage: "You already have a view with this name." });
+    await ctx.audit({ event: "data_update", resourceType: "saved_view", resourceId: data!.id, details: { page: "work", name: input.name, shared } });
     return ok({ id: data!.id });
   },
 );
@@ -752,8 +781,9 @@ export const saveWorkView = defineAction(
 export const deleteWorkView = defineAction(
   { name: "tasks.views.delete", schema: DeleteViewSchema, roles: STAFF_ROLES },
   async (input, ctx): Promise<ActionResult<{ id: string }>> => {
-    const { error } = await ctx.supabase.from("saved_views").delete().eq("id", input.id).eq("user_id", ctx.user.id);
+    const { data, error } = await ctx.supabase.from("saved_views").delete().eq("id", input.id).eq("user_id", ctx.user.id).select("id");
     throwIfDbError(error);
+    if (data?.length) await ctx.audit({ event: "data_delete", resourceType: "saved_view", resourceId: input.id, details: { page: "work" } });
     return ok({ id: input.id });
   },
 );

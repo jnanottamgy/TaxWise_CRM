@@ -665,10 +665,12 @@ export const resetTwoStepSignIn = defineAction(
     const removed = await resetTwoStep(person.profile_id);
     await ctx.audit({ event: "permission_change", resourceType: "employee", resourceId: person.id, action: "people.reset_two_step", details: { user: person.profile_id, factors_removed: removed } });
     const userId = person.profile_id;
+    // A "warning", not "security_alert": insert_notifications (0101) refuses security alerts from a
+    // signed-in session (only the system raises them), so that type would never reach the person.
     ctx.after("Tell them to set it up again", () =>
       notify({
         to: { userIds: [userId] },
-        type: "security_alert",
+        type: "warning",
         title: "Your two-step sign-in was reset",
         body: `${ctx.user.fullName} reset your two-step sign-in. Set up your authenticator app again when you next sign in.`,
         linkUrl: "/profile",
