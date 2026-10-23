@@ -179,7 +179,7 @@ export const SAMPLE_TEMPLATE_VALUES: Readonly<Record<TemplateVariable, string>> 
   client_name: "Sample Traders Pvt Ltd",
   client_code: "TW-C-0001",
   contact_name: "Priya",
-  service_type: "GST",
+  service_type: "GST returns", // as live drafts name it (SERVICE_TYPE_LABELS.gst)
   compliance_type: "GSTR-3B",
   period: "Sep 2026",
   due_date: "20 Oct 2026",

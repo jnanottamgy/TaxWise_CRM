@@ -17,6 +17,7 @@ import type { TaskListRow } from "@/lib/data/tasks"
 import { exportTasks } from "@/server/actions/tasks"
 import { BulkDialog, type BulkKind } from "@/components/tasks/bulk-dialog"
 import { ChecklistCell, PersonCell, TimeCell, downloadBase64 } from "@/components/tasks/task-ui"
+import { BulkReminderLauncher } from "@/components/bulk-queue"
 import type { StaffPick } from "@/components/tasks/task-form"
 
 /**
@@ -179,6 +180,8 @@ export function TasksTable({
                     <FlagIcon aria-hidden="true" />
                     Priority
                   </Button>
+                  {/* §7.13.2 bulk reminders: one WhatsApp draft per Data awaited task, sent by a person. */}
+                  <DataAwaitedReminder ids={selectedIds} rows={rows} />
                 </>
               )
             : undefined
@@ -200,5 +203,20 @@ export function TasksTable({
         />
       ) : null}
     </>
+  )
+}
+
+/** The selected tasks that are waiting on the client (Data awaited); the reminder asks for what's missing. */
+function DataAwaitedReminder({ ids, rows }: { ids: string[]; rows: TaskListRow[] }) {
+  const selected = new Set(ids)
+  const waiting = rows.filter((r) => selected.has(r.id) && r.status === "data_awaited").map((r) => r.id)
+  return (
+    <BulkReminderLauncher
+      source={waiting.length ? { kind: "tasks", ids: waiting } : { kind: "tasks", ids }}
+      label={waiting.length && waiting.length < ids.length ? `Remind ${waiting.length} on WhatsApp` : "Remind on WhatsApp"}
+      title="Ask for the data on WhatsApp"
+      disabled={waiting.length === 0}
+      disabledReason="Select tasks in Data awaited: the reminder asks the client for what's still missing."
+    />
   )
 }

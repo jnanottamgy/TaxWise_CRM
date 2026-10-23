@@ -192,11 +192,22 @@ async function invoice(s: Session, by: (typeof U)[keyof typeof U], opts: { statu
   const total = opts.total ?? 11800;
   const taxable = Math.round((total / 1.18) * 100) / 100;
   const half = Math.round(((total - taxable) / 2) * 100) / 100;
-  return s.value<string>(
+  const status = opts.status ?? "draft";
+  // A session creates invoices as drafts (0190): an issued one is a draft issued through issue_invoice.
+  const id = await s.value<string>(
     `insert into invoices (client_id, issue_date, due_date, status, place_of_supply_code, taxable_amount, cgst_amount, sgst_amount, total_amount, created_by)
      values ($1, '2026-10-01', '2026-10-16', $2::invoice_status, '29', $3, $4, $4, $5, $6) returning id`,
-    [C.A, opts.status ?? "draft", taxable, half, total, by.id],
+    [C.A, status === "sent" ? "draft" : status, taxable, half, total, by.id],
   );
+  // An unissued invoice carries the line its totals come from (0190: it is issued only when they match).
+  await s.exec("insert into invoice_items (invoice_id, description, sac_code, quantity, rate, amount, tax_rate) values ($1, 'Professional fees', '998231', 1, $2, $2, 18)", [id, taxable]);
+  if (status === "sent") await issueInvoice(s, id);
+  return id;
+}
+
+/** Issues a draft the way the app does (issue_invoice: number, snapshots, Rule 46 checks). */
+async function issueInvoice(s: Session, id: string): Promise<void> {
+  await s.value("select public.issue_invoice($1, (select updated_at from invoices where id = $1), null)", [id]);
 }
 
 const approvalOf = (s: Session, id: string) =>
@@ -255,7 +266,7 @@ describe("invoice approval gate (§4.1 'Raise an invoice above the approval limi
       expect(await s.exec("update invoices set approved_by = $2, approved_at = now(), status = 'draft' where id in ($1, $3)", [id, U.P1.id, other])).toBe(2);
       await s.as(U.M1);
       expect(userMessage(await s.fails("update invoices set total_amount = 118000, taxable_amount = 100000, cgst_amount = 9000, sgst_amount = 9000 where id = $1", [other]))).toMatch(/approved/);
-      expect(await s.exec("update invoices set status = 'sent' where id = $1", [id])).toBe(1);
+      await issueInvoice(s, id);
       expect(await s.value("select invoice_number is not null from invoices where id = $1", [id])).toBe(true);
     });
   });
@@ -276,7 +287,8 @@ describe("invoice approval gate (§4.1 'Raise an invoice above the approval limi
       await s.exec("update firm_settings set invoice_approval_limit = 100");
       await s.as(U.M1);
       expect(await s.exec("update invoices set notes = 'Thanks' where id = $1", [free])).toBe(1);
-      expect(await s.exec("update invoices set status = 'sent' where id = $1", [free])).toBe(1);
+      await issueInvoice(s, free);
+      expect((await approvalOf(s, free)).status).toBe("sent");
     });
   });
 });
@@ -286,11 +298,17 @@ describe("invoice approval gate (§4.1 'Raise an invoice above the approval limi
 // -------------------------------------------------------------------------------------------------
 
 async function quotation(s: Session, by: (typeof U)[keyof typeof U], opts: { total?: number; status?: string } = {}): Promise<string> {
-  return s.value<string>(
-    `insert into quotations (client_id, client_name, client_email, valid_until, issue_date, created_by, subtotal, tax_amount, total, status)
-     values ($1, 'Alpha Traders', 'alpha@example.com', '2026-12-31', '2026-10-22', $2, $3, 0, $3, $4::quotation_status) returning id`,
-    [C.A, by.id, opts.total ?? 11800, opts.status ?? "draft"],
+  // A quotation starts as a Draft and its totals are its lines' (0190), so the helper adds one line
+  // (no GST) worth the total, and touches the draft so the totals follow it.
+  const id = await s.value<string>(
+    `insert into quotations (client_id, client_name, client_email, valid_until, issue_date, created_by)
+     values ($1, 'Alpha Traders', 'alpha@example.com', '2026-12-31', '2026-10-22', $2) returning id`,
+    [C.A, by.id],
   );
+  await s.exec("insert into quotation_items (quotation_id, description, quantity, unit_price, tax_rate, tax_amount, total) values ($1, 'Annual compliance', 1, $2, 0, 0, 0)", [id, opts.total ?? 11800]);
+  await s.exec("update quotations set notes = 'Fees as discussed' where id = $1", [id]);
+  if (opts.status && opts.status !== "draft") await s.exec("update quotations set status = $2::quotation_status where id = $1", [id, opts.status]);
+  return id;
 }
 
 describe("quotation approval gate (§4.1 'Send a quotation': Manager only under the limit, else held)", () => {
@@ -316,7 +334,7 @@ describe("quotation approval gate (§4.1 'Send a quotation': Manager only under 
       expect(userMessage(await s.fails(
         `insert into quotations (client_name, client_email, valid_until, created_by, total, status) values ('X', 'x@example.com', '2026-12-31', $1, 100, 'sent')`,
         [U.M1.id],
-      ))).toMatch(/over the quotation approval limit/);
+      ))).toMatch(/over the quotation approval limit|starts as a draft/);
       expect(await s.exec("update quotations set status = 'pending_approval' where id = $1", [id])).toBe(1);
       await s.as(U.P1);
       expect(await s.exec("update quotations set status = 'approved', approved_by = $2, approved_at = now() where id = $1", [id, U.P1.id])).toBe(1);

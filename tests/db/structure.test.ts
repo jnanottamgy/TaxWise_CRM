@@ -31,7 +31,13 @@ const DEFINER_VIEWS = [
   "client_whatsapp_groups_public",
   "employee_cost_rates",
   "employee_directory",
+  // The portal's windows (0154, 0175): is_client() and the signed-in client's own rows only.
+  "portal_compliance_events",
+  "portal_credit_notes",
+  "portal_filing_records",
+  "portal_invoice_items",
   "portal_invoices",
+  "portal_messages",
   "portal_my_client",
   "portal_payment_receipts",
 ];
@@ -142,7 +148,12 @@ describe("views", () => {
          order by 1, 2`,
       ),
     );
-    expect(cols).toEqual([{ table_name: "employee_cost_rates", column_name: "cost_rate_per_hour" }]);
+    // retainer_draft_queue (0161) is security_invoker over Partner/Manager-only tables (retainer
+    // drafts, client_services): Employees and clients read no row of it (matrix.test.ts MONEY_WAVE_B).
+    expect(cols).toEqual([
+      { table_name: "employee_cost_rates", column_name: "cost_rate_per_hour" },
+      { table_name: "retainer_draft_queue", column_name: "billing_frequency" },
+    ]);
   });
 });
 

@@ -21,6 +21,7 @@ import { COVER_REASON_LABELS, ExtendCoverSchema, ReturnNoteSchema } from "@/lib/
 import { endCover, extendCover, loadCoverFormContext, saveReturnNote } from "@/server/actions/covers"
 import { DateTimeField } from "@/components/covers/date-time-field"
 import { cn } from "@/lib/utils"
+import { refreshDesktopContext } from "@/components/shell/use-desktop"
 
 const STATE: Record<CoverState, { label: string; tone: "success" | "info" | "muted"; meaning: string }> = {
   in_force: { label: "In force", tone: "success", meaning: "In force: the cover person works on these clients now. Access ends by itself at Until." },
@@ -167,6 +168,7 @@ function ExtendCoverDialog({ cover, onOpenChange }: { cover: CoverRow; onOpenCha
     successMessage: "Cover extended.",
     onSuccess: () => {
       onOpenChange(false)
+      refreshDesktopContext()
       router.refresh()
     },
   })
@@ -228,6 +230,7 @@ function EndCoverDialog({ cover, imBack, onOpenChange }: { cover: CoverRow; imBa
         }
         for (const w of r.warnings ?? []) toast.warning(w, { duration: 12_000 })
         toast.success("Cover ended.")
+        refreshDesktopContext()
         router.refresh()
       }}
     />

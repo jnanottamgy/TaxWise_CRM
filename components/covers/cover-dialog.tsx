@@ -20,6 +20,7 @@ import type { CoverClientRow } from "@/lib/data/covers"
 import { grantCover, loadCoverFormContext, loadPersonClients, type CoverFormContext } from "@/server/actions/covers"
 import { DateTimeField } from "@/components/covers/date-time-field"
 import { cn } from "@/lib/utils"
+import { refreshDesktopContext } from "@/components/shell/use-desktop"
 
 export type CoverTarget =
   | { kind: "client"; clientId: string; clientName: string; ownerEmployeeId: string | null; ownerName: string | null }
@@ -91,6 +92,7 @@ export function CoverDialog({
     onSuccess: () => {
       onOpenChange(false)
       onDone?.()
+      refreshDesktopContext()
       router.refresh()
     },
   })

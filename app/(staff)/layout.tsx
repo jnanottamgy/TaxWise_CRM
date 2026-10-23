@@ -12,6 +12,8 @@ import { ShellUnavailable } from "@/components/shell/shell-unavailable";
 import { StaffShell } from "@/components/shell/staff-shell";
 import { TimerPanel } from "@/components/timesheet/timer-panel";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
+import { DesktopDownloadHandler } from "@/components/whatsapp/desktop-download-handler";
+import { DesktopContextSync } from "@/components/whatsapp/desktop-context-sync";
 
 /**
  * The firm's app shell (§3.3). The guard runs first and only redirects: no session → /login, no
@@ -58,6 +60,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       timerPanel={<TimerPanel user={user} />}
     >
       <PresenceHeartbeat />
+      {/* TaxWise Desktop only: context after sign-in, and files saved from the WhatsApp panel (§7.25.6). */}
+      <DesktopContextSync userId={user.id} />
+      <DesktopDownloadHandler />
       {children}
     </StaffShell>
   );

@@ -9,7 +9,7 @@
  *   - desktop device tables are Partner/Manager only.
  */
 import { describe, expect, it } from "vitest";
-import { C, F, SQLSTATE, U, setupTestDatabase, userMessage, type Session, type TestUser } from "./helpers";
+import { C, F, SQLSTATE, U, fid, setupTestDatabase, userMessage, type Session, type TestUser } from "./helpers";
 
 const db = setupTestDatabase("clients");
 
@@ -441,10 +441,13 @@ describe("portal isolation (§7.22, §14 'a client can never read another client
     it(`${user.key} sees only its own client in every portal surface`, async () => {
       await db.asRole(user, async (s) => {
         expect((await s.rows<{ id: string }>("select id from portal_my_client")).map((r) => r.id)).toEqual([own]);
-        for (const t of ["portal_invoices", "portal_payment_claims", "compliance_events", "filing_records", "documents", "document_requests", "messages"]) {
+        for (const t of ["portal_invoices", "portal_payment_claims", "portal_compliance_events", "portal_filing_records", "portal_messages", "documents", "document_requests", "messages"]) {
           const ids = new Set((await s.rows<{ client_id: string }>(`select client_id from ${t}`)).map((r) => r.client_id));
           expect(ids, t).toEqual(new Set([own]));
         }
+        // Since 0175 the portal reads compliance only through its views; the base tables show nothing.
+        expect(await s.value<number>("select count(*)::int from compliance_events")).toBe(0);
+        expect(await s.value<number>("select count(*)::int from filing_records")).toBe(0);
         expect(await s.value<number>("select count(*)::int from portal_payment_receipts r join portal_invoices i on i.id = r.invoice_id where i.client_id = $1", [other])).toBe(0);
         expect(await s.value<boolean>("select can_see_client($1)", [other])).toBe(false);
         expect(await s.value<boolean>("select can_see_client($1)", [own])).toBe(true);
@@ -453,11 +456,25 @@ describe("portal isolation (§7.22, §14 'a client can never read another client
   }
 
   it("portal users get only what the firm shares: statutory deadlines, shareable filings and documents, the portal channel", async () => {
-    await db.asRole(U.CA, async (s) => {
-      expect(await s.rows("select is_statutory from compliance_events")).toEqual([{ is_statutory: true }]);
-      expect(await s.rows("select shareable_with_client from filing_records")).toEqual([{ shareable_with_client: true }]);
+    await db.asSuper(async (s) => {
+      // Attach an acknowledgement to both of A's filings: only the shareable one may download.
+      await s.exec("update filing_records set document_id = $2 where client_id = $1 and shareable_with_client", [C.A, F.docShared("A")]);
+      await s.exec("update filing_records set document_id = $2 where client_id = $1 and not shareable_with_client", [C.A, F.docPrivate("A")]);
+      await s.as(U.CA);
+      // Statutory deadlines only: the firm's internal follow-up never reaches the portal.
+      expect(await s.value<number>("select count(*)::int from portal_compliance_events where id = $1", [fid("ce:A:ops")])).toBe(0);
+      expect((await s.rows<{ id: string }>("select id from portal_compliance_events")).map((r) => r.id)).toEqual([fid("ce:A:stat")]);
+      // Every filing shows (form, period, acknowledgement number); the document only when shareable.
+      const filings = await s.rows<{ filing_type: string; acknowledgement_document_id: string | null }>(
+        "select filing_type, acknowledgement_document_id from portal_filing_records order by filing_type",
+      );
+      expect(filings).toEqual([
+        { filing_type: "GSTR-1", acknowledgement_document_id: null },
+        { filing_type: "GSTR-3B", acknowledgement_document_id: F.docShared("A") },
+      ]);
       expect((await s.rows<{ id: string }>("select id from documents")).map((r) => r.id)).toEqual([F.docShared("A")]);
       expect(await s.rows("select channel::text from messages")).toEqual([{ channel: "portal" }]);
+      expect((await s.rows<{ id: string }>("select id from portal_messages")).map((r) => r.id)).toEqual([fid("msg:A:portal")]);
       expect(await s.value<number>("select count(*)::int from clients")).toBe(0); // internal notes stay internal
       expect(await s.value<number>("select count(*)::int from client_timeline_events")).toBe(0);
       expect(await s.value<number>("select count(*)::int from tasks")).toBe(0);

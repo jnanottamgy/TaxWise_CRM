@@ -4,6 +4,7 @@ import { readParam, type SearchParamsInput } from "@/components/app/data-table/p
 import { VAULT_PARAM, resolveDocumentSubtab } from "@/lib/schemas/documents"
 import { DocumentsTabSkeleton } from "@/components/documents/documents-tab-skeleton"
 import { ClientComplianceSkeleton } from "@/components/compliance/client-compliance-skeleton"
+import { CommunicationTabSkeleton } from "@/components/comms/thread-skeleton"
 
 /**
  * What a Client 360 tab shows while it streams in (§3.4): its own shape at its real size, real
@@ -44,6 +45,26 @@ export function TabSkeleton({ tab, seesMoney, searchParams }: { tab: ClientTabId
         <div className="flex flex-col gap-4">
           <SkeletonTable headers={["Service", "Frequency", "Next due", "Agreed fee", "Billing", "Next invoice"]} rows={4} />
           <SkeletonCard title="Fee history" rows={4} />
+        </div>
+      )
+    case "communication":
+      return <CommunicationTabSkeleton />
+    case "billing":
+      // Partners and Managers only (the tab isn't offered to anyone else).
+      return (
+        <div className="flex flex-col gap-4">
+          <SkeletonKpiStrip labels={["Outstanding", "Overdue", "Invoiced", "Received"]} />
+          <SkeletonTable headers={["Invoice", "Date", "Due", "Total", "Outstanding", "Status"]} rows={5} />
+          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
+            <SkeletonCard title="Receipts" rows={4} />
+            <SkeletonCard title="TDS credits" rows={4} />
+          </div>
+        </div>
+      )
+    case "whatsapp":
+      return (
+        <div className="flex flex-col gap-4">
+          <SkeletonCard title="WhatsApp group" rows={6} />
         </div>
       )
     case "timeline":

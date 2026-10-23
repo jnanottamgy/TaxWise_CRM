@@ -20,13 +20,14 @@ import { GRID_STATUS_FILTERS, GRID_STATUS_LABELS, UNASSIGNED, returnTypeByKey, t
 import { getFilingsGrid, listOwnerOptions } from "@/lib/data/compliance"
 import { loadComplianceEngine, loadHintContext } from "@/server/compliance/engine"
 import { firmCoverageGaps } from "@/server/compliance/coverage-gaps"
-import { columnCounts, focusColumn, gridColumns } from "@/components/compliance/logic/grid"
+import { columnCounts, eventsInColumn, focusColumn, gridColumns } from "@/components/compliance/logic/grid"
 import { withParams } from "@/components/compliance/logic/urls"
 import { FilingsGrid } from "@/components/compliance/filings-grid"
 import { GridControls } from "@/components/compliance/grid-controls"
 import { StatusLegend } from "@/components/compliance/status-mark"
 import { FirmGapsReport } from "@/components/compliance/coverage-gaps"
 import { EventSheetSlot } from "@/components/compliance/event-sheet-slot"
+import { BulkReminderLauncher } from "@/components/bulk-queue"
 
 export const metadata: Metadata = { title: "Filings" }
 
@@ -157,6 +158,13 @@ export default async function FilingsPage({ searchParams }: { searchParams: Prom
     const focus = idx >= 0 ? idx : focusColumn(counts, today)
     const c = counts[focus]
     const col = columns[focus]
+    // §7.13.2 bulk reminders for the focused period: this page's returns not started or waiting on documents.
+    const remindIds = col
+      ? eventsInColumn(rt.layout, fy, columns, g.events, focus)
+          .filter((e) => e.status === "pending" && (e.workflow_status === "not_started" || e.workflow_status === "documents_awaited"))
+          .map((e) => e.id)
+          .slice(0, 200)
+      : []
     const kpis: KpiItem[] = col && c
       ? [
           { label: `Filed · ${col.name}`, value: <span>{formatCount(c.done)}<span className="text-text-muted"> /{formatCount(c.total)}</span></span>, sub: c.total ? `${Math.round((c.done / c.total) * 100)}% of ${c.total === 1 ? "the return" : "the returns"} due` : "Nothing due" },
@@ -202,7 +210,18 @@ export default async function FilingsPage({ searchParams }: { searchParams: Prom
         <>
           {kpis.length ? <KpiStrip items={kpis} lead className="mb-4" aria-label={`Summary for ${col?.name ?? "the period"}`} /> : null}
           {annualHint}
-          <StatusLegend className="mb-3" />
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <StatusLegend />
+            {col ? (
+              <BulkReminderLauncher
+                source={remindIds.length ? { kind: "compliance_events", ids: remindIds } : { kind: "compliance_due" }}
+                label={remindIds.length ? `Remind ${formatCount(remindIds.length)} on WhatsApp` : "Remind on WhatsApp"}
+                title={`${rt.label} · ${col.name}: ask for the data`}
+                disabled={remindIds.length === 0}
+                disabledReason={`Nothing for ${col.name} on this page is waiting on the client.`}
+              />
+            ) : null}
+          </div>
           <FilingsGrid
             layout={rt.layout}
             fy={fy}

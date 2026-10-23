@@ -69,6 +69,25 @@ const MONEY = [
   "audit_engagements",
 ];
 
+/**
+ * Wave B money relations (§4.1): leads and quotations lists, acceptance register, collections,
+ * retainer billing, TDS credits, GST annual returns. Partner/Manager only, so nobody else reads a
+ * row (the Partner/Manager side is covered by each module's own tests: growth, invoices, collections).
+ */
+const MONEY_WAVE_B = [
+  "leads_list",
+  "quotations_list",
+  "client_acceptances_list",
+  "collection_forecast",
+  "retainer_draft_queue",
+  "retainer_runs",
+  "retainer_drafts",
+  "tds_credit_register",
+  "tds_statement_imports",
+  "tds_statement_matches",
+  "gst_annual_returns",
+];
+
 /** Firm configuration written by Partners only (§4.1 settings, §5.12 law tables, §7.15.4 quality). */
 const PARTNER_WRITES = [
   "firm_settings",
@@ -146,7 +165,8 @@ describe("users without a valid role", () => {
       const rels = await db.asSuper(relations);
       const counts = await countsAs(U[key], rels);
       const nonZero = Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0));
-      expect(nonZero).toEqual({ app_meta: 1, employees: 1, notifications: 1, profiles: 1 });
+      // inbox_notifications (0172) is the caller's own notifications with needs_action: the same row.
+      expect(nonZero).toEqual({ app_meta: 1, employees: 1, notifications: 1, inbox_notifications: 1, profiles: 1 });
     });
   }
 });
@@ -214,8 +234,9 @@ describe("client-owned rows", () => {
       "portal_invoices",
       "portal_payment_receipts",
       "portal_payment_claims",
-      "compliance_events",
-      "filing_records",
+      "portal_compliance_events",
+      "portal_filing_records",
+      "portal_messages",
       "documents",
       "document_requests",
       "messages",
@@ -224,6 +245,16 @@ describe("client-owned rows", () => {
       const rels = (await db.asSuper(relations)).filter((r) => expected.includes(r.name));
       const counts = await countsAs(U[key], rels);
       expect(Object.entries(counts).filter(([, n]) => n === 0).map(([t]) => `${key}:${t}`)).toEqual([]);
+    }
+  });
+
+  it("portal users read compliance only through the portal views, never the base tables (0175)", async () => {
+    const base: Rel[] = [
+      { name: "compliance_events", kind: "table", hasClientId: true },
+      { name: "filing_records", kind: "table", hasClientId: true },
+    ];
+    for (const key of ["CA", "CB"] as const) {
+      expect(await countsAs(U[key], base), key).toEqual({ compliance_events: 0, filing_records: 0 });
     }
   });
 
@@ -243,8 +274,15 @@ describe("client-owned rows", () => {
     all.client_credentials_list = base.client_credentials;
     all.client_services_public = base.client_services;
     all.client_whatsapp_groups_public = base.client_whatsapp_groups;
+    // message_threads (0173) is one row per live client with messages, for staff (is_staff()).
+    all.message_threads = await db.asSuper((s) =>
+      s.value<number>("select count(distinct m.client_id)::int from messages m join clients c on c.id = m.client_id where c.deleted_at is null"),
+    );
+    // inbox_action_items (0172) is the caller's own action list (their approvals, reviews, tasks to
+    // accept), not a client-owned table; comms.test.ts checks who gets which item.
+    const scoped = rels.filter((r) => r.name !== "inbox_action_items");
     for (const key of ["P1", "P2", "M1", "M2"] as const) {
-      const counts = await countsAs(U[key], rels);
+      const counts = await countsAs(U[key], scoped);
       const short = Object.entries(counts)
         .filter(([t, n]) => n !== all[t])
         .map(([t, n]) => `${t}: ${n} of ${all[t]}`);
@@ -266,7 +304,8 @@ describe("money and engagement fees (§4.1 'never, anywhere' for Employees)", ()
 
   for (const key of LIMITED_USERS) {
     it(`${key} reads no money row at all`, async () => {
-      const rels = (await db.asSuper(relations)).filter((r) => MONEY.includes(r.name) || r.name === "employee_cost_rates");
+      const rels = (await db.asSuper(relations)).filter((r) => MONEY.includes(r.name) || MONEY_WAVE_B.includes(r.name) || r.name === "employee_cost_rates");
+      expect(rels.filter((r) => MONEY_WAVE_B.includes(r.name)).length, "every wave B money relation exists").toBe(MONEY_WAVE_B.length);
       const counts = await countsAs(U[key], rels);
       expect(Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0))).toEqual({});
     });

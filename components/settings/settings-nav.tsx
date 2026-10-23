@@ -3,16 +3,18 @@
 import Link from "next/link"
 import { useSelectedLayoutSegment } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { SETTINGS_SECTIONS } from "@/lib/schemas/settings"
+import { SETTINGS_SECTIONS, type SettingsSlug } from "@/lib/schemas/settings"
 
 /**
  * The settings section list (§7.21). One view per section (taste §8.2): each link opens its own
  * page with the section's name as the h1. A vertical list beside the content on wide screens; a
- * row that scrolls sideways inside itself on narrow ones (never the page).
+ * row that scrolls sideways inside itself on narrow ones (never the page). `only` limits it to the
+ * sections the viewer may open (Managers and Employees: WhatsApp, read-only).
  */
-export function SettingsNav() {
+export function SettingsNav({ only }: { only?: readonly SettingsSlug[] } = {}) {
   const active = useSelectedLayoutSegment()
-  const groups = SETTINGS_SECTIONS.reduce<Array<{ group: string; items: Array<(typeof SETTINGS_SECTIONS)[number]> }>>((acc, s) => {
+  const sections: ReadonlyArray<(typeof SETTINGS_SECTIONS)[number]> = only ? SETTINGS_SECTIONS.filter((s) => only.includes(s.slug)) : SETTINGS_SECTIONS
+  const groups = sections.reduce<Array<{ group: string; items: Array<(typeof SETTINGS_SECTIONS)[number]> }>>((acc, s) => {
     const last = acc[acc.length - 1]
     if (last && last.group === s.group) last.items.push(s)
     else acc.push({ group: s.group, items: [s] })
@@ -52,7 +54,7 @@ export function SettingsNav() {
       {/* Narrow screens: one row that scrolls inside itself */}
       <div className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:thin] md:-mx-6 md:px-6 lg:hidden">
         <ul className="flex w-max gap-1">
-          {SETTINGS_SECTIONS.map((s) => {
+          {sections.map((s) => {
             const current = active === s.slug
             return (
               <li key={s.slug}>

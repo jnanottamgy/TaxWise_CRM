@@ -53,7 +53,13 @@ export function authCookieOptions(secure: boolean): CookieOptions {
 // -------------------------------------------------------------------------------------------------
 
 const PUBLIC_EXACT = new Set(["/login", "/forgot-password", "/reset-password", "/setup", "/auth/confirm", "/api/health"]);
-const PUBLIC_PREFIXES = ["/q/", "/api/cron/", "/api/webhooks/"];
+/**
+ * /q/ and /api/q/: the public quotation page and its PDF (token-checked, rate-limited, §7.23).
+ * /api/desktop/: TaxWise Desktop's API answers for itself (server/desktop.ts): a removed PC gets 403
+ * device_revoked even with nobody signed in, then the session check (401, never a redirect) and the
+ * two-step gate. Not a machine prefix, so its session cookies still refresh here.
+ */
+const PUBLIC_PREFIXES = ["/q/", "/api/q/", "/api/desktop/", "/api/cron/", "/api/webhooks/"];
 /** Machine endpoints: no cookies to refresh, skip Supabase entirely. */
 const MACHINE_PREFIXES = ["/api/health", "/api/cron/", "/api/webhooks/"];
 const STATIC_FILE = /\.(?:svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|css|js|map|txt|xml|webmanifest)$/i;

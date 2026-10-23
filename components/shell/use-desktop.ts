@@ -33,3 +33,19 @@ export function useIsDesktopApp(): boolean {
     () => false,
   );
 }
+
+/**
+ * Asks TaxWise Desktop to reload its context now (docs/DESKTOP-API.md (c)): after sign-in, after a
+ * cover is granted, extended or ended, and after Settings → WhatsApp is saved, so allowedGroups and
+ * the numbers change at once instead of at the next five-minute refresh. No-op in a browser; never
+ * throws.
+ */
+export function refreshDesktopContext(): void {
+  try {
+    void getDesktopBridge()
+      ?.refreshContext()
+      .catch(() => undefined);
+  } catch {
+    // The bridge went away mid-call: nothing to refresh.
+  }
+}

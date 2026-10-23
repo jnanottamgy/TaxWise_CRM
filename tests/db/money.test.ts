@@ -13,12 +13,27 @@ type Inv = { status: string; amount_received: string; tds_credited: string; cred
 
 /** A sent intra-state invoice of ₹11,800 (₹10,000 + 9% CGST + 9% SGST) for client A, as M1. */
 async function sentInvoice(s: Session, opts: { issue?: string; due?: string; status?: string } = {}): Promise<string> {
-  await s.as(U.M1);
-  return s.value<string>(
+  const status = opts.status ?? "sent";
+  const unissued = status === "draft" || status === "awaiting_approval";
+  // A session creates invoices only as drafts and issues them only through issue_invoice (0190), so an
+  // invoice that starts out issued is set up as the system; a draft is the Manager's own.
+  await s.as(unissued ? U.M1 : "super");
+  const id = await s.value<string>(
     `insert into invoices (client_id, issue_date, due_date, status, place_of_supply_code, taxable_amount, cgst_amount, sgst_amount, total_amount, created_by)
      values ($1, $2::date, $3::date, $4::invoice_status, '29', 10000, 900, 900, 11800, $5) returning id`,
-    [C.A, opts.issue ?? "2026-10-01", opts.due ?? "2026-10-16", opts.status ?? "sent", U.M1.id],
+    [C.A, opts.issue ?? "2026-10-01", opts.due ?? "2026-10-16", status, U.M1.id],
   );
+  // An unissued invoice carries the line its totals come from (0190: it is issued only when they match).
+  if (unissued) {
+    await s.exec("insert into invoice_items (invoice_id, description, sac_code, rate, amount, tax_rate) values ($1, 'Fee', '998231', 10000, 10000, 18)", [id]);
+  }
+  await s.as(U.M1);
+  return id;
+}
+
+/** Issues a draft the way the app does (issue_invoice: number, snapshots, Rule 46 checks). */
+async function issue(s: Session, id: string): Promise<void> {
+  await s.value("select public.issue_invoice($1, (select updated_at from invoices where id = $1), null)", [id]);
 }
 
 const settlement = (s: Session, id: string) =>
@@ -172,7 +187,7 @@ describe("issued invoices are frozen (§7.9.3)", () => {
     await db.asSuper(async (s) => {
       const id = await sentInvoice(s, { status: "draft" });
       expect(await s.value("select invoice_number from invoices where id = $1", [id])).toBeNull();
-      await s.exec("update invoices set status = 'sent' where id = $1", [id]);
+      await issue(s, id);
       expect(await s.value("select invoice_number from invoices where id = $1", [id])).toMatch(/^TW\/26-27\/\d{4}$/);
     });
   });
@@ -189,8 +204,7 @@ describe("issued invoices are frozen (§7.9.3)", () => {
       ))).toMatch(/lines of an issued invoice/);
       // a line added while it was a draft is frozen once the invoice is issued
       const draft = await sentInvoice(s, { status: "draft" });
-      await s.exec("insert into invoice_items (invoice_id, description, sac_code, rate, amount, tax_rate) values ($1, 'Fee', '998231', 10000, 10000, 18)", [draft]);
-      await s.exec("update invoices set status = 'sent' where id = $1", [draft]);
+      await issue(s, draft);
       expect(userMessage(await s.fails("update invoice_items set amount = 1 where invoice_id = $1", [draft]))).toMatch(/lines of an issued invoice/);
       expect(userMessage(await s.fails("delete from invoice_items where invoice_id = $1", [draft]))).toMatch(/lines of an issued invoice/);
       await s.exec("update invoices set cancelled_at = now(), cancelled_by = $2, cancel_reason = 'Wrong GSTIN' where id = $1", [id, U.M1.id]);
@@ -207,7 +221,9 @@ describe("Partner-only acts (§4.1)", () => {
       expect(userMessage(await s.fails("update invoices set status = 'sent' where id = $1", [id]))).toMatch(/waiting for a Partner's approval/);
       expect(userMessage(await s.fails("update invoices set approved_by = $2, approved_at = now() where id = $1", [id, U.M1.id]))).toMatch(/Only a Partner can approve/);
       await s.as(U.P1);
-      expect(await s.exec("update invoices set approved_by = $2, approved_at = now(), status = 'sent' where id = $1", [id, U.P1.id])).toBe(1);
+      expect(await s.exec("update invoices set approved_by = $2, approved_at = now(), status = 'draft' where id = $1", [id, U.P1.id])).toBe(1);
+      await issue(s, id);
+      expect(await s.value("select status::text from invoices where id = $1", [id])).toBe("sent");
     });
   });
 
@@ -246,11 +262,40 @@ describe("Partner-only acts (§4.1)", () => {
 describe("portal payment claims (§7.22 'I've paid')", () => {
   it("a client claims payment on its own issued invoice; the claim never marks it paid", async () => {
     await db.asRole(U.CA, async (s) => {
-      expect(await s.exec("insert into portal_payment_claims (invoice_id, client_id, created_by) values ($1, $2, $3)", [F.invoiceSent("A"), C.A, U.CA.id])).toBe(1);
-      expect((await s.attempt("insert into portal_payment_claims (invoice_id, client_id, created_by) values ($1, $2, $3)", [F.invoiceDraft("A"), C.A, U.CA.id])).ok).toBe(false);
-      expect((await s.attempt("insert into portal_payment_claims (invoice_id, client_id, created_by, status) values ($1, $2, $3, 'verified')", [F.invoiceSent("A"), C.A, U.CA.id])).ok).toBe(false);
+      // §7.22 "reference + date": a claim carries both (0176).
+      expect(
+        await s.exec("insert into portal_payment_claims (invoice_id, client_id, created_by, reference, paid_on) values ($1, $2, $3, 'UTR-1', public.today_ist())", [F.invoiceSent("A"), C.A, U.CA.id]),
+      ).toBe(1);
+      expect((await s.attempt("insert into portal_payment_claims (invoice_id, client_id, created_by) values ($1, $2, $3)", [F.invoiceSent("A"), C.A, U.CA.id])).ok).toBe(false);
+      expect(
+        (await s.attempt("insert into portal_payment_claims (invoice_id, client_id, created_by, reference, paid_on) values ($1, $2, $3, 'UTR-2', public.today_ist() + 1)", [F.invoiceSent("A"), C.A, U.CA.id])).ok,
+      ).toBe(false);
+      expect(
+        (await s.attempt("insert into portal_payment_claims (invoice_id, client_id, created_by, reference, paid_on) values ($1, $2, $3, 'UTR-3', public.today_ist())", [F.invoiceDraft("A"), C.A, U.CA.id])).ok,
+      ).toBe(false);
+      expect(
+        (await s.attempt("insert into portal_payment_claims (invoice_id, client_id, created_by, reference, paid_on, status) values ($1, $2, $3, 'UTR-4', public.today_ist(), 'verified')", [F.invoiceSent("A"), C.A, U.CA.id])).ok,
+      ).toBe(false);
       expect(await s.exec("update portal_payment_claims set status = 'verified'")).toBe(0);
       expect(await s.value("select status::text from portal_invoices where id = $1", [F.invoiceSent("A")])).toBe("partially_paid");
+    });
+  });
+
+  it("the firm closes a claim it can't find in the bank; the client and Employees can't", async () => {
+    await db.asRole(U.CA, async (s) => {
+      await s.exec("insert into portal_payment_claims (invoice_id, client_id, created_by, reference, paid_on) values ($1, $2, $3, 'UTR-9', public.today_ist())", [F.invoiceSent("A"), C.A, U.CA.id]);
+      const reject = "update portal_payment_claims set status = 'rejected', verified_by = $1, verified_at = now() where reference = 'UTR-9' and status = 'pending'";
+      expect(await s.exec(reject, [U.CA.id])).toBe(0);
+      await s.as(U.E1);
+      expect(await s.value<number>("select count(*)::int from portal_payment_claims")).toBe(0);
+      const e = await s.attempt(reject, [U.E1.id]);
+      expect(e.ok ? e.rowCount : 0).toBe(0);
+      await s.as(U.M1);
+      expect(await s.exec(reject, [U.M1.id])).toBe(1);
+      // A rejected claim never touches the invoice, and the client no longer sees it as pending.
+      expect(await s.value("select status::text from invoices where id = $1", [F.invoiceSent("A")])).toBe("partially_paid");
+      await s.as(U.CA);
+      expect(await s.value<number>("select count(*)::int from portal_payment_claims where status = 'pending' and reference = 'UTR-9'")).toBe(0);
     });
   });
 });

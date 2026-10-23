@@ -16,9 +16,10 @@ import {
 } from "@/lib/preferences";
 
 /**
- * What the shells load for themselves, under the user's own session (RLS). Nothing here may throw:
+ * What the staff shell loads for itself, under the user's own session (RLS). Nothing here may throw:
  * a layout that throws blanks the whole app (§0.1 rule 3). Every load falls back to a safe default
- * and the staff shell shows one quiet warning with a Ref.
+ * and the staff shell shows one quiet warning with a Ref. The portal frame is lib/data/portal.ts
+ * loadPortalFrame (portal users can read neither clients nor firm_settings).
  */
 
 export const DEFAULT_FIRM_NAME = "TaxWise Consultants";
@@ -43,13 +44,6 @@ export interface StaffShellData {
   unreadCount: number | null;
   fy: { selected: string; current: string; options: string[] };
   warning: { message: string; ref: string } | null;
-}
-
-export interface PortalShellData {
-  firm: ShellFirm;
-  clientName: string | null;
-  /** True when this portal user has not yet acknowledged the privacy notice (§6.10, §7.22). */
-  needsWelcome: boolean;
 }
 
 type Failure = { what: string; err: unknown };
@@ -183,54 +177,3 @@ export function fallbackStaffShellData(user: CurrentUser, ref: string): StaffShe
   };
 }
 
-/** The portal shell with nothing loaded. Never blocks the client on the welcome check (§6.10). */
-export function fallbackPortalShellData(): PortalShellData {
-  return { firm: { name: DEFAULT_FIRM_NAME, logoUrl: null }, clientName: null, needsWelcome: false };
-}
-
-export async function loadPortalShellData(user: CurrentUser, supabase: ServerSupabase): Promise<PortalShellData> {
-  const failures: Failure[] = [];
-
-  const [firm, clientName, acknowledged] = await Promise.all([
-    loadFirm(supabase, failures),
-    attempt("client name", failures, async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("display_name")
-        .eq("portal_user_id", user.id)
-        .is("deleted_at", null)
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      const name = (data as { display_name: string | null } | null)?.display_name?.trim();
-      return name || null;
-    }),
-    // §6.10: the privacy notice is acknowledged on first use. If this check fails, don't block the client.
-    attempt("privacy acknowledgement", failures, async () => {
-      const { data, error } = await supabase
-        .from("consent_records")
-        .select("id")
-        .eq("subject_type", "portal_user")
-        .eq("subject_id", user.id)
-        .is("withdrawn_at", null)
-        .limit(1);
-      if (error) throw error;
-      return Array.isArray(data) && data.length > 0;
-    }),
-  ]);
-
-  if (failures.length > 0) {
-    logUnexpected(failures[0].err, {
-      source: "layout:(portal)",
-      userId: user.id,
-      role: user.role,
-      failed: failures.map((f) => f.what),
-    });
-  }
-
-  return {
-    firm,
-    clientName: clientName ?? null,
-    needsWelcome: acknowledged === false,
-  };
-}

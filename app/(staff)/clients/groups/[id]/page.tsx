@@ -1,12 +1,13 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound, unstable_rethrow } from "next/navigation"
-import { CalendarClockIcon, ListChecksIcon } from "lucide-react"
+import { CalendarClockIcon, FileTextIcon, ListChecksIcon } from "lucide-react"
 import { z } from "zod"
 import { requireManagerOrPartner } from "@/lib/auth/guards"
 import { can } from "@/lib/auth/roles"
 import { logUnexpected } from "@/lib/log"
-import { todayIST } from "@/lib/domain/fy"
+import { fyEnd, fyStart, todayIST } from "@/lib/domain/fy"
+import { getSelectedFy } from "@/lib/fy-context"
 import { EMPTY, formatDate } from "@/lib/format"
 import { getGroup, type GroupDetail } from "@/lib/data/client-groups"
 import { PageHeader } from "@/components/app/page-header"
@@ -17,6 +18,7 @@ import { DateText } from "@/components/app/date-text"
 import { Money } from "@/components/app/money"
 import { EmptyState } from "@/components/app/empty-state"
 import { ErrorBlock } from "@/components/app/error-block"
+import { Button } from "@/components/ui/button"
 import { ShellTitle } from "@/components/shell/page-slots"
 import { EditGroupDialog } from "@/components/clients/groups/group-form-dialog"
 import { AddMembersDialog, DeleteGroupButton, GroupMembersTable } from "@/components/clients/groups/group-members"
@@ -25,8 +27,9 @@ export const metadata: Metadata = { title: "Client group" }
 
 /**
  * One client group (§7.4): its clients, their combined open tasks and upcoming deadlines, and
- * (Partner/Manager) the outstanding across them. Members are added and removed here; the name and
- * notes are edited here. Invoicing stays per client.
+ * (Partner/Manager) the outstanding across them and the group's statement of account for the selected
+ * FY (§7.9.10). Members are added and removed here; the name and notes are edited here. Invoicing
+ * stays per client.
  */
 export default async function ClientGroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -52,6 +55,8 @@ export default async function ClientGroupPage({ params }: { params: Promise<{ id
   }
   if (!detail) notFound()
   const { group, members, tasks, tasksTotal, deadlines, deadlinesTotal } = detail
+  const fy = seesMoney ? await getSelectedFy() : null
+  const statementHref = fy ? `/api/pdf/statement/group/${group.id}?from=${fyStart(fy)}&to=${fyEnd(fy) < today ? fyEnd(fy) : today}` : null
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -62,6 +67,14 @@ export default async function ClientGroupPage({ params }: { params: Promise<{ id
         description={group.notes ?? undefined}
         actions={
           <>
+            {statementHref ? (
+              <Button asChild variant="outline">
+                <a href={statementHref} target="_blank" rel="noopener" title={`Statement of account for FY ${fy}`}>
+                  <FileTextIcon aria-hidden="true" />
+                  Statement of account
+                </a>
+              </Button>
+            ) : null}
             <DeleteGroupButton group={{ id: group.id, name: group.name, members: group.members, updatedAt: group.updated_at }} />
             <EditGroupDialog group={{ id: group.id, name: group.name, notes: group.notes, updatedAt: group.updated_at }} />
             <AddMembersDialog groupId={group.id} groupName={group.name} />

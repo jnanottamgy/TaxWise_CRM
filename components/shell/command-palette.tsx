@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Command as CommandPrimitive } from "cmdk";
+import { toast } from "sonner";
 import {
   ArrowRightIcon,
   Building2Icon,
@@ -16,6 +17,7 @@ import {
   KeyboardIcon,
   ListChecksIcon,
   Loader2Icon,
+  MessageCircleIcon,
   MoonIcon,
   ReceiptTextIcon,
   RotateCwIcon,
@@ -34,10 +36,12 @@ import { cn } from "@/lib/utils";
 import { saveTheme } from "@/server/actions/preferences";
 import { useShell } from "./shell-context";
 import { useRecentSearches } from "./use-recent";
+import { getDesktopBridge } from "./use-desktop";
 import {
   MIN_SEARCH_LENGTH,
   parseSearchResponse,
   searchPageHref,
+  whatsAppCommandLabel,
   type SearchResultGroup,
 } from "./search-contract";
 
@@ -98,6 +102,9 @@ export function commandScore(query: string, label: string, keywords: readonly st
   if (all) return l.split(" ").some((w) => w.startsWith(tokens[0])) ? 3 : 2;
   return l.includes(q) ? 1 : 0;
 }
+
+/** How many client results get an "Open … WhatsApp" command. */
+const WHATSAPP_COMMANDS = 3;
 
 const TYPE_ICON: Record<string, LucideIcon> = {
   client: Building2Icon,
@@ -251,6 +258,26 @@ function PaletteBody({ onDone }: { onDone: () => void }) {
     go(href);
   };
 
+  // §7.25.5 Open chat from ⌘K: inside TaxWise Desktop the app opens the client's group itself
+  // (POST /api/desktop/whatsapp/open does the access check and the audit); in a browser or on a
+  // phone it lands on the client's WhatsApp tab, whose Open chat button does the rest.
+  const openWhatsApp = (clientId: string) => {
+    remember(trimmed);
+    const bridge = getDesktopBridge();
+    if (!bridge) {
+      go(`/clients/${clientId}?tab=whatsapp`);
+      return;
+    }
+    onDone();
+    void bridge
+      .openClientChat(clientId)
+      .then((r) => {
+        if (!r.ok) toast.error(r.error);
+      })
+      .catch(() => toast.error("TaxWise Desktop didn't open the chat. Try Open chat on the client's WhatsApp tab."));
+  };
+  const whatsAppClients = user.role === "client" ? [] : (results.find((g) => g.type === "client")?.items ?? []).slice(0, WHATSAPP_COMMANDS);
+
   // Results first when searching (people search for records more than for commands).
   const resultGroups = results.map((g) => {
     const Icon = TYPE_ICON[g.type] ?? SearchIcon;
@@ -336,6 +363,17 @@ function PaletteBody({ onDone }: { onDone: () => void }) {
         ) : null}
 
         {searching ? resultGroups : null}
+
+        {searching && whatsAppClients.length > 0 ? (
+          <CommandGroup heading="WhatsApp">
+            {whatsAppClients.map((item) => (
+              <CommandItem key={`wa-${item.id}`} value={`whatsapp:${item.id}`} className={ITEM_CLASS} onSelect={() => openWhatsApp(item.id)}>
+                <MessageCircleIcon aria-hidden="true" className="text-text-muted" />
+                <span className="min-w-0 flex-1 truncate">{whatsAppCommandLabel(item.title)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ) : null}
 
         {searching && pending && results.length === 0 ? (
           <div className="px-3 py-2" aria-hidden="true">

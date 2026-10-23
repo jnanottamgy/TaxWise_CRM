@@ -293,11 +293,11 @@ export const EXPECTED_BUCKETS: ReadonlyArray<{ id: string; public: boolean }> = 
 /** How stale a job may be before it is flagged, by job name (§8). Names the jobs don't use are ignored. */
 const JOB_STALE_HOURS: Readonly<Record<string, number>> = {
   "cover-lifecycle": 3,
+  "lead-follow-ups": 3,
   "workforce-sweep": 30,
   "recurring-tasks": 30,
   "upload-cleanup": 30,
-  receivables: 30,
-  "escalation-digest": 30,
+  "receivables-sweep": 30,
   escalation: 30,
   digest: 30,
   reminders: 30,

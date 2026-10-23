@@ -149,8 +149,8 @@ export function FilingDialog({
           <SwitchField
             control={f.control}
             name="shareableWithClient"
-            label="Show the acknowledgement in the client portal"
-            description="The client can download it from Compliance in their portal."
+            label="Let the client download the acknowledgement"
+            description="The acknowledgement number always shows in their portal; this lets them download the document from Compliance."
             className="md:col-span-2"
           />
         </div>

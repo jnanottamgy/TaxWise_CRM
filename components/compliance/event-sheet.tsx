@@ -490,7 +490,7 @@ function FilingSection({ detail, manager, onRecord }: { detail: EventDetail; man
               </div>
               <p className="text-xs text-text-muted">
                 {f.filed_by_external ? `Filed by ${f.filed_by_external}` : f.created_by_name ? `Recorded by ${f.created_by_name}` : "Recorded"}
-                {f.shareable_with_client ? " · shown in the client portal" : ""}
+                {f.shareable_with_client ? " · acknowledgement downloadable in the client portal" : ""}
               </p>
             </li>
           ))}

@@ -303,6 +303,8 @@ describe("onboard_client", () => {
       const lead = await s.value<string>("insert into leads (lead_number, name, email, created_by) values ('L-9101', 'Nandi Foods', 'hello@nandifoods.in', $1) returning id", [
         U.P1.id,
       ]);
+      // An accepted quotation comes from the client's page (the system), not from a session (0190).
+      await s.as("super");
       const quote = await s.value<string>(
         `insert into quotations (quotation_number, lead_id, client_name, client_email, valid_until, issue_date, created_by, total, status)
          values ('TW-Q/26-27/9101', $1, 'Nandi Foods', 'hello@nandifoods.in', current_date + 30, current_date, $2, 4130, 'accepted') returning id`,
@@ -312,6 +314,7 @@ describe("onboard_client", () => {
         "insert into quotation_items (quotation_id, description, service_type, frequency, unit_price, tax_amount, total) values ($1, 'GST returns', 'gst', 'monthly', 3500, 630, 4130) returning id",
         [quote],
       );
+      await s.as(U.P1);
       const values = wizard({
         display_name: "Nandi Foods",
         pan: "",
@@ -337,11 +340,13 @@ describe("onboard_client", () => {
 
   it("refuses a service pointing at another quotation's line", async () => {
     await db.asRole(U.P1, async (s) => {
+      await s.as("super");
       const quote = await s.value<string>(
         `insert into quotations (quotation_number, client_name, client_email, valid_until, issue_date, created_by, total, status)
          values ('TW-Q/26-27/9102', 'Hampi Tours', 'ops@hampitours.in', current_date + 30, current_date, $1, 1180, 'accepted') returning id`,
         [U.P1.id],
       );
+      await s.as(U.P1);
       const foreignLine = await s.value<string>("select id from quotation_items where quotation_id = $1 limit 1", [fid("quotation:A")]);
       const values = wizard({
         display_name: "Hampi Tours",

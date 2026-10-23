@@ -83,3 +83,9 @@ export function parseSearchResponse(body: unknown): SearchResponse {
     ref: typeof b.ref === "string" ? b.ref : undefined,
   };
 }
+
+/** The ⌘K command for a client result: "Open XYZ Traders' WhatsApp", "Open Ravi Kumar's WhatsApp" (§7.25.5). */
+export function whatsAppCommandLabel(clientName: string): string {
+  const name = clientName.trim() || "the client";
+  return `Open ${name}${/s$/i.test(name) ? "'" : "'s"} WhatsApp`;
+}
