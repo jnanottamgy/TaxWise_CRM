@@ -394,6 +394,7 @@ export type Database = {
           client_id: string | null
           cover_employee_id: string
           created_at: string
+          ending_notified_at: string | null
           ends_at: string
           expiry_logged_at: string | null
           granted_by: string
@@ -402,6 +403,7 @@ export type Database = {
           include_vault: boolean
           kind: Database["public"]["Enums"]["cover_kind"]
           leave_id: string | null
+          merged_into: string | null
           note: string | null
           reason: Database["public"]["Enums"]["cover_reason"]
           return_note: string | null
@@ -416,6 +418,7 @@ export type Database = {
           client_id?: string | null
           cover_employee_id: string
           created_at?: string
+          ending_notified_at?: string | null
           ends_at: string
           expiry_logged_at?: string | null
           granted_by: string
@@ -424,6 +427,7 @@ export type Database = {
           include_vault?: boolean
           kind: Database["public"]["Enums"]["cover_kind"]
           leave_id?: string | null
+          merged_into?: string | null
           note?: string | null
           reason: Database["public"]["Enums"]["cover_reason"]
           return_note?: string | null
@@ -438,6 +442,7 @@ export type Database = {
           client_id?: string | null
           cover_employee_id?: string
           created_at?: string
+          ending_notified_at?: string | null
           ends_at?: string
           expiry_logged_at?: string | null
           granted_by?: string
@@ -446,6 +451,7 @@ export type Database = {
           include_vault?: boolean
           kind?: Database["public"]["Enums"]["cover_kind"]
           leave_id?: string | null
+          merged_into?: string | null
           note?: string | null
           reason?: Database["public"]["Enums"]["cover_reason"]
           return_note?: string | null
@@ -482,6 +488,13 @@ export type Database = {
             columns: ["leave_id"]
             isOneToOne: false
             referencedRelation: "employee_leave"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_covers_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "client_covers"
             referencedColumns: ["id"]
           },
         ]
@@ -2159,6 +2172,150 @@ export type Database = {
           verified_on?: string | null
         }
         Relationships: []
+      }
+      email_deliveries: {
+        Row: {
+          attempts: number
+          bounced_at: string | null
+          client_id: string | null
+          complained_at: string | null
+          contact_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          kind: string
+          last_event_at: string | null
+          message_id: string | null
+          opened_at: string | null
+          provider_message_id: string | null
+          recipient: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          bounced_at?: string | null
+          client_id?: string | null
+          complained_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          kind: string
+          last_event_at?: string | null
+          message_id?: string | null
+          opened_at?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          bounced_at?: string | null
+          client_id?: string | null
+          complained_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          last_event_at?: string | null
+          message_id?: string | null
+          opened_at?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_deliveries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_deliveries_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_deliveries_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_webhook_events: {
+        Row: {
+          created_at: string
+          delivery_id: string | null
+          event_type: string
+          id: string
+          occurred_at: string | null
+          provider_message_id: string | null
+          updated_at: string
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_id?: string | null
+          event_type: string
+          id?: string
+          occurred_at?: string | null
+          provider_message_id?: string | null
+          updated_at?: string
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string | null
+          event_type?: string
+          id?: string
+          occurred_at?: string | null
+          provider_message_id?: string | null
+          updated_at?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_webhook_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "email_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_activities: {
         Row: {
@@ -3861,6 +4018,7 @@ export type Database = {
           archived_at: string | null
           body: string
           created_at: string
+          dedupe_key: string | null
           emailed_at: string | null
           entity_id: string | null
           entity_type: string | null
@@ -3875,6 +4033,7 @@ export type Database = {
           archived_at?: string | null
           body: string
           created_at?: string
+          dedupe_key?: string | null
           emailed_at?: string | null
           entity_id?: string | null
           entity_type?: string | null
@@ -3889,6 +4048,7 @@ export type Database = {
           archived_at?: string | null
           body?: string
           created_at?: string
+          dedupe_key?: string | null
           emailed_at?: string | null
           entity_id?: string | null
           entity_type?: string | null
@@ -6067,6 +6227,34 @@ export type Database = {
         }
         Relationships: []
       }
+      people_overview: {
+        Row: {
+          avatar_path: string | null
+          created_at: string | null
+          date_of_joining: string | null
+          department: string | null
+          designation: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          last_login_at: string | null
+          last_seen_at: string | null
+          login_status: string | null
+          must_change_password: boolean | null
+          on_leave_today: boolean | null
+          open_session_active_at: string | null
+          open_tasks: number | null
+          phone: string | null
+          profile_id: string | null
+          review_tasks: number | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          updated_at: string | null
+          vault_access: boolean | null
+          whatsapp: string | null
+        }
+        Relationships: []
+      }
       portal_invoices: {
         Row: {
           amount_received: number | null
@@ -6236,12 +6424,20 @@ export type Database = {
       can_see_document: { Args: { did: string | null }; Returns: boolean }
       can_see_entity: { Args: { p_type: string | null; p_id: string | null }; Returns: boolean }
       can_see_task: { Args: { tid: string | null }; Returns: boolean }
+      cancel_leave: { Args: { p_leave_id: string | null; p_updated_at: string | null }; Returns: Json }
+      change_staff_email: { Args: { p_employee: string | null; p_email: string | null; p_updated_at: string | null }; Returns: string }
       change_task_status: { Args: { p_task_id: string | null; p_to: Database["public"]["Enums"]["task_status"] | null; p_reason?: string | null }; Returns: Json }
       check_rate_limit: { Args: { p_key: string | null; p_limit: number | null; p_window_seconds: number | null }; Returns: boolean }
+      clear_leave_attendance: { Args: { p_employee: string | null; p_start: string | null; p_end: string | null }; Returns: number }
+      decide_leave: { Args: { p_leave_id: string | null; p_decision: string | null; p_note: string | null; p_updated_at: string | null }; Returns: Json }
       delete_client_credential: { Args: { p_id: string | null }; Returns: boolean }
+      delete_staff: { Args: { p_employee: string | null; p_updated_at: string | null }; Returns: Json }
+      employee_open_work: { Args: { p_employee: string | null }; Returns: Json }
+      employee_role: { Args: { p_employee: string | null }; Returns: Database["public"]["Enums"]["app_role"] }
       financial_year_label: { Args: { p_date: string | null }; Returns: string }
       fy_end_date: { Args: { p_fy: string | null }; Returns: string }
       fy_start_date: { Args: { p_fy: string | null }; Returns: string }
+      insert_notifications: { Args: { p_type: Database["public"]["Enums"]["notification_type"] | null; p_title: string | null; p_body: string | null; p_link_url: string | null; p_user_ids?: string[] | null; p_roles?: Database["public"]["Enums"]["app_role"][] | null; p_employee_ids?: string[] | null; p_entity_type?: string | null; p_entity_id?: string | null; p_client_id?: string | null; p_dedupe_key?: string | null; p_exclude_user_id?: string | null }; Returns: { notification_id: string | null; recipient_id: string | null; forwarded: boolean | null }[] }
       is_active_employee: { Args: { eid: string | null }; Returns: boolean }
       is_active_staff_profile: { Args: { uid: string | null }; Returns: boolean }
       is_api_caller: { Args: never; Returns: boolean }
@@ -6249,10 +6445,13 @@ export type Database = {
       is_fy_label: { Args: { p: string | null }; Returns: boolean }
       is_manager_or_partner: { Args: never; Returns: boolean }
       is_money_message: { Args: { p_related_entity_type: string | null; p_template_id: string | null }; Returns: boolean }
+      is_money_notification: { Args: { p_type: Database["public"]["Enums"]["notification_type"] | null; p_entity_type: string | null; p_link_url: string | null }; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       jsonb_to_numeric: { Args: { p: Json | null }; Returns: number }
+      leave_working_dates: { Args: { p_start: string | null; p_end: string | null }; Returns: string[] }
       log_audit_event: { Args: { p_event: Database["public"]["Enums"]["audit_event"] | null; p_resource_type?: string | null; p_resource_id?: string | null; p_action?: string | null; p_details?: Json | null; p_success?: boolean | null; p_error?: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: string }
+      mark_leave_attendance: { Args: { p_employee: string | null; p_start: string | null; p_end: string | null; p_half_day: boolean | null }; Returns: number }
       money_side_kind: { Args: { p_kind: string | null }; Returns: boolean }
       my_employee_id: { Args: never; Returns: string }
       next_document_number: { Args: { p_key: string | null; p_date?: string | null }; Returns: string }
@@ -6260,15 +6459,20 @@ export type Database = {
       portal_client_ids: { Args: never; Returns: string[] }
       portal_document_ids: { Args: never; Returns: string[] }
       portal_linked_document_ids: { Args: never; Returns: string[] }
+      profile_image_kind: { Args: { p_name: string | null }; Returns: string }
       public_firm_profile: { Args: never; Returns: { firm_name: string | null; legal_name: string | null; tagline: string | null; address: string | null; city: string | null; state_code: string | null; pincode: string | null; phone: string | null; email: string | null; website: string | null; gstin: string | null; logo_path: string | null; logo_updated_at: string | null; bank_name: string | null; bank_account_name: string | null; bank_account_number: string | null; bank_ifsc: string | null; bank_branch: string | null; upi_id: string | null; upi_payee_name: string | null }[] }
+      reassign_all_work: { Args: { p_from_employee: string | null; p_to_employee: string | null }; Returns: Json }
       record_whatsapp_group_opened: { Args: { p_client_id: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: Json }
       report_role_claim: { Args: never; Returns: boolean }
       respond_to_task: { Args: { p_task_id: string | null; p_accept: boolean | null; p_decline_reason?: Database["public"]["Enums"]["decline_reason"] | null; p_decline_note?: string | null }; Returns: Json }
+      revoke_auth_sessions: { Args: { p_user: string | null }; Returns: number }
       revoke_desktop_device: { Args: { p_device_id: string | null }; Returns: boolean }
       save_client_credential: { Args: { p_id: string | null; p_client_id: string | null; p_portal: string | null; p_portal_label: string | null; p_username: string | null; p_password_ciphertext: string | null; p_login_url?: string | null; p_notes?: string | null; p_expected_updated_at?: string | null }; Returns: string }
+      set_staff_active: { Args: { p_employee: string | null; p_active: boolean | null; p_updated_at: string | null }; Returns: Json }
       staff_client_ids: { Args: never; Returns: string[] }
       staff_document_ids: { Args: never; Returns: string[] }
       staff_employee_id: { Args: never; Returns: string }
+      staff_record_conflict: { Args: { p_name: string | null; p_at: string | null }; Returns: string }
       staff_task_ids: { Args: never; Returns: string[] }
       staff_whatsapp_client_ids: { Args: never; Returns: string[] }
       staff_whatsapp_group_ids: { Args: never; Returns: string[] }
@@ -6279,6 +6483,7 @@ export type Database = {
       tasks_guard_employee: { Args: { p_old: Database["public"]["Tables"]["tasks"]["Row"] | null; p_new: Database["public"]["Tables"]["tasks"]["Row"] | null }; Returns: undefined }
       today_ist: { Args: never; Returns: string }
       try_uuid: { Args: { p: string | null }; Returns: string }
+      update_my_contact: { Args: { p_full_name: string | null; p_phone: string | null; p_was_full_name: string | null; p_was_phone: string | null }; Returns: string }
     }
     Enums: {
       acceptance_outcome: "pending" | "accepted" | "declined"
