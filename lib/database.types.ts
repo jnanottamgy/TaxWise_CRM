@@ -822,6 +822,50 @@ export type Database = {
           },
         ]
       }
+      client_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          client_id: string
+          created_at: string
+          from_status: Database["public"]["Enums"]["client_status"] | null
+          id: string
+          reason: string
+          to_status: Database["public"]["Enums"]["client_status"]
+          updated_at: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          client_id: string
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["client_status"] | null
+          id?: string
+          reason: string
+          to_status: Database["public"]["Enums"]["client_status"]
+          updated_at?: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          client_id?: string
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["client_status"] | null
+          id?: string
+          reason?: string
+          to_status?: Database["public"]["Enums"]["client_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_status_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_team_members: {
         Row: {
           client_id: string
@@ -1096,6 +1140,9 @@ export type Database = {
           pincode: string | null
           portal_invited_at: string | null
           portal_last_seen_at: string | null
+          portal_revoked_at: string | null
+          portal_revoked_by: string | null
+          portal_revoked_user_id: string | null
           portal_user_id: string | null
           priority: Database["public"]["Enums"]["client_priority"]
           reminder_days: number | null
@@ -1105,9 +1152,12 @@ export type Database = {
           status: Database["public"]["Enums"]["client_status"]
           tan: string | null
           tax_audit_applicable: string | null
+          tax_audit_decided_at: string | null
+          tax_audit_decided_by: string | null
           tax_audit_note: string | null
           turnover_fy: string | null
           updated_at: string
+          updated_by: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -1142,6 +1192,9 @@ export type Database = {
           pincode?: string | null
           portal_invited_at?: string | null
           portal_last_seen_at?: string | null
+          portal_revoked_at?: string | null
+          portal_revoked_by?: string | null
+          portal_revoked_user_id?: string | null
           portal_user_id?: string | null
           priority?: Database["public"]["Enums"]["client_priority"]
           reminder_days?: number | null
@@ -1151,9 +1204,12 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           tan?: string | null
           tax_audit_applicable?: string | null
+          tax_audit_decided_at?: string | null
+          tax_audit_decided_by?: string | null
           tax_audit_note?: string | null
           turnover_fy?: string | null
           updated_at?: string
+          updated_by?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -1188,6 +1244,9 @@ export type Database = {
           pincode?: string | null
           portal_invited_at?: string | null
           portal_last_seen_at?: string | null
+          portal_revoked_at?: string | null
+          portal_revoked_by?: string | null
+          portal_revoked_user_id?: string | null
           portal_user_id?: string | null
           priority?: Database["public"]["Enums"]["client_priority"]
           reminder_days?: number | null
@@ -1197,9 +1256,12 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           tan?: string | null
           tax_audit_applicable?: string | null
+          tax_audit_decided_at?: string | null
+          tax_audit_decided_by?: string | null
           tax_audit_note?: string | null
           turnover_fy?: string | null
           updated_at?: string
+          updated_by?: string | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -1741,10 +1803,13 @@ export type Database = {
           is_required: boolean
           rejection_reason: string | null
           request_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           sort_order: number
           status: Database["public"]["Enums"]["request_item_status"]
           title: string
           updated_at: string
+          uploaded_at: string | null
         }
         Insert: {
           created_at?: string
@@ -1754,10 +1819,13 @@ export type Database = {
           is_required?: boolean
           rejection_reason?: string | null
           request_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["request_item_status"]
           title: string
           updated_at?: string
+          uploaded_at?: string | null
         }
         Update: {
           created_at?: string
@@ -1767,10 +1835,13 @@ export type Database = {
           is_required?: boolean
           rejection_reason?: string | null
           request_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["request_item_status"]
           title?: string
           updated_at?: string
+          uploaded_at?: string | null
         }
         Relationships: [
           {
@@ -1791,39 +1862,57 @@ export type Database = {
       }
       document_requests: {
         Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           client_id: string
+          completed_at: string | null
+          contact_id: string | null
           created_at: string
           created_by: string
           due_date: string | null
           id: string
           last_reminded_at: string | null
           notes: string | null
+          reminder_count: number
           reminder_every_days: number
           status: Database["public"]["Enums"]["request_status"]
           title: string
           updated_at: string
         }
         Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           client_id: string
+          completed_at?: string | null
+          contact_id?: string | null
           created_at?: string
           created_by: string
           due_date?: string | null
           id?: string
           last_reminded_at?: string | null
           notes?: string | null
+          reminder_count?: number
           reminder_every_days?: number
           status?: Database["public"]["Enums"]["request_status"]
           title: string
           updated_at?: string
         }
         Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           client_id?: string
+          completed_at?: string | null
+          contact_id?: string | null
           created_at?: string
           created_by?: string
           due_date?: string | null
           id?: string
           last_reminded_at?: string | null
           notes?: string | null
+          reminder_count?: number
           reminder_every_days?: number
           status?: Database["public"]["Enums"]["request_status"]
           title?: string
@@ -1835,6 +1924,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -1871,6 +1967,137 @@ export type Database = {
           },
         ]
       }
+      document_uploads: {
+        Row: {
+          accept_item: boolean
+          bucket: string
+          category: Database["public"]["Enums"]["document_category"]
+          change_note: string | null
+          claimed_sha256: string | null
+          client_id: string
+          confirmed_at: string | null
+          confirmed_document_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          document_id: string | null
+          expires_at: string
+          expiry_date: string | null
+          failed_at: string | null
+          failure: string | null
+          file_name: string
+          file_size: number
+          financial_year: string | null
+          id: string
+          is_confidential: boolean
+          mime_type: string
+          period: string | null
+          purpose: string
+          renewal_date: string | null
+          request_item_id: string | null
+          source: string
+          storage_path: string
+          tags: string[]
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          accept_item?: boolean
+          bucket?: string
+          category?: Database["public"]["Enums"]["document_category"]
+          change_note?: string | null
+          claimed_sha256?: string | null
+          client_id: string
+          confirmed_at?: string | null
+          confirmed_document_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          document_id?: string | null
+          expires_at?: string
+          expiry_date?: string | null
+          failed_at?: string | null
+          failure?: string | null
+          file_name: string
+          file_size: number
+          financial_year?: string | null
+          id?: string
+          is_confidential?: boolean
+          mime_type: string
+          period?: string | null
+          purpose: string
+          renewal_date?: string | null
+          request_item_id?: string | null
+          source?: string
+          storage_path: string
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accept_item?: boolean
+          bucket?: string
+          category?: Database["public"]["Enums"]["document_category"]
+          change_note?: string | null
+          claimed_sha256?: string | null
+          client_id?: string
+          confirmed_at?: string | null
+          confirmed_document_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          document_id?: string | null
+          expires_at?: string
+          expiry_date?: string | null
+          failed_at?: string | null
+          failure?: string | null
+          file_name?: string
+          file_size?: number
+          financial_year?: string | null
+          id?: string
+          is_confidential?: boolean
+          mime_type?: string
+          period?: string | null
+          purpose?: string
+          renewal_date?: string | null
+          request_item_id?: string | null
+          source?: string
+          storage_path?: string
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_uploads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_uploads_confirmed_document_id_fkey"
+            columns: ["confirmed_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_uploads_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_uploads_request_item_id_fkey"
+            columns: ["request_item_id"]
+            isOneToOne: false
+            referencedRelation: "document_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
           change_note: string | null
@@ -1879,6 +2106,8 @@ export type Database = {
           file_name: string
           file_size: number
           id: string
+          mime_type: string | null
+          sha256: string | null
           storage_path: string
           uploaded_by: string
           version: number
@@ -1890,6 +2119,8 @@ export type Database = {
           file_name: string
           file_size: number
           id?: string
+          mime_type?: string | null
+          sha256?: string | null
           storage_path: string
           uploaded_by: string
           version: number
@@ -1901,6 +2132,8 @@ export type Database = {
           file_name?: string
           file_size?: number
           id?: string
+          mime_type?: string | null
+          sha256?: string | null
           storage_path?: string
           uploaded_by?: string
           version?: number
@@ -2763,6 +2996,7 @@ export type Database = {
           capacity_thresholds: Json
           city: string | null
           client_code_prefix: string
+          client_notify_channels: string[]
           compliance_reminder_days: number
           created_at: string
           credit_note_prefix: string
@@ -2841,6 +3075,7 @@ export type Database = {
           capacity_thresholds?: Json
           city?: string | null
           client_code_prefix?: string
+          client_notify_channels?: string[]
           compliance_reminder_days?: number
           created_at?: string
           credit_note_prefix?: string
@@ -2919,6 +3154,7 @@ export type Database = {
           capacity_thresholds?: Json
           city?: string | null
           client_code_prefix?: string
+          client_notify_channels?: string[]
           compliance_reminder_days?: number
           created_at?: string
           credit_note_prefix?: string
@@ -5250,6 +5486,7 @@ export type Database = {
           client_id: string | null
           config: Json | null
           created_at: string
+          created_by: string | null
           frequency: Database["public"]["Enums"]["automation_frequency"]
           id: string
           is_active: boolean
@@ -5263,6 +5500,7 @@ export type Database = {
           client_id?: string | null
           config?: Json | null
           created_at?: string
+          created_by?: string | null
           frequency: Database["public"]["Enums"]["automation_frequency"]
           id?: string
           is_active?: boolean
@@ -5276,6 +5514,7 @@ export type Database = {
           client_id?: string | null
           config?: Json | null
           created_at?: string
+          created_by?: string | null
           frequency?: Database["public"]["Enums"]["automation_frequency"]
           id?: string
           is_active?: boolean
@@ -5473,7 +5712,10 @@ export type Database = {
         Row: {
           acceptance_status: Database["public"]["Enums"]["task_acceptance"]
           accepted_at: string | null
+          assigned_at: string | null
+          assigned_by: string | null
           assigned_employee_id: string | null
+          automation_id: string | null
           client_id: string
           completion_date: string | null
           compliance_event_id: string | null
@@ -5508,7 +5750,10 @@ export type Database = {
         Insert: {
           acceptance_status?: Database["public"]["Enums"]["task_acceptance"]
           accepted_at?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
           assigned_employee_id?: string | null
+          automation_id?: string | null
           client_id: string
           completion_date?: string | null
           compliance_event_id?: string | null
@@ -5543,7 +5788,10 @@ export type Database = {
         Update: {
           acceptance_status?: Database["public"]["Enums"]["task_acceptance"]
           accepted_at?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
           assigned_employee_id?: string | null
+          automation_id?: string | null
           client_id?: string
           completion_date?: string | null
           compliance_event_id?: string | null
@@ -5581,6 +5829,13 @@ export type Database = {
             columns: ["assigned_employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "task_automations"
             referencedColumns: ["id"]
           },
           {
@@ -5870,6 +6125,7 @@ export type Database = {
           description: string | null
           employee_id: string
           ended_at: string | null
+          entry_source: string
           id: string
           invoice_id: string | null
           invoiced_at: string | null
@@ -5886,6 +6142,7 @@ export type Database = {
           description?: string | null
           employee_id: string
           ended_at?: string | null
+          entry_source?: string
           id?: string
           invoice_id?: string | null
           invoiced_at?: string | null
@@ -5902,6 +6159,7 @@ export type Database = {
           description?: string | null
           employee_id?: string
           ended_at?: string | null
+          entry_source?: string
           id?: string
           invoice_id?: string | null
           invoiced_at?: string | null
@@ -5935,6 +6193,105 @@ export type Database = {
           },
           {
             foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_week_approvals: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          created_at: string
+          employee_id: string
+          id: string
+          note: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_week_approvals_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_week_rows: {
+        Row: {
+          billable: boolean
+          client_id: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          sort_order: number
+          task_id: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          billable?: boolean
+          client_id?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          sort_order?: number
+          task_id?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          billable?: boolean
+          client_id?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          sort_order?: number
+          task_id?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_week_rows_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_week_rows_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_week_rows_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -6048,6 +6405,22 @@ export type Database = {
         }
         Relationships: []
       }
+      client_groups_overview: {
+        Row: {
+          active_members: number | null
+          created_at: string | null
+          id: string | null
+          members: number | null
+          name: string | null
+          next_due_date: string | null
+          notes: string | null
+          open_tasks: number | null
+          outstanding: number | null
+          overdue_tasks: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       client_services_public: {
         Row: {
           client_id: string | null
@@ -6081,6 +6454,53 @@ export type Database = {
           purpose: string | null
           status: Database["public"]["Enums"]["whatsapp_group_status"] | null
           updated_at: string | null
+        }
+        Relationships: []
+      }
+      clients_list: {
+        Row: {
+          annual_turnover: number | null
+          city: string | null
+          client_code: string | null
+          covered_now: boolean | null
+          created_at: string | null
+          deleted_at: string | null
+          display_name: string | null
+          effective_gst_scheme: string | null
+          email: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"] | null
+          entity_type_other: string | null
+          group_id: string | null
+          group_name: string | null
+          gst_registration: Database["public"]["Enums"]["gst_registration"] | null
+          gst_scheme: Database["public"]["Enums"]["gst_scheme"] | null
+          gstin: string | null
+          has_overdue_invoices: boolean | null
+          has_portal: boolean | null
+          id: string | null
+          last_contact_at: string | null
+          legal_name: string | null
+          next_due_date: string | null
+          next_due_title: string | null
+          onboarded_at: string | null
+          open_tasks: number | null
+          outstanding: number | null
+          overdue_tasks: number | null
+          owner_employee_id: string | null
+          owner_name: string | null
+          pan: string | null
+          phone: string | null
+          portal_invited_at: string | null
+          priority: Database["public"]["Enums"]["client_priority"] | null
+          service_types: Database["public"]["Enums"]["service_type"][] | null
+          state_code: string | null
+          status: Database["public"]["Enums"]["client_status"] | null
+          tan: string | null
+          turnover_fy: string | null
+          unreachable: boolean | null
+          updated_at: string | null
+          whatsapp: string | null
+          whatsapp_group_status: string | null
         }
         Relationships: []
       }
@@ -6343,6 +6763,58 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks_list: {
+        Row: {
+          acceptance_status: Database["public"]["Enums"]["task_acceptance"] | null
+          accepted_at: string | null
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_employee_id: string | null
+          assignee_name: string | null
+          automation_id: string | null
+          checklist_done: number | null
+          checklist_total: number | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          client_owner_employee_id: string | null
+          completion_date: string | null
+          compliance_event_id: string | null
+          created_at: string | null
+          created_by: string | null
+          days_overdue: number | null
+          decline_note: string | null
+          decline_reason: Database["public"]["Enums"]["decline_reason"] | null
+          declined_at: string | null
+          declined_by_employee_id: string | null
+          declined_by_name: string | null
+          deleted_at: string | null
+          description: string | null
+          due_date: string | null
+          escalated_at: string | null
+          escalation_level: number | null
+          estimated_minutes: number | null
+          filing_skipped_reason: string | null
+          financial_year: string | null
+          id: string | null
+          is_overdue: boolean | null
+          logged_minutes: number | null
+          on_hold_reason: string | null
+          open_blockers: number | null
+          period_label: string | null
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          remarks: string | null
+          reviewer_employee_id: string | null
+          reviewer_name: string | null
+          service_type: Database["public"]["Enums"]["service_type"] | null
+          source_template_id: string | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          task_number: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       tasks_view: {
         Row: {
           acceptance_status: Database["public"]["Enums"]["task_acceptance"] | null
@@ -6400,6 +6872,41 @@ export type Database = {
         }
         Relationships: []
       }
+      unbilled_time_by_client: {
+        Row: {
+          amount: number | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          entries: number | null
+          latest_started_at: string | null
+          minutes: number | null
+          oldest_started_at: string | null
+          people: number | null
+          unrated_minutes: number | null
+        }
+        Relationships: []
+      }
+      unbilled_time_entries: {
+        Row: {
+          amount: number | null
+          billing_rate_per_hour: number | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          description: string | null
+          employee_id: string | null
+          employee_name: string | null
+          ended_at: string | null
+          id: string | null
+          minutes: number | null
+          started_at: string | null
+          task_id: string | null
+          task_number: string | null
+          task_title: string | null
+        }
+        Relationships: []
+      }
       whatsapp_links_per_number: {
         Row: {
           active_links: number | null
@@ -6418,25 +6925,53 @@ export type Database = {
     Functions: {
       app_role: { Args: never; Returns: Database["public"]["Enums"]["app_role"] }
       apply_due_date_override: { Args: { p_override_id: string | null }; Returns: number }
+      apply_job_template: { Args: { p_task_id: string | null; p_template_id: string | null }; Returns: Json }
+      approve_timesheet_week: { Args: { p_employee_id: string | null; p_week_start: string | null; p_note?: string | null }; Returns: Json }
       assert_changed_only: { Args: { p_old: Json | null; p_new: Json | null; p_allowed: string[] | null; p_what: string | null }; Returns: undefined }
+      bulk_update_tasks: { Args: { p_task_ids: string[] | null; p_changes: Json | null; p_reason?: string | null }; Returns: Json }
       can_open_whatsapp: { Args: { cid: string | null }; Returns: boolean }
       can_see_client: { Args: { cid: string | null }; Returns: boolean }
       can_see_document: { Args: { did: string | null }; Returns: boolean }
       can_see_entity: { Args: { p_type: string | null; p_id: string | null }; Returns: boolean }
       can_see_task: { Args: { tid: string | null }; Returns: boolean }
       cancel_leave: { Args: { p_leave_id: string | null; p_updated_at: string | null }; Returns: Json }
+      change_client_status: { Args: { p_client_id: string | null; p_to: Database["public"]["Enums"]["client_status"] | null; p_reason: string | null; p_updated_at?: string | null }; Returns: Json }
+      change_compliance_workflow: { Args: { p_event_id: string | null; p_to: Database["public"]["Enums"]["compliance_workflow"] | null; p_reason?: string | null; p_expected_updated_at?: string | null }; Returns: Json }
       change_staff_email: { Args: { p_employee: string | null; p_email: string | null; p_updated_at: string | null }; Returns: string }
       change_task_status: { Args: { p_task_id: string | null; p_to: Database["public"]["Enums"]["task_status"] | null; p_reason?: string | null }; Returns: Json }
       check_rate_limit: { Args: { p_key: string | null; p_limit: number | null; p_window_seconds: number | null }; Returns: boolean }
       clear_leave_attendance: { Args: { p_employee: string | null; p_start: string | null; p_end: string | null }; Returns: number }
+      client_change_conflict: { Args: { p_client_id: string | null }; Returns: string }
+      client_cover_badges: { Args: { p_client_id: string | null }; Returns: { cover_id: string | null; kind: Database["public"]["Enums"]["cover_kind"] | null; cover_employee_id: string | null; cover_name: string | null; absent_employee_id: string | null; absent_name: string | null; starts_at: string | null; ends_at: string | null; handover_note: string | null }[] }
+      client_status_label: { Args: { p: Database["public"]["Enums"]["client_status"] | null }; Returns: string }
+      client_team_signature: { Args: { p_client_id: string | null }; Returns: string }
+      compliance_agenda: { Args: { p_from: string | null; p_to?: string | null; p_client?: string | null; p_owner?: string | null; p_types?: Database["public"]["Enums"]["compliance_type"][] | null; p_statutory?: boolean | null; p_label?: string | null; p_overdue_only?: boolean | null; p_limit?: number | null; p_offset?: number | null }; Returns: Json }
+      compliance_calendar_days: { Args: { p_from: string | null; p_to: string | null; p_client?: string | null; p_owner?: string | null; p_types?: Database["public"]["Enums"]["compliance_type"][] | null; p_statutory?: boolean | null }; Returns: Json }
+      compliance_coverage: { Args: { p_client_ids?: string[] | null }; Returns: Json }
+      compliance_workflow_label: { Args: { p: Database["public"]["Enums"]["compliance_workflow"] | null }; Returns: string }
+      confirm_document_upload: { Args: { p_upload_id: string | null; p_file_size: number | null; p_mime_type: string | null; p_sha256: string | null; p_retention_until?: string | null }; Returns: Json }
+      conflict_candidates: { Args: { p_name: string | null; p_pan?: string | null; p_gstin?: string | null; p_related?: string[] | null; p_exclude_client?: string | null; p_exclude_lead?: string | null }; Returns: { kind: string | null; record_id: string | null; client_id: string | null; lead_id: string | null; label: string | null; code: string | null; pan: string | null; gstin: string | null; din: string | null; candidate_name: string | null; target: string | null; score: number | null; in_recycle_bin: boolean | null }[] }
+      contains_full_aadhaar: { Args: { p: string | null }; Returns: boolean }
+      create_document_request: { Args: { p_client_id: string | null; p_title: string | null; p_due_date: string | null; p_notes: string | null; p_reminder_every_days: number | null; p_contact_id: string | null; p_items: Json | null }; Returns: string }
+      create_task: { Args: { p: Json | null }; Returns: Json }
       decide_leave: { Args: { p_leave_id: string | null; p_decision: string | null; p_note: string | null; p_updated_at: string | null }; Returns: Json }
+      delete_client: { Args: { p_client_id: string | null; p_updated_at?: string | null }; Returns: Json }
       delete_client_credential: { Args: { p_id: string | null }; Returns: boolean }
       delete_staff: { Args: { p_employee: string | null; p_updated_at: string | null }; Returns: Json }
+      discard_document_upload: { Args: { p_upload_id: string | null; p_reason: string | null }; Returns: string }
+      document_request_is_complete: { Args: { p_request_id: string | null }; Returns: boolean }
+      effective_gst_scheme: { Args: { p_registration: Database["public"]["Enums"]["gst_registration"] | null; p_scheme: Database["public"]["Enums"]["gst_scheme"] | null; p_turnover: number | null; p_limit: number | null }; Returns: string }
+      employee_can_take_work: { Args: { p_employee_id: string | null }; Returns: boolean }
       employee_open_work: { Args: { p_employee: string | null }; Returns: Json }
       employee_role: { Args: { p_employee: string | null }; Returns: Database["public"]["Enums"]["app_role"] }
+      file_task: { Args: { p_task_id: string | null; p_filing?: Json | null; p_skip_reason?: string | null; p_expected_updated_at?: string | null }; Returns: Json }
+      filings_grid: { Args: { p_financial_year: string | null; p_types: Database["public"]["Enums"]["compliance_type"][] | null; p_form_pattern?: string | null; p_rule_pattern?: string | null; p_owner?: string | null; p_unassigned?: boolean | null; p_q?: string | null; p_status?: string | null; p_limit?: number | null; p_offset?: number | null }; Returns: Json }
       financial_year_label: { Args: { p_date: string | null }; Returns: string }
+      find_client_duplicates: { Args: { p_pan?: string | null; p_gstin?: string | null; p_name?: string | null; p_exclude_client?: string | null }; Returns: { client_id: string | null; client_code: string | null; display_name: string | null; status: Database["public"]["Enums"]["client_status"] | null; in_recycle_bin: boolean | null; matched_on: string | null; score: number | null }[] }
+      find_document_duplicates: { Args: { p_client_id: string | null; p_hashes: string[] | null }; Returns: { document_id: string | null; sha256: string | null; title: string | null; file_name: string | null; version: number | null; is_current: boolean | null; category: Database["public"]["Enums"]["document_category"] | null; financial_year: string | null; uploaded_at: string | null; in_recycle_bin: boolean | null }[] }
       fy_end_date: { Args: { p_fy: string | null }; Returns: string }
       fy_start_date: { Args: { p_fy: string | null }; Returns: string }
+      import_clients: { Args: { p_rows: Json | null; p_meta?: Json | null }; Returns: Json }
       insert_notifications: { Args: { p_type: Database["public"]["Enums"]["notification_type"] | null; p_title: string | null; p_body: string | null; p_link_url: string | null; p_user_ids?: string[] | null; p_roles?: Database["public"]["Enums"]["app_role"][] | null; p_employee_ids?: string[] | null; p_entity_type?: string | null; p_entity_id?: string | null; p_client_id?: string | null; p_dedupe_key?: string | null; p_exclude_user_id?: string | null }; Returns: { notification_id: string | null; recipient_id: string | null; forwarded: boolean | null }[] }
       is_active_employee: { Args: { eid: string | null }; Returns: boolean }
       is_active_staff_profile: { Args: { uid: string | null }; Returns: boolean }
@@ -6448,6 +6983,7 @@ export type Database = {
       is_money_notification: { Args: { p_type: Database["public"]["Enums"]["notification_type"] | null; p_entity_type: string | null; p_link_url: string | null }; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      ist_week_start: { Args: { p_at: string | null }; Returns: string }
       jsonb_to_numeric: { Args: { p: Json | null }; Returns: number }
       leave_working_dates: { Args: { p_start: string | null; p_end: string | null }; Returns: string[] }
       log_audit_event: { Args: { p_event: Database["public"]["Enums"]["audit_event"] | null; p_resource_type?: string | null; p_resource_id?: string | null; p_action?: string | null; p_details?: Json | null; p_success?: boolean | null; p_error?: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: string }
@@ -6455,6 +6991,8 @@ export type Database = {
       money_side_kind: { Args: { p_kind: string | null }; Returns: boolean }
       my_employee_id: { Args: never; Returns: string }
       next_document_number: { Args: { p_key: string | null; p_date?: string | null }; Returns: string }
+      normalise_party_name: { Args: { p: string | null }; Returns: string }
+      onboard_client: { Args: { p_payload: Json | null }; Returns: Json }
       portal_can_read_object: { Args: { p_name: string | null }; Returns: boolean }
       portal_client_ids: { Args: never; Returns: string[] }
       portal_document_ids: { Args: never; Returns: string[] }
@@ -6462,12 +7000,18 @@ export type Database = {
       profile_image_kind: { Args: { p_name: string | null }; Returns: string }
       public_firm_profile: { Args: never; Returns: { firm_name: string | null; legal_name: string | null; tagline: string | null; address: string | null; city: string | null; state_code: string | null; pincode: string | null; phone: string | null; email: string | null; website: string | null; gstin: string | null; logo_path: string | null; logo_updated_at: string | null; bank_name: string | null; bank_account_name: string | null; bank_account_number: string | null; bank_ifsc: string | null; bank_branch: string | null; upi_id: string | null; upi_payee_name: string | null }[] }
       reassign_all_work: { Args: { p_from_employee: string | null; p_to_employee: string | null }; Returns: Json }
+      record_compliance_filing: { Args: { p_event_id: string | null; p_filing: Json | null; p_expected_updated_at?: string | null }; Returns: Json }
       record_whatsapp_group_opened: { Args: { p_client_id: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: Json }
+      reopen_timesheet_week: { Args: { p_employee_id: string | null; p_week_start: string | null; p_reason: string | null }; Returns: Json }
       report_role_claim: { Args: never; Returns: boolean }
       respond_to_task: { Args: { p_task_id: string | null; p_accept: boolean | null; p_decline_reason?: Database["public"]["Enums"]["decline_reason"] | null; p_decline_note?: string | null }; Returns: Json }
+      review_document_request_item: { Args: { p_item_id: string | null; p_decision: string | null; p_reason?: string | null; p_document_id?: string | null; p_expected_updated_at?: string | null }; Returns: Json }
       revoke_auth_sessions: { Args: { p_user: string | null }; Returns: number }
       revoke_desktop_device: { Args: { p_device_id: string | null }; Returns: boolean }
       save_client_credential: { Args: { p_id: string | null; p_client_id: string | null; p_portal: string | null; p_portal_label: string | null; p_username: string | null; p_password_ciphertext: string | null; p_login_url?: string | null; p_notes?: string | null; p_expected_updated_at?: string | null }; Returns: string }
+      save_job_template: { Args: { p: Json | null; p_expected_updated_at?: string | null }; Returns: Json }
+      set_client_team: { Args: { p_client_id: string | null; p_owner: string | null; p_engagement_partner: string | null; p_review_manager: string | null; p_preparers: string[] | null; p_expected_signature?: string | null }; Returns: Json }
+      set_primary_contact: { Args: { p_contact_id: string | null; p_updated_at?: string | null }; Returns: Json }
       set_staff_active: { Args: { p_employee: string | null; p_active: boolean | null; p_updated_at: string | null }; Returns: Json }
       staff_client_ids: { Args: never; Returns: string[] }
       staff_document_ids: { Args: never; Returns: string[] }
@@ -6476,14 +7020,23 @@ export type Database = {
       staff_task_ids: { Args: never; Returns: string[] }
       staff_whatsapp_client_ids: { Args: never; Returns: string[] }
       staff_whatsapp_group_ids: { Args: never; Returns: string[] }
+      start_timer: { Args: { p_task_id?: string | null; p_client_id?: string | null; p_description?: string | null; p_billable?: boolean | null }; Returns: Json }
       statutory_param_value: { Args: { p_key: string | null; p_on: string | null }; Returns: Json }
+      stop_timer: { Args: { p_description?: string | null }; Returns: Json }
       storage_first_folder_uuid: { Args: { p_name: string | null }; Returns: string }
       storage_path_in_client_folder: { Args: { p_path: string | null; p_client_id: string | null }; Returns: boolean }
+      sync_document_request_status: { Args: { p_request_id: string | null }; Returns: Database["public"]["Enums"]["request_status"] }
+      task_client_ref: { Args: { p_task_id: string | null }; Returns: Json }
+      task_dependency_list: { Args: { p_task_id: string | null }; Returns: { dependency_id: string | null; direction: string | null; task_id: string | null; task_number: string | null; title: string | null; status: Database["public"]["Enums"]["task_status"] | null; due_date: string | null; client_name: string | null; visible: boolean | null }[] }
+      task_logged_minutes: { Args: { p_task_id: string | null }; Returns: number }
+      task_open_blocker_count: { Args: { p_task_id: string | null }; Returns: number }
       task_status_label: { Args: { p: Database["public"]["Enums"]["task_status"] | null }; Returns: string }
       tasks_guard_employee: { Args: { p_old: Database["public"]["Tables"]["tasks"]["Row"] | null; p_new: Database["public"]["Tables"]["tasks"]["Row"] | null }; Returns: undefined }
+      timesheet_week_scope_check: { Args: { p_employee_id: string | null; p_week_start: string | null }; Returns: undefined }
       today_ist: { Args: never; Returns: string }
       try_uuid: { Args: { p: string | null }; Returns: string }
       update_my_contact: { Args: { p_full_name: string | null; p_phone: string | null; p_was_full_name: string | null; p_was_phone: string | null }; Returns: string }
+      upsert_compliance_events: { Args: { p_rows: Json | null }; Returns: Json }
     }
     Enums: {
       acceptance_outcome: "pending" | "accepted" | "declined"

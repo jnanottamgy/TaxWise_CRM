@@ -24,6 +24,7 @@ import {
   validateTan,
 } from "@/lib/domain/india-validators";
 import { isValidUpiId } from "@/lib/domain/messaging";
+import { NOTIFY_CHANNELS } from "@/lib/schemas/onboarding";
 import { parseAmount } from "@/lib/domain/money";
 import { checkSeriesPrefix, formatSeriesNumber, NUMBERING_DEFAULTS, SERIES, SERIES_KEYS, type SeriesKey } from "@/lib/domain/numbering";
 
@@ -618,6 +619,14 @@ export const RemindersSchema = z.object({
   document_request_reminder_every_days: intField("the document request cadence", 1, 60),
   quotation_follow_up_days: dayListField("the quotation follow-ups", { min: 1, max: 90, maxItems: 6, allowEmpty: true }),
   digest_enabled: z.boolean(),
+  /** The "Notify the client by" defaults for new clients (§7.3.2 step 5): email, the WhatsApp hand-off, the portal. */
+  client_notify_channels: z
+    .array(z.string())
+    .superRefine((v, ctx) => {
+      if (v.some((c) => !(NOTIFY_CHANNELS as readonly string[]).includes(c))) ctx.addIssue({ code: "custom", message: "Choose email, WhatsApp or the portal." });
+      else if (v.length === 0) ctx.addIssue({ code: "custom", message: "Choose at least one way to notify new clients." });
+    })
+    .transform((v) => NOTIFY_CHANNELS.filter((c) => v.includes(c))),
 });
 export type RemindersInput = z.input<typeof RemindersSchema>;
 export type RemindersValues = z.output<typeof RemindersSchema>;

@@ -86,7 +86,7 @@ function alignClass(align: DataTableColumn<unknown>["align"]) {
 }
 
 function hideClass(h: DataTableColumn<unknown>["hideBelow"]) {
-  return h === "lg" ? "hidden lg:table-cell" : h === "xl" ? "hidden xl:table-cell" : ""
+  return h === "lg" ? "hidden lg:table-cell" : h === "xl" ? "hidden xl:table-cell" : h === "2xl" ? "hidden 2xl:table-cell" : ""
 }
 
 /**

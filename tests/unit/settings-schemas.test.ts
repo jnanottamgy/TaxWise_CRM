@@ -381,6 +381,7 @@ describe("RemindersSchema", () => {
     document_request_reminder_every_days: "3",
     quotation_follow_up_days: "",
     digest_enabled: true,
+    client_notify_channels: ["whatsapp", "email"],
   };
 
   it("reads day lists typed with commas into sorted unique days", () => {
@@ -396,6 +397,14 @@ describe("RemindersSchema", () => {
     expect(errorPaths(RemindersSchema.safeParse({ ...base, invoice_reminder_after_days: "1,2,3,4,5,6,7" }))).toContain("invoice_reminder_after_days");
     expect(errorPaths(RemindersSchema.safeParse({ ...base, invoice_reminder_after_days: "" }))).toContain("invoice_reminder_after_days");
     expect(errorPaths(RemindersSchema.safeParse({ ...base, document_request_reminder_every_days: "0" }))).toContain("document_request_reminder_every_days");
+  });
+
+  it("keeps the new-client notify channels in a fixed order and needs at least one", () => {
+    const r = RemindersSchema.safeParse({ ...base, client_notify_channels: ["portal", "email", "email"] });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.client_notify_channels).toEqual(["email", "portal"]);
+    expect(errorPaths(RemindersSchema.safeParse({ ...base, client_notify_channels: [] }))).toContain("client_notify_channels");
+    expect(errorPaths(RemindersSchema.safeParse({ ...base, client_notify_channels: ["sms"] }))).toContain("client_notify_channels");
   });
 });
 

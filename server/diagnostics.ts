@@ -4,6 +4,8 @@ import { untyped } from "@/lib/supabase/untyped";
 import { unstable_rethrow } from "next/navigation";
 import { createClient, type ServerSupabase } from "@/lib/supabase/server";
 import { EXPECTED_SCHEMA_VERSION, appEnv } from "@/lib/env";
+import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
+import { EXPECTED_TABLES, EXPECTED_VIEWS } from "@/server/diagnostics-relations";
 import { logUnexpected, scrub } from "@/lib/log";
 import { DB_ENUMS, type DbEnumName } from "@/lib/domain/enums";
 import { todayIST } from "@/lib/domain/fy";
@@ -185,34 +187,7 @@ function plural(n: number, one: string, many = `${one}s`): string {
 // What the code expects (keep in step with supabase/migrations)
 // -------------------------------------------------------------------------------------------------
 
-/** Every table the app reads or writes (§5, plus the platform tables the build added). */
-export const EXPECTED_TABLES = [
-  "app_meta", "firm_settings", "profiles", "employees", "employee_leave", "employee_sessions", "attendance_records",
-  "employee_activities", "holidays", "client_groups", "clients", "onboarding_drafts", "client_services",
-  "client_service_fee_history", "client_contacts", "client_team_members", "client_document_checklist_items",
-  "client_credentials", "credential_access_logs", "client_acceptances", "leads", "quotations", "quotation_items",
-  "quotation_email_logs", "quotation_follow_ups", "job_templates", "job_template_items", "tasks", "task_status_history",
-  "task_comments", "task_attachments", "task_checklist_items", "task_dependencies", "task_automations", "time_entries",
-  "compliance_events", "recurring_compliance_templates", "filing_records", "udin_records", "statutory_registrations",
-  "dsc_records", "engagement_letters", "peer_reviews", "invoices", "invoice_items", "payment_receipts", "credit_notes",
-  "invoice_follow_ups", "invoice_reminders", "portal_payment_claims", "tds_statement_entries", "documents",
-  "document_versions", "document_tags", "document_activities", "document_requests", "document_request_items",
-  "message_templates", "messages", "message_events", "message_attachments", "gst_recon_runs", "gst_recon_entries",
-  "itr_computations", "financial_statements", "tax_notices", "tax_notice_documents", "register_portal_mappings",
-  "notifications", "activity_logs", "client_timeline_events", "audit_logs", "saved_views", "number_series", "job_runs",
-  "rate_limits", "recent_searches", "statutory_parameters", "due_date_rules", "due_date_overrides",
-  "section_concordance", "client_kyc", "previous_auditor_communications", "audit_engagements",
-  "tax_audit_external_counts", "privacy_notices", "consent_records", "data_requests", "data_incidents",
-  "independence_declarations", "quality_manual_items", "restore_drills", "firm_whatsapp_numbers",
-  "client_whatsapp_groups", "client_whatsapp_group_members", "desktop_devices", "desktop_device_numbers", "client_covers",
-] as const;
-
-/** Views with derived state (§0.1 rule 10) and the role-scoped views (§4.6). */
-export const EXPECTED_VIEWS = [
-  "tasks_view", "invoices_view", "compliance_events_view", "covers_in_force", "client_services_public",
-  "client_whatsapp_groups_public", "portal_invoices", "portal_payment_receipts", "whatsapp_links_per_number",
-  "tax_audit_ceiling_view",
-] as const;
+export { EXPECTED_TABLES, EXPECTED_VIEWS } from "@/server/diagnostics-relations";
 
 /** Where each §5.1 enum can be filtered: a column of that type. */
 export const ENUM_COLUMNS: Readonly<Record<DbEnumName, { table: string; column: string }>> = {
@@ -319,6 +294,8 @@ export const EXPECTED_BUCKETS: ReadonlyArray<{ id: string; public: boolean }> = 
 const JOB_STALE_HOURS: Readonly<Record<string, number>> = {
   "cover-lifecycle": 3,
   "workforce-sweep": 30,
+  "recurring-tasks": 30,
+  "upload-cleanup": 30,
   receivables: 30,
   "escalation-digest": 30,
   escalation: 30,
@@ -541,20 +518,26 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
     const hasKey = Boolean(process.env.RESEND_API_KEY?.trim());
     items.push({ label: "RESEND_API_KEY set", status: hasKey ? "pass" : deployed ? "fail" : "warn", detail: hasKey ? "yes" : "no" });
 
+    // Every email the app sends is in the delivery ledger (client emails, staff invites, digests,
+    // test sends), so the last failure or bounce is read there, not from client messages only.
     const last = await supabase
-      .from("messages")
-      .select("error, failed_at")
-      .eq("channel", "email")
-      .eq("status", "failed")
-      .order("failed_at", { ascending: false, nullsFirst: false })
+      .from("email_deliveries")
+      .select("kind, status, error, failed_at, bounced_at, updated_at")
+      .in("status", ["failed", "bounced"])
+      .order("updated_at", { ascending: false })
       .limit(1);
     if (last.error) {
       items.push({ label: "Last delivery error", status: "warn", code: errorCode(last.error), detail: describe(last.error) });
     } else {
-      const row = ((last.data ?? []) as Array<{ error: string | null; failed_at: string | null }>)[0];
+      const row = (last.data ?? [])[0];
+      const at = row ? (row.status === "bounced" ? row.bounced_at : row.failed_at) ?? row.updated_at : null;
       items.push(
         row
-          ? { label: "Last delivery error", status: "warn", detail: `${row.failed_at ? new Date(row.failed_at).toISOString().slice(0, 16).replace("T", " ") + " UTC: " : ""}${safeMessage(row.error ?? "no message recorded")}` }
+          ? {
+              label: "Last delivery error",
+              status: "warn",
+              detail: `${at ? new Date(at).toISOString().slice(0, 16).replace("T", " ") + " UTC: " : ""}${row.status === "bounced" ? "bounced" : "failed"} (${safeMessage(row.kind.replace(/_/g, " "))}): ${safeMessage(row.error ?? "no message recorded")}`,
+            }
           : { label: "Last delivery error", status: "pass", detail: "None recorded." },
       );
     }
@@ -592,7 +575,13 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
     for (const r of (data ?? []) as Array<{ name: string; started_at: string; finished_at: string | null; status: string; error: string | null }>) {
       if (!latest.has(r.name)) latest.set(r.name, r);
     }
-    if (latest.size === 0) return { status: "warn", summary: "No scheduled job has run yet. Register the cron jobs and run each once.", items: [] };
+    if (latest.size === 0) {
+      return {
+        status: "warn",
+        summary: "No scheduled job has run yet. Register the cron jobs and run each once.",
+        items: Object.entries(SCHEDULED_JOBS).map(([name, when]) => ({ label: name, status: "warn" as const, detail: `Never run (${when} IST).` })),
+      };
+    }
     const now = Date.now();
     const items: DiagnosticItem[] = [...latest.values()]
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -607,10 +596,14 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
         const note = failed && r.error ? `: ${safeMessage(r.error)}` : running ? ": still marked running after an hour" : stale ? ": overdue for its next run" : "";
         return { label: r.name, status, detail: `Last run ${stamp}, ${r.status}${note}` };
       });
+    // §18.2: every registered job has run once successfully before go-live.
+    for (const [name, when] of Object.entries(SCHEDULED_JOBS)) {
+      if (!latest.has(name)) items.push({ label: name, status: "warn", detail: `Never run (${when} IST).` });
+    }
     const failed = items.filter((i) => i.status === "fail");
     return {
       status: worst(items),
-      summary: failed.length ? `${plural(failed.length, "job")} failed on the last run.` : `${plural(items.length, "job")} reported; none failed on its last run.`,
+      summary: failed.length ? `${plural(failed.length, "job")} failed on the last run.` : `${plural(latest.size, "job")} reported; none failed on its last run.`,
       items,
     };
   },

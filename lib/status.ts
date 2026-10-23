@@ -25,6 +25,7 @@ import type {
   QuotationStatus,
   RegistrationStatus,
   RequestItemStatus,
+  RequestStatus,
   TaskAcceptance,
   TaskPriority,
   TaskStatus,
@@ -402,6 +403,24 @@ const REQUEST_ITEM_STATUS: Record<RequestItemStatus, StatusInfo> = {
   },
 };
 
+const REQUEST_STATUS: Record<RequestStatus, StatusInfo> = {
+  open: {
+    label: "Open",
+    tone: "warning",
+    meaning: "Open: waiting for the client. Reminders repeat until nothing is pending; it completes once every required item is accepted.",
+  },
+  completed: {
+    label: "Completed",
+    tone: "success",
+    meaning: "Completed: every required item has been accepted. Reminders have stopped.",
+  },
+  cancelled: {
+    label: "Cancelled",
+    tone: "muted",
+    meaning: "Cancelled: no longer needed. The client can't upload against it and no reminders go. Reopen it to use it again.",
+  },
+};
+
 const REGISTRATION_STATUS: Record<RegistrationStatus, StatusInfo> = {
   active: {
     label: "Active",
@@ -475,6 +494,7 @@ export const STATUS_VOCABULARY = {
   notice_status: NOTICE_STATUS,
   attendance_status: ATTENDANCE_STATUS,
   engagement_status: ENGAGEMENT_STATUS,
+  request_status: REQUEST_STATUS,
   request_item_status: REQUEST_ITEM_STATUS,
   registration_status: REGISTRATION_STATUS,
   dsc_status: DSC_STATUS,

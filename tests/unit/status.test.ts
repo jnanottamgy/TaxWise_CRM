@@ -78,6 +78,7 @@ describe("status vocabulary (§3.6)", () => {
       "notice_status",
       "attendance_status",
       "engagement_status",
+      "request_status",
       "request_item_status",
       "registration_status",
       "dsc_status",
@@ -228,6 +229,7 @@ describe("status vocabulary (§3.6)", () => {
     ]);
     expect(labels("attendance_status")).toEqual(["Present", "Late login", "Half day", "Absent", "On leave"]);
     expect(labels("engagement_status")).toEqual(["Draft", "Issued", "Signed", "Declined", "Expired"]);
+    expect(labels("request_status")).toEqual(["Open", "Completed", "Cancelled"]);
     expect(labels("request_item_status")).toEqual(["Pending", "Uploaded", "Accepted", "Rejected"]);
     expect(getStatus("request_item_status", "rejected").meaning).toContain("reason");
     expect(tone("attendance_status", "absent")).toBe("danger");

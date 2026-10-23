@@ -34,6 +34,7 @@ import {
   startActivityClock,
   syncAppMetadata,
 } from "@/server/auth";
+import { presenceOnSignIn, presenceOnSignOut } from "@/server/presence";
 
 /**
  * Sign-in, sign-out, password and two-step sign-in actions (§4.4, §12, §13).
@@ -204,6 +205,9 @@ export async function signIn(input: SignInInput): Promise<ActionResult<{ redirec
       supabase,
     });
     await startActivityClock();
+    // §7.12: the presence session opens now, or at the first heartbeat after the password change
+    // or the two-step check.
+    await presenceOnSignIn({ userId: user.id, role, ready: !profile.mustChangePassword && !needsMfa, ip: meta.ip, userAgent: meta.userAgent });
 
     const destination = destinationFor(role, next);
     if (profile.mustChangePassword) return ok({ redirectTo: "/set-password" });
@@ -353,6 +357,8 @@ export async function signOut(): Promise<ActionResult<{ redirectTo: string }>> {
     userId = user?.id ?? null;
 
     if (user) {
+      // §7.12: explicit sign-out closes the presence session.
+      await presenceOnSignOut(user.id);
       // Written before the session goes, so it is recorded under the person's own session.
       await auditAuthEvent({
         event: "logout",

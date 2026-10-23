@@ -74,6 +74,7 @@ export interface FirmSettingsRow {
   invoice_reminder_after_days: number[];
   document_request_reminder_every_days: number;
   digest_enabled: boolean;
+  client_notify_channels: string[];
   // Email (shown on the invoice preview and in diagnostics)
   email_from_name: string;
   email_from_address: string;
@@ -142,6 +143,7 @@ export const FIRM_SETTINGS_COLUMNS = [
   "invoice_reminder_after_days",
   "document_request_reminder_every_days",
   "digest_enabled",
+  "client_notify_channels",
   "email_from_name",
   "email_from_address",
   "email_reply_to",

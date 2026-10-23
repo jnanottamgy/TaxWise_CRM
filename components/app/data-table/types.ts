@@ -15,8 +15,8 @@ export interface DataTableColumn<T> {
   /** Server-side sortable: `id` (or `sortKey`) must be in the page's parseTableParams `sortable` list. */
   sortable?: boolean
   sortKey?: string
-  /** Hide the column below this breakpoint (on top of the phone card layout below 768px). */
-  hideBelow?: "lg" | "xl"
+  /** Hide the column below this breakpoint (on top of the phone card layout below 768px). `2xl` (1536px) keeps a column off 1366px screens. */
+  hideBelow?: "lg" | "xl" | "2xl"
   /**
    * Where the column goes in the stacked card below 768px: `primary` (line 1, left: the identity),
    * `trailing` (line 1, right: the key number or status), `secondary` (line 2, grey, joined with " · ").
