@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, "claude/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web app (typecheck, lint, unit tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Build (placeholder Supabase values; nothing is contacted at build time)
+        run: npm run build
+        env:
+          APP_ENV: development
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      - name: Service-role key never reaches the browser bundle (§12)
+        run: node scripts/check-service-role.mjs
+
+  database:
+    name: Database (migrations, seed, RLS role x table tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # Throwaway CI service container only; never a real database.
+      LOCAL_PG_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply every migration and seed to a fresh database
+        run: npx tsx scripts/db-local.ts reset taxwise_ci
+      - name: Generated types match the migrated schema
+        run: npx tsx scripts/gen-db-types.ts --check
+      - run: npm run test:db
+
+  desktop:
+    name: TaxWise Desktop (typecheck, unit tests, Electron e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Electron end-to-end tests (Playwright _electron)
+        run: xvfb-run --auto-servernum npm run e2e
+        env:
+          TAXWISE_APP_URL: https://example.invalid
