@@ -112,13 +112,13 @@ export default async function WorkpapersPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Financial statements" description={`Schedule III from the trial balance, FY ${fy}.`} viewAll={{ href: "/workpapers/financial-statements", label: "Open financial statements" }} flush>
+        <SectionCard title="Financial statements" description={`Schedule III from the trial balance, FY ${fy}.`} viewAll={{ href: `/workpapers/financial-statements?fy=${fy}`, label: "Open financial statements" }} flush>
           {fs.ok ? (
             <Figures
               figures={[
-                { label: "Drafts", value: fs.data.draft, href: "/workpapers/financial-statements?status=draft" },
-                { label: "Reviewed, not final", value: fs.data.reviewed, href: "/workpapers/financial-statements?status=reviewed" },
-                { label: "Final", value: fs.data.final, href: "/workpapers/financial-statements?status=final" },
+                { label: "Drafts", value: fs.data.draft, href: `/workpapers/financial-statements?status=draft&fy=${fy}` },
+                { label: "Reviewed, not final", value: fs.data.reviewed, href: `/workpapers/financial-statements?status=reviewed&fy=${fy}` },
+                { label: "Final", value: fs.data.final, href: `/workpapers/financial-statements?status=final&fy=${fy}` },
               ]}
             />
           ) : (

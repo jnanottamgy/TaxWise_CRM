@@ -213,7 +213,7 @@ export function StepBasics({
         </div>
       </SectionCard>
 
-      <SectionCard id="basics-scale" headingLevel={3} title="Scale" description="Decides the GST scheme and whether a tax audit is indicated (§6.6).">
+      <SectionCard id="basics-scale" headingLevel={3} title="Scale" description="Decides the GST scheme and whether a tax audit is indicated.">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <SelectField control={control} name="fy_end_month" label="Financial year ends in" options={MONTH_OPTIONS} />
           <div className="hidden md:block" />

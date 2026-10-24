@@ -4,7 +4,7 @@ import * as React from "react"
 import { CalendarClockIcon, FileClockIcon, LandmarkIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, ScaleIcon, Trash2Icon } from "lucide-react"
 import { COMPLIANCE_TYPE_LABELS, SERVICE_FREQUENCY_LABELS, type ComplianceType, type ServiceFrequency } from "@/lib/domain/enums"
 import { formatDate, formatDateTime } from "@/lib/format"
-import { summariseParameterValue } from "@/lib/schemas/law"
+import { describeParameterValue, summariseParameterValue } from "@/lib/schemas/law"
 import type { ConcordanceRow, DueDateRuleRow, LawChangeRow, OverrideRow, ParameterRow } from "@/lib/data/law"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -22,26 +22,41 @@ interface PageProps<T> {
   today: string
 }
 
-const AWAITING_ROW = "bg-warning-soft/40"
+// Opaque (mixed with the surface, not a translucent tint): DataTable's sticky first column takes the
+// row's background, and a translucent one painted twice made that column a darker band.
+const AWAITING_ROW = "bg-[color-mix(in_oklab,var(--warning-soft)_45%,var(--surface))]"
+
+/**
+ * DataTable keeps cells on one line (and the first column truncated); these columns hold sentences
+ * (a value, a source, a scope), so they wrap, from a readable minimum width.
+ */
+const WRAP = "whitespace-normal min-w-[10rem]"
+const WRAP_WIDE = "whitespace-normal min-w-[14rem]"
 
 function InForce({ from, to, today }: { from: string; to: string | null; today: string }) {
   const past = to !== null && to < today
   const future = from > today
   return (
     <div className="flex flex-col items-end">
-      <span className="num whitespace-nowrap text-text">{to ? `${formatDate(from)} – ${formatDate(to)}` : `from ${formatDate(from)}`}</span>
+      {to ? (
+        <span className="num flex flex-col items-end text-text">
+          <span>{formatDate(from)} –</span>
+          <span>{formatDate(to)}</span>
+        </span>
+      ) : (
+        <span className="num text-text">from {formatDate(from)}</span>
+      )}
       {past ? <span className="text-xs text-text-muted">Past</span> : future ? <span className="text-xs text-info-text">Starts later</span> : null}
     </div>
   )
 }
 
+// Long text in these tables wraps rather than clamps: a line-clamped box (display: -webkit-box)
+// offers its whole one-line text as its narrowest width, so one long source or value stretched the
+// table far past its frame at 1366 and pushed Confirm out of view.
 function Source({ text }: { text: string | null }) {
   if (!text) return <span className="text-text-muted">—</span>
-  return (
-    <span className="line-clamp-2 text-sm text-text" title={text}>
-      {text}
-    </span>
-  )
+  return <span className="text-sm text-text">{text}</span>
 }
 
 function RowMenu({ label, children }: { label: string; children: React.ReactNode }) {
@@ -136,12 +151,11 @@ export function ParametersTable({ rows, total, page, pageSize, today }: PageProp
       hideable: false,
       mobile: "primary",
       width: "28%",
+      // Both lines wrap (the key at its dots and underscores) so the column can be as narrow as 28%.
       cell: (r) => (
-        <div className="min-w-0">
-          <p className="truncate font-mono text-sm text-text" title={r.key}>
-            {r.key}
-          </p>
-          <p className="truncate text-xs text-text-muted">{[r.statute, r.section_ref].filter(Boolean).join(" · ") || "—"}</p>
+        <div className="min-w-0 whitespace-normal">
+          <p className="font-mono text-sm [overflow-wrap:anywhere] text-text">{r.key}</p>
+          <p className="text-xs text-text-muted">{[r.statute, r.section_ref].filter(Boolean).join(" · ") || "—"}</p>
         </div>
       ),
     },
@@ -149,14 +163,15 @@ export function ParametersTable({ rows, total, page, pageSize, today }: PageProp
       id: "value",
       header: "Value",
       mobile: "secondary",
+      className: WRAP,
       cell: (r) => (
-        <span className="line-clamp-2 font-mono text-sm break-all text-text" title={summariseParameterValue(r.value, 400)}>
-          {summariseParameterValue(r.value, 60)}
+        <span className="text-sm text-text" title={summariseParameterValue(r.value, 400)}>
+          {describeParameterValue(r.value, 80)}
         </span>
       ),
     },
     { id: "in_force", header: "In force", align: "right", mobile: "secondary", cell: (r) => <InForce from={r.effective_from} to={r.effective_to} today={today} /> },
-    { id: "source", header: "Source", hideBelow: "xl", cell: (r) => <Source text={r.source_ref} /> },
+    { id: "source", header: "Source", hideBelow: "2xl", className: WRAP_WIDE, cell: (r) => <Source text={r.source_ref} /> },
     { id: "verified", header: "Confirmation", mobile: "trailing", cell: (r) => <VerificationCell verified={r.verified} byName={r.verified_by_name} on={r.verified_on} /> },
     { id: "actions", header: "Actions", hideable: false, align: "right", cell: (r) => <ParameterActions row={r} today={today} /> },
   ]
@@ -211,24 +226,28 @@ export function RulesTable({ rows, total, page, pageSize, today }: PageProps<Due
       mobile: "primary",
       width: "30%",
       cell: (r) => (
-        <div className="min-w-0">
-          <p className="truncate text-base text-text" title={r.title}>
-            {r.title}
-          </p>
-          <p className="truncate font-mono text-xs text-text-muted">
-            {r.code}
+        <div className="min-w-0 whitespace-normal">
+          <p className="text-base text-text">{r.title}</p>
+          <p className="text-xs text-text-muted">
+            {/* Below 2xl the Return column is folded in here, so Confirm stays in view at 1366. */}
+            <span className="2xl:hidden">
+              {r.form_code ?? COMPLIANCE_TYPE_LABELS[r.compliance_type as ComplianceType] ?? r.compliance_type} · {SERVICE_FREQUENCY_LABELS[r.frequency as ServiceFrequency] ?? r.frequency} ·{" "}
+            </span>
+            <span className="font-mono">{r.code}</span>
             {r.is_active ? "" : " · switched off"}
           </p>
         </div>
       ),
+      mobileCell: (r) => r.title,
     },
     {
       id: "form",
       header: "Return",
       mobile: "secondary",
+      hideBelow: "2xl",
       cell: (r) => (
         <div className="min-w-0">
-          <p className="truncate text-sm text-text">{r.form_code ?? COMPLIANCE_TYPE_LABELS[r.compliance_type as ComplianceType] ?? r.compliance_type}</p>
+          <p className="text-sm whitespace-normal text-text">{r.form_code ?? COMPLIANCE_TYPE_LABELS[r.compliance_type as ComplianceType] ?? r.compliance_type}</p>
           <p className="text-xs text-text-muted">{SERVICE_FREQUENCY_LABELS[r.frequency as ServiceFrequency] ?? r.frequency}</p>
         </div>
       ),
@@ -237,15 +256,16 @@ export function RulesTable({ rows, total, page, pageSize, today }: PageProps<Due
       id: "rule",
       header: "Due",
       hideBelow: "lg",
+      className: "whitespace-normal min-w-[8rem]",
       cell: (r) => (
-        <span className="line-clamp-2 font-mono text-xs break-all text-text" title={JSON.stringify(r.rule)}>
-          {summariseParameterValue(r.rule, 50)}
+        <span className="text-sm text-text" title={JSON.stringify(r.rule)}>
+          {describeParameterValue(r.rule, 60)}
         </span>
       ),
     },
-    { id: "reminder_days", header: "Reminder", align: "right", hideBelow: "xl", cell: (r) => <span className="num text-text">{r.reminder_days} d</span> },
+    { id: "reminder_days", header: "Reminder", align: "right", hideBelow: "2xl", cell: (r) => <span className="num text-text">{r.reminder_days} d</span> },
     { id: "in_force", header: "In force", align: "right", mobile: "secondary", cell: (r) => <InForce from={r.effective_from} to={r.effective_to} today={today} /> },
-    { id: "source", header: "Source", hideBelow: "xl", cell: (r) => <Source text={r.source_ref} /> },
+    { id: "source", header: "Source", hideBelow: "2xl", className: WRAP_WIDE, cell: (r) => <Source text={r.source_ref} /> },
     { id: "verified", header: "Confirmation", mobile: "trailing", cell: (r) => <VerificationCell verified={r.verified} byName={r.verified_by_name} on={r.verified_on} /> },
     { id: "actions", header: "Actions", hideable: false, align: "right", cell: (r) => <RuleActions row={r} today={today} /> },
   ]
@@ -294,8 +314,8 @@ export function OverridesTable({ rows, total, page, pageSize, rules }: Omit<Page
       mobile: "primary",
       width: "30%",
       cell: (r) => (
-        <div className="min-w-0">
-          <p className="truncate text-base text-text">
+        <div className="min-w-0 whitespace-normal">
+          <p className="text-base text-text">
             {r.rule_title ?? r.rule_code} · {r.period_label}
           </p>
           <p className="truncate font-mono text-xs text-text-muted">{r.rule_code}</p>
@@ -314,9 +334,9 @@ export function OverridesTable({ rows, total, page, pageSize, rules }: Omit<Page
         </div>
       ),
     },
-    { id: "source", header: "Circular", mobile: "secondary", cell: (r) => <Source text={r.source_ref} /> },
-    { id: "scope", header: "Covers", hideBelow: "xl", cell: (r) => <Source text={r.scope} /> },
-    { id: "moved", header: "Events moved", align: "right", hideBelow: "lg", cell: (r) => <span className="num text-text">{r.moved_count.toLocaleString("en-IN")}</span> },
+    { id: "source", header: "Circular", mobile: "secondary", className: WRAP, cell: (r) => <Source text={r.source_ref} /> },
+    { id: "scope", header: "Covers", hideBelow: "xl", className: WRAP_WIDE, cell: (r) => <Source text={r.scope} /> },
+    { id: "moved", header: "Events moved", align: "right", hideBelow: "2xl", cell: (r) => <span className="num text-text">{r.moved_count.toLocaleString("en-IN")}</span> },
     {
       id: "added",
       header: "Added",
@@ -386,10 +406,10 @@ function Provision({ section, form }: { section: string | null; form: string | n
 
 export function ConcordanceTable({ rows, total, page, pageSize }: Omit<PageProps<ConcordanceRow>, "today">) {
   const columns: DataTableColumn<ConcordanceRow>[] = [
-    { id: "topic", header: "Topic", hideable: false, mobile: "primary", width: "28%", cell: (r) => <span className="text-base text-text">{r.topic}</span> },
+    { id: "topic", header: "Topic", hideable: false, mobile: "primary", width: "28%", cell: (r) => <span className="text-base whitespace-normal text-text">{r.topic}</span> },
     { id: "old", header: "Income-tax Act, 1961", mobile: "secondary", cell: (r) => <Provision section={r.old_section} form={r.old_form} /> },
     { id: "new", header: "Income-tax Act, 2025", mobile: "secondary", cell: (r) => <Provision section={r.new_section} form={r.new_form} /> },
-    { id: "source", header: "Source", hideBelow: "xl", cell: (r) => <Source text={r.source_ref} /> },
+    { id: "source", header: "Source", hideBelow: "2xl", className: WRAP_WIDE, cell: (r) => <Source text={r.source_ref} /> },
     { id: "verified", header: "Confirmation", mobile: "trailing", cell: (r) => <VerificationCell verified={r.verified} byName={r.verified_by_name} on={r.verified_on} /> },
     { id: "actions", header: "Actions", hideable: false, align: "right", cell: (r) => <ConcordanceActions row={r} /> },
   ]
@@ -466,7 +486,7 @@ export function ChangeLogTable({ rows, total, page, pageSize }: Omit<PageProps<L
       cell: (r) => (
         <div className="min-w-0">
           <p className="text-base text-text">{ACTION_LABEL[r.action ?? ""] ?? r.action ?? "Change"}</p>
-          <p className="line-clamp-2 text-sm break-words text-text-muted">{describeChange(r) || "—"}</p>
+          <p className="text-sm break-words text-text-muted">{describeChange(r) || "—"}</p>
         </div>
       ),
     },

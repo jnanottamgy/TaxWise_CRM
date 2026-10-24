@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { unstable_rethrow } from "next/navigation"
 import type { CurrentUser } from "@/lib/auth/current-user"
@@ -125,7 +126,8 @@ export async function FirmTodayView({ user, supabase }: { user: CurrentUser; sup
 
         {/* Approvals first (left), the firm's figures beside them; phones: Approvals, figures, review, deadlines. */}
         <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-6">
-          <div className="max-lg:contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6 lg:[&>*:last-child]:flex-1">
+          {/* The review queue stretches to the figures' bottom only when it has rows: an empty one keeps its own height. */}
+          <div className={cn("max-lg:contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6", (!m || m.review.rows.length > 0) && "lg:[&>*:last-child]:flex-1")}>
             {m ? (
               <SectionCard
                 className="max-lg:order-1"

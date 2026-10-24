@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { PhoneIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { EmptyState } from "@/components/app/empty-state"
 import { StatusChip } from "@/components/app/status-chip"
 import { DateText } from "@/components/app/date-text"
@@ -13,6 +14,7 @@ import { formatDate, formatTimeAgo } from "@/lib/format"
 import { STALE_LEAD_DAYS, type AttendanceSnapshot, type CallListRow, type SalesSnapshot } from "@/lib/data/dashboard"
 import type { TaskListRow } from "@/lib/data/tasks"
 import { Figure, RowLink } from "@/components/home/home-ui"
+import { MetaLine } from "@/components/tasks/meta-line"
 import { MoneyText, figure } from "@/components/home/kpi-grid"
 import { count, moneyHref, workHref, type TeamLoadRow } from "@/components/home/logic"
 
@@ -31,15 +33,15 @@ export function DeclinedList({ rows, today }: { rows: TaskListRow[]; today: stri
       {rows.map((r) => (
         <li key={r.id} className="flex min-h-11 flex-col justify-center gap-0.5 py-2.5">
           <RowLink href={`/work/${r.id}`}>{r.title}</RowLink>
-          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-text-muted">
+          <MetaLine>
             <span className="font-mono text-xs">{r.task_number}</span>
-            {r.client_name ? <span className="truncate">· {r.client_name}</span> : null}
+            {r.client_name ? <span>{r.client_name}</span> : null}
             {r.due_date ? (
               <span className="whitespace-nowrap">
-                · <DateText date={r.due_date} withRelative today={today} />
+                <DateText date={r.due_date} withRelative today={today} />
               </span>
             ) : null}
-          </p>
+          </MetaLine>
           <p className="text-sm text-text">
             {r.declined_by_name ?? "The assignee"} declined: {r.decline_reason ? DECLINE_REASON_LABELS[r.decline_reason] : "no reason recorded"}
           </p>
@@ -68,18 +70,18 @@ export function CallList({ rows, today, messaging, portalLink }: { rows: CallLis
                 <RowLink href={`/clients/${task.client_id}`}>{task.client_name ?? "Client"}</RowLink>
                 <span className="num text-sm whitespace-nowrap text-warning-text">{waited === null ? "Waiting" : waited === 0 ? "Waiting since today" : `Waiting ${count(waited, "day")}`}</span>
               </div>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-text-muted">
-                <Link href={`/work/${task.id}`} className="truncate text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+              <MetaLine className="mt-0.5">
+                <Link href={`/work/${task.id}`} className="text-text hover:underline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
                   {task.title}
                 </Link>
-                <span className="font-mono text-xs">· {task.task_number}</span>
-                {task.assignee_name ? <span>· {task.assignee_name}</span> : null}
+                <span className="font-mono text-xs">{task.task_number}</span>
+                {task.assignee_name ? <span>{task.assignee_name}</span> : null}
                 {task.due_date ? (
                   <span className="whitespace-nowrap">
-                    · <DateText date={task.due_date} withRelative today={today} />
+                    <DateText date={task.due_date} withRelative today={today} />
                   </span>
                 ) : null}
-              </p>
+              </MetaLine>
               <p className="mt-0.5 text-sm text-text-muted">
                 {contact ? (
                   <>
@@ -133,27 +135,33 @@ export function CallList({ rows, today, messaging, portalLink }: { rows: CallLis
   )
 }
 
-export function TeamLoadList({ rows }: { rows: TeamLoadRow[] }) {
+export function TeamLoadList({ rows, columns = 1 }: { rows: TeamLoadRow[]; /** Two columns of people on wide screens, for a full-width card. */ columns?: 1 | 2 }) {
   if (rows.length === 0) return <EmptyState size="compact" message="No active team members yet." />
   return (
-    <ul className="divide-y divide-border/70">
+    <ul className={cn(columns === 2 ? "lg:columns-2 lg:gap-x-10 [&>li]:break-inside-avoid [&>li]:border-b [&>li]:border-border/70 max-lg:[&>li:last-child]:border-b-0" : "divide-y divide-border/70")}>
       {rows.map((r) => (
-        <li key={r.id} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2">
-          <PersonInitials name={r.name} size="sm" />
-          <div className="min-w-0 flex-1">
-            <Link href={`/people/${r.id}`} className="block truncate text-base text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-              {r.name}
-            </Link>
-            <p className="num truncate text-sm text-text-muted">{r.capacity ? r.capacity.arithmetic : "No longer active"}</p>
+        // Phones: name and arithmetic at full width, then overdue and band on their own line (two
+        // fixed 96px columns beside the text squeezed it to one word a line). Wider: one row.
+        <li key={r.id} className="flex min-h-11 items-start gap-3 py-2 sm:items-center">
+          <PersonInitials name={r.name} size="sm" className="max-sm:mt-0.5" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <Link href={`/people/${r.id}`} className="block truncate text-base text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                {r.name}
+              </Link>
+              <p className="num text-sm text-pretty text-text-muted">{r.capacity ? r.capacity.arithmetic : "No longer active"}</p>
+            </div>
+            <div className="flex items-center gap-3 sm:contents">
+              {r.overdue > 0 ? (
+                <Link href={workHref.overdueFor(r.id)} className="num text-sm font-medium whitespace-nowrap text-danger-text tabular-nums hover:underline focus-visible:outline-2 focus-visible:outline-ring sm:w-24 sm:text-right">
+                  {r.overdue} overdue
+                </Link>
+              ) : (
+                <span className="num text-sm whitespace-nowrap text-text-muted sm:w-24 sm:text-right">0 overdue</span>
+              )}
+              <span className="flex sm:w-24 sm:justify-end">{r.capacity ? <CapacityChip capacity={r.capacity} /> : null}</span>
+            </div>
           </div>
-          {r.overdue > 0 ? (
-            <Link href={workHref.overdueFor(r.id)} className="num w-24 text-right text-sm font-medium text-danger-text tabular-nums hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-              {r.overdue} overdue
-            </Link>
-          ) : (
-            <span className="num w-24 text-right text-sm text-text-muted">0 overdue</span>
-          )}
-          <span className="flex w-24 justify-end">{r.capacity ? <CapacityChip capacity={r.capacity} /> : null}</span>
         </li>
       ))}
     </ul>

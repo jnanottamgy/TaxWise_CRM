@@ -60,7 +60,7 @@ export function RunsTable(props: { rows: RunListRow[]; total: number; page: numb
     }
     cols.push(
       { id: "period_start", header: "Month", sortable: true, mobile: showClient ? "secondary" : "primary", rowLink: !showClient, cell: (r) => <span className="whitespace-nowrap">{periodLabel(r.period)}</span> },
-      { id: "matched", header: "Matched", align: "right", hideBelow: "lg", cell: (r) => <Count n={r.matched_count} /> },
+      { id: "matched", header: "Matched", align: "right", hideBelow: "2xl", cell: (r) => <Count n={r.matched_count} /> },
       { id: "mismatch", header: "Mismatch", align: "right", cell: (r) => <Count n={r.mismatch_count} tone="danger" /> },
       { id: "missing_in_2b", header: "Not in 2B", align: "right", cell: (r) => <Count n={r.missing_in_2b_count} tone="danger" /> },
       { id: "missing_in_books", header: "Not in books", align: "right", hideBelow: "lg", cell: (r) => <Count n={r.missing_in_books_count} tone="warning" /> },

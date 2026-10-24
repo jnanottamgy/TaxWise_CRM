@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LockIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShellTitle } from "@/components/shell/page-slots";
 
 export const metadata = { title: "Not available for your role" };
 
@@ -12,6 +13,8 @@ export const metadata = { title: "Not available for your role" };
 export default function StaffForbidden() {
   return (
     <div className="flex justify-center py-6 md:py-12">
+      {/* The sidebar has no item for a refused or unknown path, so the top bar names the page itself. */}
+      <ShellTitle crumbs={[{ label: "Not available" }]} />
       <section className="w-full max-w-lg rounded-lg border border-border bg-surface px-5 py-6 sm:px-6">
         <div className="flex items-start gap-3">
           <LockIcon aria-hidden="true" className="mt-1 size-4 flex-none text-text-muted" />

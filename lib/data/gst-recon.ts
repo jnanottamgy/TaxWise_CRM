@@ -417,11 +417,14 @@ export async function openLinesForCarryForward(supabase: ServerSupabase, previou
       .order("id")
       .range(from, to) as unknown as PromiseLike<{ data: CarryLine[] | null; error: unknown }>,
   );
-  return rows.filter((r) => {
-    const res = r.resolution ?? "open";
-    if (res === "open" || res === "follow_up_supplier") return true;
-    return r.cleared_by_run_id !== null && sameMonthIds.has(r.cleared_by_run_id);
-  });
+  return rows
+    .filter((r) => {
+      const res = r.resolution ?? "open";
+      if (res === "open" || res === "follow_up_supplier") return true;
+      return r.cleared_by_run_id !== null && sameMonthIds.has(r.cleared_by_run_id);
+    })
+    // An import (IMPG bill of entry) has no supplier GSTIN: NULL in the table (0234), '' to the engine.
+    .map((r) => ({ ...r, supplier_gstin: r.supplier_gstin ?? "" }));
 }
 
 export type PriorDecision = { bucket: string; resolution: string; resolution_note: string | null; ims_action: string | null; ims_reason: string | null; ims_decided: boolean };

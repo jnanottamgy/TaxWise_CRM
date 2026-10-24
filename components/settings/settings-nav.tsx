@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useSelectedLayoutSegment } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { SETTINGS_SECTIONS, type SettingsSlug } from "@/lib/schemas/settings"
+import { ShellTitle } from "@/components/shell/page-slots"
 
 /**
  * The settings section list (§7.21). One view per section (taste §8.2): each link opens its own
@@ -21,8 +22,12 @@ export function SettingsNav({ only }: { only?: readonly SettingsSlug[] } = {}) {
     return acc
   }, [])
 
+  const activeLabel = SETTINGS_SECTIONS.find((s) => s.slug === active)?.label ?? null
+
   return (
     <nav aria-label="Settings sections" className="min-w-0">
+      {/* The top bar names the section ("Admin › Settings › Bank & UPI"; Partners only see Admin), not just "Settings". */}
+      {activeLabel ? <ShellTitle crumbs={[...(only ? [] : [{ label: "Admin" }]), { label: "Settings" }, { label: activeLabel }]} /> : null}
       {/* Wide screens: grouped vertical list */}
       <div className="hidden lg:flex lg:flex-col lg:gap-5">
         {groups.map((g) => (

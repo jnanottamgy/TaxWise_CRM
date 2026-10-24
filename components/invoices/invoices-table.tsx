@@ -67,6 +67,10 @@ export function InvoicesTable(props: {
 }) {
   const { rows, total, page, pageSize, sort, dir, today, showClient = true } = props
   const columns = React.useMemo<DataTableColumn<InvoiceListRow>[]>(() => {
+    // The list answers "what's outstanding, and what's overdue?": at 1366px (1,060px of table beside
+    // the sidebar) Number, Date, Client, Total, Outstanding, Due and Status fit without scrolling;
+    // period, taxable value, GST, received, TDS and channel join from 1536px. The totals band below
+    // the table always carries every sum.
     const cols: DataTableColumn<InvoiceListRow>[] = [
       { id: "invoice_number", header: "Number", sortable: true, hideable: false, mobile: "secondary", width: "9.5rem", cell: (r) => <NumberCell r={r} />, mobileCell: (r) => r.invoice_number ?? "Draft" },
       { id: "issue_date", header: "Date", sortable: true, align: "right", cell: (r) => <DateText date={r.issue_date} /> },
@@ -81,7 +85,8 @@ export function InvoicesTable(props: {
         width: "22%",
         cell: (r) => (
           <span className="inline-flex min-w-0 flex-col leading-5" title={`${r.client_code} · ${r.client_name}`}>
-            <span className="truncate">{r.client_name}</span>
+            {/* Capped, so one long company name can't push the amounts out of view; the title has it whole. */}
+            <span className="max-w-60 truncate">{r.client_name}</span>
             <span className="text-xs text-text-muted">{r.client_code}</span>
           </span>
         ),
@@ -89,11 +94,11 @@ export function InvoicesTable(props: {
       })
     }
     cols.push(
-      { id: "billing_period_label", header: "Period", sortable: true, hideBelow: "xl", cell: (r) => (r.billing_period_label ? <span className="text-text-muted">{r.billing_period_label}</span> : <Muted />) },
-      { id: "taxable_amount", header: "Taxable", sortable: true, align: "right", hideBelow: "xl", cell: (r) => <Money value={r.taxable_amount} /> },
+      { id: "billing_period_label", header: "Period", sortable: true, hideBelow: "2xl", cell: (r) => (r.billing_period_label ? <span className="text-text-muted">{r.billing_period_label}</span> : <Muted />) },
+      { id: "taxable_amount", header: "Taxable", sortable: true, align: "right", hideBelow: "2xl", cell: (r) => <Money value={r.taxable_amount} /> },
       { id: "gst_amount", header: "GST", sortable: true, align: "right", hideBelow: "2xl", cell: (r) => <Money value={r.gst_amount} /> },
       { id: "total_amount", header: "Total", sortable: true, align: "right", mobile: "trailing", cell: (r) => <Money value={r.total_amount} /> },
-      { id: "amount_received", header: "Received", sortable: true, align: "right", hideBelow: "lg", cell: (r) => <Money value={r.amount_received} /> },
+      { id: "amount_received", header: "Received", sortable: true, align: "right", hideBelow: "2xl", cell: (r) => <Money value={r.amount_received} /> },
       { id: "tds_credited", header: "TDS", sortable: true, align: "right", hideBelow: "2xl", cell: (r) => <Money value={r.tds_credited} /> },
       {
         id: "outstanding_amount",
@@ -117,14 +122,20 @@ export function InvoicesTable(props: {
         sortable: true,
         align: "right",
         mobile: "secondary",
-        cell: (r) => <DateText date={r.due_date} withRelative={!r.cancelled_at && (r.status === "sent" || r.status === "partially_paid")} stacked today={today} />,
-        mobileCell: (r) => <DateText date={r.due_date} withRelative={!r.cancelled_at && (r.status === "sent" || r.status === "partially_paid")} today={today} />,
+        // Status already reads "Overdue · 5 days overdue"; the due date adds "in 3 days" only while it's still ahead.
+        cell: (r) => <DateText date={r.due_date} withRelative={!r.cancelled_at && !r.is_overdue && (r.status === "sent" || r.status === "partially_paid")} stacked today={today} />,
+        // On a phone card the status already says "5 days overdue"; the date line says what the date is.
+        mobileCell: (r) => (
+          <span>
+            Due <DateText date={r.due_date} withRelative={!r.cancelled_at && !r.is_overdue && (r.status === "sent" || r.status === "partially_paid")} today={today} />
+          </span>
+        ),
       },
       { id: "status", header: "Status", sortable: true, mobile: "trailing", cell: (r) => <InvoiceStatusCell row={r} /> },
       {
         id: "sent_via",
         header: "Sent via",
-        hideBelow: "xl",
+        hideBelow: "2xl",
         cell: (r) => {
           if (!r.invoice_number) return <Muted />
           const via = sentViaLabel(r.sent_channels)

@@ -160,7 +160,13 @@ export function FilingsGrid({
               return (
                 <tr key={c.id} className="group">
                   <th scope="row" className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-1.5 text-left font-normal group-hover:bg-surface-2 md:px-4">
-                    <Link href={`/clients/${c.id}?tab=compliance`} className="block min-w-0 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                    {/* A fixed width (the column's, less its padding): a long name truncates instead of
+                        widening the column and pushing March out of the frame at 1366px. */}
+                    <Link
+                      href={`/clients/${c.id}?tab=compliance`}
+                      title={c.display_name}
+                      className="block w-[8.5rem] min-w-0 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-ring md:w-44"
+                    >
                       <span className="block truncate text-sm font-medium text-text">{c.display_name}</span>
                       <span className="block truncate text-xs text-text-muted">
                         {c.client_code}

@@ -6,14 +6,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { PUSH } from "../shared/channels";
 import type { PanelViewState } from "../shared/types";
+import { preloadMayRun } from "../shared/url";
 
 const listeners = new Set<(state: PanelViewState) => void>();
 let last: PanelViewState | null = null;
-
-ipcRenderer.on(PUSH.panelState, (_e, state: PanelViewState) => {
-  last = state;
-  for (const l of listeners) l(state);
-});
 
 const panel = {
   onState(callback: (state: PanelViewState) => void): void {
@@ -37,4 +33,11 @@ const panel = {
 
 export type TaxwisePanelBridge = typeof panel;
 
-contextBridge.exposeInMainWorld("taxwisePanel", Object.freeze(panel));
+// Only on the bundled panel page (preloadMayRun): never in the view's initial empty document.
+if (preloadMayRun(location.href)) {
+  ipcRenderer.on(PUSH.panelState, (_e, state: PanelViewState) => {
+    last = state;
+    for (const l of listeners) l(state);
+  });
+  contextBridge.exposeInMainWorld("taxwisePanel", Object.freeze(panel));
+}

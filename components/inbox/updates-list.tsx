@@ -35,6 +35,7 @@ export function UpdatesList({
   pageSize,
   show,
   filtered,
+  now: serverNow,
 }: {
   rows: UpdateRow[]
   total: number
@@ -42,13 +43,15 @@ export function UpdatesList({
   pageSize: number
   show: InboxShow
   filtered: boolean
+  /** The server's render time (ISO), so "3 hours ago" hydrates to the same text. */
+  now?: string
 }) {
   const router = useRouter()
   const url = useTableUrlState()
   const [overrides, setOverrides] = React.useState<Record<string, Override>>({})
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set())
   const [confirmDelete, setConfirmDelete] = React.useState<string[] | null>(null)
-  const [now] = React.useState(() => new Date())
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
   const [seenRows, setSeenRows] = React.useState(rows)
 
   // New rows from the server replace what the optimistic overrides were standing in for.

@@ -12,9 +12,9 @@ import { StatusChip } from "@/components/app/status-chip"
 import { ConfirmDialog } from "@/components/app/confirm-dialog"
 
 export const AWAITING_MEANING =
-  "Checked only against secondary sources, or the sources disagreed. Confirm it against the notification or circular it cites, then mark it verified. Every one must be confirmed before go-live."
+  "Checked only against secondary sources, or the sources disagreed. A Partner confirms it against the notification or circular it cites and marks it verified. Every one must be confirmed before go-live."
 
-/** "Verified" or "Awaiting partner confirmation", with who and when underneath. */
+/** "Verified" or "Awaiting confirmation" (by a Partner: the hover says so), with who and when underneath. */
 export function VerificationCell({ verified, byName, on }: { verified: boolean; byName: string | null; on: string | null }) {
   return (
     <div className="flex min-w-0 flex-col items-start gap-0.5">
@@ -25,7 +25,7 @@ export function VerificationCell({ verified, byName, on }: { verified: boolean; 
           meaning={byName || on ? `Confirmed${byName ? ` by ${byName}` : ""}${on ? ` on ${formatDate(on)}` : ""}.` : "Confirmed against its source."}
         />
       ) : (
-        <StatusChip label="Awaiting partner confirmation" tone="warning" meaning={AWAITING_MEANING} />
+        <StatusChip label="Awaiting confirmation" tone="warning" meaning={AWAITING_MEANING} />
       )}
       {verified && (byName || on) ? (
         <span className="text-xs text-text-muted">

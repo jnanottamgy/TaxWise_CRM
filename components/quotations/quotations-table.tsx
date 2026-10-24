@@ -87,7 +87,7 @@ export function QuotationsTable(props: { rows: QuotationListRow[]; total: number
         hideBelow: "lg",
         cell: (r) => <DateText date={r.valid_until} withRelative={OPEN_FOR_DATE.includes(r.display_status)} stacked today={today} />,
       },
-      { id: "sent_at", header: "Sent", sortable: true, align: "right", hideBelow: "xl", cell: (r) => (r.sent_at ? <span className="num tabular-nums">{formatDate(r.sent_at)}</span> : <Muted />) },
+      { id: "sent_at", header: "Sent", sortable: true, align: "right", hideBelow: "2xl", cell: (r) => (r.sent_at ? <span className="num tabular-nums">{formatDate(r.sent_at)}</span> : <Muted />) },
       {
         id: "last_viewed_at",
         header: "Opened",

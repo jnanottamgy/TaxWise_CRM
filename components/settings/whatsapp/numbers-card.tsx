@@ -99,8 +99,9 @@ export function NumbersCard({
           ].filter(Boolean)
           return (
             <li key={n.id} className="flex flex-col gap-1.5 border-t border-border/70 px-4 py-3 first:border-t-0 md:px-5">
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              {/* Edit stays top right; on phones the name, number and status wrap beside it. */}
+              <div className="flex items-start justify-between gap-x-3">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 py-1">
                   <span className="font-medium text-text">{n.label}</span>
                   {n.number ? (
                     <span className="inline-flex items-center gap-1">
@@ -117,7 +118,7 @@ export function NumbersCard({
                   )}
                 </div>
                 {canEdit ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(n)} aria-label={`Edit ${n.label}`}>
+                  <Button type="button" variant="ghost" size="sm" className="flex-none" onClick={() => setEditing(n)} aria-label={`Edit ${n.label}`}>
                     <PencilIcon aria-hidden="true" />
                     Edit
                   </Button>

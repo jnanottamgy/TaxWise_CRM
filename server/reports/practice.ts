@@ -169,7 +169,8 @@ export const loadPracticeReport: ReportLoader = async (supabase, f, ctx) => {
         columns: [
           { key: "what", header: "DSC or registration", kind: "text", mobile: "primary" },
           { key: "client", header: "Client", kind: "link", mobile: "secondary" },
-          { key: "expiry", header: "Expiry date", kind: "date", hideBelow: "lg" },
+          // In a half-width card the date gives way to "When" (which says it in days) below 2xl.
+          { key: "expiry", header: "Expiry date", kind: "date", hideBelow: "2xl" },
           { key: "left", header: "When", kind: "status", mobile: "trailing" },
         ],
         rows: expiries,

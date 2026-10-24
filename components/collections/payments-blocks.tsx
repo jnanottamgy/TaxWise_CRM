@@ -28,21 +28,25 @@ export function TopDebtors({ rows, today }: { rows: PaymentsDashboard["topDebtor
             <li key={d.clientId}>
               <Link href={`/invoices?client=${d.clientId}&status=sent,partially_paid,disputed`} className={rowLink}>
                 <span className="num w-5 flex-none text-right text-sm text-text-muted tabular-nums">{i + 1}</span>
+                {/* Name and amount share the first line; on phones the overdue figure gets its own line
+                    instead of squeezing the name to a few letters. */}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-base text-text">{d.clientName}</span>
-                  <span className="block truncate text-sm text-text-muted">
-                    {d.clientCode} · {d.invoices} {d.invoices === 1 ? "invoice" : "invoices"} · oldest {formatDate(d.oldestIssueDate)} ({diffDays(today, d.oldestIssueDate)} days)
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="truncate text-base text-text">{d.clientName}</span>
+                    <span className="num flex-none text-base font-medium text-text tabular-nums">{formatINR(d.outstandingPaise)}</span>
                   </span>
-                </span>
-                <span className="flex flex-none flex-col items-end">
-                  <span className="num text-base font-medium text-text tabular-nums">{formatINR(d.outstandingPaise)}</span>
-                  {d.overduePaise > 0 ? (
-                    <span className="num text-sm text-danger-text tabular-nums">
-                      {formatINR(d.overduePaise)} overdue{d.maxDaysOverdue > 0 ? ` · up to ${d.maxDaysOverdue} days` : ""}
+                  <span className="flex flex-col text-sm sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                    <span className="truncate text-text-muted" title={`Oldest unpaid invoice: ${formatDate(d.oldestIssueDate)}`}>
+                      {d.clientCode} · {d.invoices} {d.invoices === 1 ? "invoice" : "invoices"} · oldest {diffDays(today, d.oldestIssueDate)} days ago
                     </span>
-                  ) : (
-                    <span className="text-sm text-text-muted">Not yet due</span>
-                  )}
+                    {d.overduePaise > 0 ? (
+                      <span className="num flex-none text-danger-text tabular-nums">
+                        {formatINR(d.overduePaise)} overdue{d.maxDaysOverdue > 0 ? ` · up to ${d.maxDaysOverdue} days` : ""}
+                      </span>
+                    ) : (
+                      <span className="flex-none text-text-muted">Not yet due</span>
+                    )}
+                  </span>
                 </span>
               </Link>
             </li>

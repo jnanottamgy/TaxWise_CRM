@@ -104,7 +104,8 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
 
       <div className="flex flex-col gap-4 lg:gap-6">
         {t ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+          // Short queues keep their own height: a card stretched over empty space reads as missing rows.
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start lg:gap-6">
             <SectionCard title="Unassigned tasks" description="Open, with nobody on them. Soonest due first." viewAll={moreLink(workHref.unassigned(), t.unassigned.total, t.unassigned.rows.length)}>
               <TaskList rows={t.unassigned.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Every open task has someone on it." />
             </SectionCard>
@@ -178,6 +179,15 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
             ) : (
               <BlockError title="Attendance today" message="Couldn't load today's attendance." errorRef={attendance.ref} />
             )}
+            {t ? (
+              <SectionCard
+                title="Review queue"
+                description="Submitted Under review to you, or to any Manager."
+                viewAll={t.review.total ? { href: workHref.review(), label: t.review.total > t.review.rows.length ? `View all ${figure(t.review.total)}` : "Review queue" } : undefined}
+              >
+                <TaskList rows={t.review.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Nothing is waiting for review." />
+              </SectionCard>
+            ) : null}
           </div>
         </div>
 
@@ -191,47 +201,35 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
             >
               <DeadlineList rows={t.week.rows} today={today} emptyMessage="Nothing left to file this week." />
             </SectionCard>
-            <SectionCard
-              title="Review queue"
-              description="Submitted Under review to you, or to any Manager."
-              viewAll={t.review.total ? { href: workHref.review(), label: t.review.total > t.review.rows.length ? `View all ${figure(t.review.total)}` : "Review queue" } : undefined}
-            >
-              <TaskList rows={t.review.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Nothing is waiting for review." />
-            </SectionCard>
-          </div>
-        ) : null}
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-          {t && capacity.ok ? (
-            <SectionCard
-              className="lg:col-span-2"
-              title="The team"
-              description="Capacity: open tasks due in the next 14 days (overdue included) per working day left. Overdue: past due, not Filed/Done."
-              viewAll={{ href: "/people", label: "People" }}
-            >
-              <TeamLoadList rows={team.slice(0, 10)} />
-              {unassignedOverdue > 0 ? (
-                <p className="mt-2 text-sm text-text-muted">
-                  And{" "}
-                  <Link href={workHref.overdueFor(null)} className="font-medium text-danger-text hover:underline">
-                    {count(unassignedOverdue, "overdue task")}
-                  </Link>{" "}
-                  with nobody assigned.
-                </p>
-              ) : null}
-              {team.length > 10 ? <p className="mt-2 text-sm text-text-muted">And {figure(team.length - 10)} more on People.</p> : null}
-            </SectionCard>
-          ) : (
-            <BlockError className="lg:col-span-2" title="The team" message="Couldn't work out the team's capacity and overdue work." errorRef={!main.ok ? main.ref : !capacity.ok ? capacity.ref : ""} />
-          )}
-          {t ? (
             <SectionCard title="Billing and sales">
               <SalesBlock sales={t.sales} />
             </SectionCard>
-          ) : (
-            <BlockError title="Billing and sales" message="Couldn't load invoices, quotations and leads." errorRef={!main.ok ? main.ref : ""} />
-          )}
-        </div>
+          </div>
+        ) : (
+          <BlockError title="Billing and sales" message="Couldn't load invoices, quotations and leads." errorRef={!main.ok ? main.ref : ""} />
+        )}
+
+        {t && capacity.ok ? (
+          <SectionCard
+            title="The team"
+            description="Capacity: open tasks due in the next 14 days (overdue included) per working day left. Overdue: past due, not Filed/Done."
+            viewAll={{ href: "/people", label: "People" }}
+          >
+            <TeamLoadList rows={team.slice(0, 10)} columns={2} />
+            {unassignedOverdue > 0 ? (
+              <p className="mt-2 text-sm text-text-muted">
+                And{" "}
+                <Link href={workHref.overdueFor(null)} className="font-medium text-danger-text hover:underline">
+                  {count(unassignedOverdue, "overdue task")}
+                </Link>{" "}
+                with nobody assigned.
+              </p>
+            ) : null}
+            {team.length > 10 ? <p className="mt-2 text-sm text-text-muted">And {figure(team.length - 10)} more on People.</p> : null}
+          </SectionCard>
+        ) : (
+          <BlockError title="The team" message="Couldn't work out the team's capacity and overdue work." errorRef={!main.ok ? main.ref : !capacity.ok ? capacity.ref : ""} />
+        )}
       </div>
     </div>
   )

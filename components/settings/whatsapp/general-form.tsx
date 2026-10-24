@@ -140,7 +140,7 @@ export function WhatsAppGeneralForm({
         title="House rules"
         description={
           <>
-            Shown to staff on every client&apos;s WhatsApp group tab (§7.25.10). The welcome message posted in each new group is the{" "}
+            Shown to staff on every client&apos;s WhatsApp group tab. The welcome message posted in each new group is the{" "}
             <Link href={welcomeTemplateHref} className="font-medium text-primary hover:underline">
               WhatsApp group welcome
             </Link>{" "}

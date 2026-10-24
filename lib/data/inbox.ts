@@ -3,6 +3,9 @@ import "server-only";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import type { NotificationType } from "@/lib/domain/enums";
+import { addDays, isDateString, type DateString } from "@/lib/domain/fy";
+import { leaveWorkingDays } from "@/lib/domain/leave";
+import { getWorkingCalendar } from "@/lib/data/capacity";
 import { escapeLike, type TableParams } from "@/components/app/data-table/params";
 import {
   ACTION_KINDS,
@@ -32,7 +35,24 @@ export async function getActionItems(supabase: ServerSupabase): Promise<{ items:
     .limit(ACTION_CAP + 1);
   if (error) throw error;
   const rows = (data ?? []).filter((r) => isActionKind(r.kind) && r.entity_id && r.entity_type && r.link_url && r.since) as ActionItem[];
-  return { items: rows.slice(0, ACTION_CAP), truncated: rows.length > ACTION_CAP };
+  return { items: await countLeaveWorkingDays(supabase, rows.slice(0, ACTION_CAP)), truncated: rows.length > ACTION_CAP };
+}
+
+/**
+ * The view counts a leave request's calendar days; the Leave page, the dashboard and the approver
+ * count working days (§7.11.3: holidays and non-working weekdays aren't leave). Recount here so the
+ * Inbox says the same "4 working days" for 10–14 Nov over Balipadyami as everywhere else.
+ */
+async function countLeaveWorkingDays(supabase: ServerSupabase, items: ActionItem[]): Promise<ActionItem[]> {
+  const spans = items
+    .filter((i) => i.kind === "leave_approval" && i.due_date && isDateString(i.due_date) && i.item_count && i.item_count > 0)
+    .map((i) => ({ item: i, start: i.due_date as DateString, end: addDays(i.due_date as DateString, (i.item_count as number) - 1) }));
+  if (spans.length === 0) return items;
+  const from = spans.reduce((m, x) => (x.start < m ? x.start : m), spans[0].start);
+  const to = spans.reduce((m, x) => (x.end > m ? x.end : m), spans[0].end);
+  const calendar = await getWorkingCalendar(supabase, from, to);
+  const counted = new Map(spans.map((x) => [x.item, leaveWorkingDays(x.start, x.end, { weekdays: calendar.weekdays, holidays: calendar.holidays }, x.item.reason === "half_day")]));
+  return items.map((i) => (counted.has(i) ? { ...i, item_count: counted.get(i) as number } : i));
 }
 
 /** The caller's unread notifications about records still on their action list, by "type:id". */

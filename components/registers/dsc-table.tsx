@@ -65,14 +65,15 @@ export function DscTable(props: {
         hideable: false,
         mobile: "primary",
         cell: (r) => (
-          <span className="inline-flex min-w-0 flex-col leading-5">
+          // Block-level and capped, so a long holder name truncates instead of widening the table.
+          <span className="flex max-w-[14rem] min-w-0 flex-col leading-5" title={r.holder_name}>
             <span className="truncate font-medium text-text">{r.holder_name}</span>
             {r.holder_pan ? <span className="font-mono text-xs text-text-muted">{r.holder_pan}</span> : null}
           </span>
         ),
         mobileCell: (r) => (showClient ? `${r.holder_name} · ${r.client_name}` : r.holder_name),
       },
-      { id: "dsc_class", header: "Class", hideBelow: "xl", cell: (r) => <span className="text-text-muted">{DSC_CLASS_LABEL[r.dsc_class] ?? r.dsc_class}</span> },
+      { id: "dsc_class", header: "Class", hideBelow: "2xl", cell: (r) => <span className="text-text-muted">{DSC_CLASS_LABEL[r.dsc_class] ?? r.dsc_class}</span> },
       {
         id: "issued_by",
         header: "Issuer and serial",

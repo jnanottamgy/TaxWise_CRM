@@ -139,14 +139,14 @@ export default async function PortalInvoicePage(props: { params: Promise<{ id: s
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <SectionCard title="What it's for" flush>
           <InvoiceBody d={d} />
         </SectionCard>
 
         <aside className="flex min-w-0 flex-col gap-4" aria-label="Payment">
           <SectionCard title="Payment">
-            <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 text-sm">
+            <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm [&>dd]:pl-6">
               <dt className="text-text-muted">Total</dt>
               <dd className="text-right">
                 <Money value={inv.totalAmount} />
@@ -275,13 +275,13 @@ function InvoiceBody({ d }: { d: PortalInvoiceDetail }) {
       </dl>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[32rem] text-sm">
+        <table className="w-full text-sm sm:min-w-[32rem]">
           <caption className="sr-only">Invoice lines</caption>
           <thead>
             <tr className="border-b border-border text-left text-xs text-text-muted">
               <th scope="col" className="px-4 py-2 font-medium md:pl-5">Service</th>
-              <th scope="col" className="px-2 py-2 font-medium">SAC</th>
-              <th scope="col" className="px-2 py-2 text-right font-medium">GST</th>
+              <th scope="col" className="hidden px-2 py-2 font-medium sm:table-cell">SAC</th>
+              <th scope="col" className="hidden px-2 py-2 text-right font-medium sm:table-cell">GST</th>
               <th scope="col" className="px-4 py-2 text-right font-medium md:pr-5">Amount</th>
             </tr>
           </thead>
@@ -295,9 +295,12 @@ function InvoiceBody({ d }: { d: PortalInvoiceDetail }) {
                       <span className="num tabular-nums">{l.quantity}</span> × <Money value={l.rate} />
                     </span>
                   ) : null}
+                  <span className="num block text-xs text-text-muted tabular-nums sm:hidden">
+                    SAC {l.sacCode ?? "—"} · GST {l.isReimbursement ? "—" : `${l.taxRate}%`}
+                  </span>
                 </td>
-                <td className="num px-2 py-2.5 text-text-muted tabular-nums">{l.sacCode ?? "—"}</td>
-                <td className="num px-2 py-2.5 text-right text-text-muted tabular-nums">{l.isReimbursement ? "—" : `${l.taxRate}%`}</td>
+                <td className="num hidden px-2 py-2.5 text-text-muted tabular-nums sm:table-cell">{l.sacCode ?? "—"}</td>
+                <td className="num hidden px-2 py-2.5 text-right text-text-muted tabular-nums sm:table-cell">{l.isReimbursement ? "—" : `${l.taxRate}%`}</td>
                 <td className="px-4 py-2.5 text-right md:pr-5">
                   <Money value={l.amount} />
                 </td>
@@ -307,7 +310,7 @@ function InvoiceBody({ d }: { d: PortalInvoiceDetail }) {
         </table>
       </div>
 
-      <dl className="ml-auto grid w-full max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 border-t border-border px-4 py-3 text-sm md:px-5">
+      <dl className="ml-auto grid w-full max-w-sm grid-cols-[1fr_auto] gap-y-1.5 border-t border-border px-4 py-3 text-sm md:px-5 [&>dd]:pl-6">
         <dt className="text-text-muted">Taxable value</dt>
         <dd className="text-right">
           <Money value={d.taxable} />
@@ -351,7 +354,7 @@ function InvoiceBody({ d }: { d: PortalInvoiceDetail }) {
         <dd className="border-t border-border pt-2 text-right text-base font-semibold">
           <Money value={d.invoice.totalAmount} />
         </dd>
-        <dd className="col-span-2 text-xs text-text-muted">{amountInWords(toPaise(d.invoice.totalAmount))}</dd>
+        <dd className="col-span-2 !pl-0 text-xs text-text-muted">{amountInWords(toPaise(d.invoice.totalAmount))}</dd>
       </dl>
 
       {d.notes || d.terms || d.irn ? (

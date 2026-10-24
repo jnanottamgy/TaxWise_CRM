@@ -38,8 +38,8 @@ export const loadWorkReport: ReportLoader = async (supabase, f, ctx) => {
 
   const waitingTotal = r.ageing.reduce((n, a) => n + a.tasks, 0);
   const waiting = (ctx.forExport ? r.longest_waiting : r.longest_waiting.slice(0, SCREEN_LIST_ROWS)).map((w) => ({
-    task: { text: `${w.task_number} · ${w.title}`, href: `/work/${w.task_id}` },
-    client: w.client_name,
+    // The client rides under the task (as the collections report's promises do): who to call is the point.
+    task: { text: `${w.task_number} · ${w.title}`, href: `/work/${w.task_id}`, sub: w.client_name },
     assignee: w.assignee ?? "Not assigned",
     due: w.due_date,
     days: w.days_waiting,
@@ -109,10 +109,9 @@ export const loadWorkReport: ReportLoader = async (supabase, f, ctx) => {
         title: "Longest waiting for data",
         description: "Call these clients first.",
         columns: [
-          { key: "task", header: "Task", kind: "link", mobile: "primary" },
-          { key: "client", header: "Client", kind: "text", mobile: "secondary" },
-          { key: "assignee", header: "Assigned to", kind: "text", hideBelow: "lg" },
-          { key: "due", header: "Due", kind: "date", hideBelow: "lg" },
+          { key: "task", header: "Task and client", kind: "link", mobile: "primary" },
+          { key: "assignee", header: "Assigned to", kind: "text", hideBelow: "lg", mobile: "secondary", nowrap: true },
+          { key: "due", header: "Due", kind: "date", hideBelow: "2xl", mobile: "secondary" },
           { key: "days", header: "Waiting", kind: "days", mobile: "trailing" },
         ],
         rows: waiting,

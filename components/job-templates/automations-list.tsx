@@ -52,8 +52,11 @@ export function AutomationsList({
     return (
       <EmptyState
         icon={<RepeatIcon />}
+        // On Client 360 this sits under the page's own primary action ("New task"), so it is compact
+        // and secondary there; on Job templates it is the page's main call to action.
+        size={client ? "compact" : undefined}
         message={client ? "No recurring tasks for this client. Set one up for returns that come every period." : "No recurring tasks yet. Each one creates a client's task every period, such as GSTR-3B on the 1st of every month."}
-        action={<NewAutomationButton options={options} client={client} />}
+        action={<NewAutomationButton options={options} client={client} variant={client ? "outline" : "default"} size={client ? "sm" : "default"} />}
       />
     )
   }

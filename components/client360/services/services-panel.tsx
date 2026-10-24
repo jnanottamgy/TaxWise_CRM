@@ -22,6 +22,8 @@ import { AddServiceDialog, EditServiceDialog, EndServiceDialog, RepriceDialog } 
 
 export interface ServiceView {
   row: ServiceRow
+  /** The next deadline for this service: from the compliance calendar, else the hand-set date. */
+  nextDue: { date: string; title: string | null } | null
   preview: NextInvoicePreview
   /** The SAC the invoice uses when there is no override (from Settings → Billing). */
   defaultSac: string
@@ -68,7 +70,7 @@ export function ServicesPanel({ clientId, clientName, views, defaultSacFor }: { 
         </div>
       ) : (
         <ul className="divide-y divide-border/70 border-t border-border/70">
-          {[...active, ...ended].map(({ row: s, preview }) => {
+          {[...active, ...ended].map(({ row: s, preview, nextDue }) => {
             const cycle = billingCycle(s.frequency, s.billing_frequency)
             return (
               <li key={s.id} className="grid grid-cols-1 gap-4 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
@@ -115,7 +117,14 @@ export function ServicesPanel({ clientId, clientName, views, defaultSacFor }: { 
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
                     <Term label="Next due">
-                      <DateText date={s.next_due_date} withRelative={s.is_active} />
+                      <span className="flex min-w-0 flex-col">
+                        <DateText date={nextDue?.date ?? null} withRelative={s.is_active} />
+                        {nextDue?.title ? (
+                          <span className="truncate text-xs text-text-muted" title={nextDue.title}>
+                            {nextDue.title}
+                          </span>
+                        ) : null}
+                      </span>
                     </Term>
                     <Term label="Agreed fee">
                       {s.agreed_fee !== null ? (

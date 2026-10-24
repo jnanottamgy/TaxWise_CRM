@@ -5,19 +5,33 @@ import { StatusChip } from "@/components/app/status-chip"
 import { isLinkCell, isNumericKind, isStatusCell, reportCellText, type ReportCell, type ReportColumn, type ReportRow } from "@/components/reports/report-types"
 
 function hideClass(h: ReportColumn["hideBelow"]) {
-  return h === "lg" ? "hidden lg:table-cell" : h === "xl" ? "hidden xl:table-cell" : ""
+  return h === "lg" ? "hidden lg:table-cell" : h === "xl" ? "hidden xl:table-cell" : h === "2xl" ? "hidden 2xl:table-cell" : ""
 }
 
-function Cell({ col, value, strong }: { col: ReportColumn; value: ReportCell | undefined; strong?: boolean }) {
+/**
+ * One cell's content. A link cell is block-level so it takes its cell's width: in a table row its two
+ * lines end in an ellipsis (the full text on hover); `wrap` (the phone card) wraps them instead, so
+ * nothing is cut off where there is room to read it.
+ */
+function Cell({ col, value, strong, wrap }: { col: ReportColumn; value: ReportCell | undefined; strong?: boolean; wrap?: boolean }) {
   if (value === null || value === undefined || value === "") return <span className="text-text-muted">{EMPTY}</span>
   if (isStatusCell(value)) return <StatusChip label={value.label} tone={value.tone} meaning={value.meaning} />
   if (isLinkCell(value)) {
+    const fit = wrap ? "[overflow-wrap:anywhere]" : "truncate"
     return (
-      <span className="inline-flex min-w-0 flex-col leading-5">
-        <Link href={value.href} className="truncate rounded-sm text-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      <span className="flex min-w-0 flex-col leading-5">
+        <Link
+          href={value.href}
+          title={wrap ? undefined : value.text}
+          className={cn(fit, "rounded-sm text-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring")}
+        >
           {value.text}
         </Link>
-        {value.sub ? <span className="truncate text-xs text-text-muted">{value.sub}</span> : null}
+        {value.sub ? (
+          <span title={wrap ? undefined : value.sub} className={cn(fit, "text-xs text-text-muted")}>
+            {value.sub}
+          </span>
+        ) : null}
       </span>
     )
   }
@@ -31,6 +45,10 @@ function Cell({ col, value, strong }: { col: ReportColumn; value: ReportCell | u
  * band, 1px row rules, no zebra, numbers right-aligned in tabular figures, the identity column
  * widest, a bold totals row under a heavier rule. Below 768px each row becomes a two-line card: the
  * identity and the key figure, then the other figures named. Server-safe.
+ *
+ * The identity column takes whatever width the figures leave (`w-full`) and may shrink below its
+ * text (`max-w-0`), ending in an ellipsis: so a long task title or client name never pushes the
+ * figures out of a half-width card, and the figures keep their full width.
  */
 export function ReportTable({ columns, rows, totals, caption }: { columns: ReportColumn[]; rows: ReportRow[]; totals?: ReportRow | null; caption: string }) {
   const primary = columns.find((c) => c.mobile === "primary") ?? columns[0]
@@ -69,8 +87,11 @@ export function ReportTable({ columns, rows, totals, caption }: { columns: Repor
                     className={cn(
                       "border-b border-border/70 px-3 align-middle",
                       isNumericKind(c.kind) ? "num text-right whitespace-nowrap tabular-nums" : "text-left",
+                      c.nowrap && "whitespace-nowrap",
+                      // A link in another column (a client beside a DSC) truncates at a readable width.
+                      i !== 0 && c.kind === "link" && "max-w-[14rem]",
                       hideClass(c.hideBelow),
-                      i === 0 && "max-w-[22rem] truncate pl-4 md:pl-5",
+                      i === 0 && "w-full max-w-0 truncate pl-4 md:pl-5",
                       i === columns.length - 1 && "pr-4 md:pr-5"
                     )}
                   >
@@ -111,7 +132,7 @@ export function ReportTable({ columns, rows, totals, caption }: { columns: Repor
             <li key={ri} className={cn("flex flex-col gap-0.5 border-b border-border/70 px-4 py-3 last:border-b-0", isTotal && "border-t border-t-text-muted/40 font-semibold")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 text-base leading-6 text-text">
-                  <Cell col={primary} value={r[primary.key]} strong={isTotal} />
+                  <Cell col={primary} value={r[primary.key]} strong={isTotal} wrap />
                 </div>
                 {trailing.length ? (
                   <div className="num flex flex-none items-center gap-2 text-right tabular-nums">

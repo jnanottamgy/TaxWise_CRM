@@ -34,7 +34,9 @@ export function LeadBoard({ columns, now, viewAllHref }: { columns: Column[]; no
   return (
     <>
       <div className="relative -mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0" role="region" aria-label="Pipeline by stage">
-        <div className="grid min-w-max auto-cols-[minmax(16rem,1fr)] grid-flow-col gap-3 max-md:snap-x max-md:snap-mandatory">
+        {/* Fixed-width stages that scroll sideways, so most of the pipeline shows at 1366px. min-w-max
+            sized every stage to its longest card line and left room for two and a half. */}
+        <div className="grid auto-cols-[16rem] grid-flow-col gap-3 max-md:snap-x max-md:snap-mandatory md:auto-cols-[minmax(15rem,1fr)]">
           {columns.map((col) => {
             const info = getStatus("lead_status", col.status)
             const canDrop = dragging ? leadMoveCheck(dragging, col.status).ok : false

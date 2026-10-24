@@ -60,7 +60,7 @@ export function SuppliersTable({ target, rows, total, page, pageSize, sort, dir 
             <span className="num text-xs text-text-muted">{r.supplier_gstin || "No GSTIN"}</span>
           </span>
         ),
-        mobileCell: (r) => r.supplier_name ?? r.supplier_gstin,
+        mobileCell: (r) => r.supplier_name ?? (r.supplier_gstin || "Imports (no GSTIN)"),
       },
       { id: "chase", header: "To chase", align: "right", cell: (r) => <Count n={r.chase_count} tone="danger" /> },
       { id: "missing_in_2b", header: "Not in 2B", align: "right", hideBelow: "lg", cell: (r) => <Count n={r.missing_in_2b_count} /> },
@@ -82,12 +82,15 @@ export function SuppliersTable({ target, rows, total, page, pageSize, sort, dir 
         header: "",
         hideable: false,
         cell: (r) =>
-          r.chase_count > 0 ? (
+          r.chase_count === 0 ? null : r.supplier_gstin ? (
             <Button type="button" variant="outline" size="sm" onClick={() => setDrafting(r)}>
               <MessageSquareShareIcon aria-hidden="true" />
               Draft follow-up
             </Button>
-          ) : null,
+          ) : (
+            // Imports (IMPG) have no supplier to write to: the bill of entry is checked on ICEGATE.
+            <span className="text-sm text-text-muted">Check on ICEGATE</span>
+          ),
       },
     ],
     [],

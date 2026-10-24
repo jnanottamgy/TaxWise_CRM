@@ -10,7 +10,7 @@ import { formatCount, parseTableParams, readParam } from "@/components/app/data-
 import { PageHeader } from "@/components/app/page-header"
 import { FilterBar } from "@/components/app/filter-bar"
 import { ErrorBlock } from "@/components/app/error-block"
-import { PageGuide } from "@/components/shell/page-slots"
+import { PageGuide, ShellTitle } from "@/components/shell/page-slots"
 import { RetainerTable } from "@/components/collections/retainer-table"
 import { RetainerRunSummary } from "@/components/collections/retainer-run-summary"
 import { IssueAllButton } from "@/components/collections/retainer-issue-all"
@@ -65,6 +65,8 @@ export default async function RetainerDraftsPage({ searchParams }: { searchParam
 
   return (
     <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
+      {/* Opened from Invoices in the sidebar; the top bar names this page, not the list. */}
+      <ShellTitle crumbs={[{ label: "Invoices", href: "/invoices" }, { label: "Retainer drafts" }]} />
       <PageGuide title="Retainer drafts">
         <p>Every day at 09:30 the retainer run drafts an invoice for each engagement set to invoice automatically whose next billing date has come. It never sends anything: the drafts wait here until you issue them.</p>
         <p className="mt-2">

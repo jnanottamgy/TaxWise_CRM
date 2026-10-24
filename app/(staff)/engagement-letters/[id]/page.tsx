@@ -17,6 +17,7 @@ import {
   isExpiringLetter,
   sa210Sections,
   scheduleAnnualPaise,
+  servicesSummary,
   type LetterAuditType,
 } from "@/lib/schemas/engagement-letters"
 import { getLetter, listLetterRecipients, type LetterRow } from "@/lib/data/engagement-letters"
@@ -30,7 +31,6 @@ import { DateText } from "@/components/app/date-text"
 import { ErrorBlock } from "@/components/app/error-block"
 import { PageGuide, ShellTitle } from "@/components/shell/page-slots"
 import { LetterActions } from "@/components/engagement-letters/letter-actions"
-import { servicesSummary } from "@/components/engagement-letters/letters-table"
 
 type Params = { params: Promise<{ id: string }> }
 

@@ -90,6 +90,25 @@ describe("save_gst_recon_run", () => {
     });
   });
 
+  it("saves an import of goods (IMPG bill of entry), which has no supplier GSTIN (0234)", async () => {
+    await db.asRole(U.E1, async (s) => {
+      const boe = { section: "impg", supplierGstin: "", docType: "bill_of_entry", docNumber: "4581237", docDate: "2026-08-05", taxable: 250000, igst: 45000, cgst: 0, sgst: 0, cess: 0, ref: "4581237" };
+      const impg = { ...entry("|debit|4581237", "missing_in_books", { portal: boe }), supplier_gstin: "", supplier_name: null };
+      const r = await saveRun(s, payload(C.A, "082026", [...AUG_ENTRIES, impg]));
+      expect(r.entries).toBe(4);
+      const stored = await s.one<{ supplier_gstin: string | null }>("select supplier_gstin::text from gst_recon_entries where run_id = $1 and entry_key = '|debit|4581237'", [r.id]);
+      expect(stored.supplier_gstin).toBeNull();
+      // The read models hand the app '' for "no GSTIN", and the roll-up keeps the imports in one row.
+      const line = await s.one<{ supplier_gstin: string; doc_type: string; portal_section: string }>("select supplier_gstin, doc_type, portal_section from gst_recon_entry_list where run_id = $1 and entry_key = '|debit|4581237'", [r.id]);
+      expect(line).toEqual({ supplier_gstin: "", doc_type: "bill_of_entry", portal_section: "impg" });
+      const rollup = await s.rows<{ supplier_gstin: string; line_count: number }>("select supplier_gstin, line_count from gst_recon_supplier_rollup where run_id = $1 order by supplier_gstin", [r.id]);
+      expect(rollup).toEqual([
+        { supplier_gstin: "", line_count: 1 },
+        { supplier_gstin: SUPPLIER, line_count: 3 },
+      ]);
+    });
+  });
+
   it("refuses a client the caller can't see, portal users and malformed runs", async () => {
     await db.asRole(U.E1, async (s) => {
       expect(userMessage(await s.fails("select save_gst_recon_run($1::jsonb)", [JSON.stringify(payload(C.B, "082026", AUG_ENTRIES))]))).toMatch(/isn't one of yours/);

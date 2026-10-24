@@ -399,31 +399,35 @@ export function InvoiceEditor({ mode, initial, invoice, client: initialClient, s
               </div>
             }
           >
-            <div className="hidden border-b border-border bg-surface-2 px-5 py-2 text-xs font-medium text-text-muted lg:grid lg:grid-cols-[minmax(0,1fr)_9rem_6.5rem_4.5rem_8.5rem_7rem_7.5rem_2.25rem] lg:gap-x-3" aria-hidden="true">
-              <span>Description</span>
-              <span>Service</span>
-              <span>SAC</span>
-              <span className="text-right">Qty</span>
-              <span className="text-right">Rate</span>
-              <span>GST</span>
-              <span className="text-right">Amount</span>
-              <span />
+            {/* The line layout follows this card's width (container queries in LineRow): beside the
+                totals at 1366px there is no room for eight columns in one row. */}
+            <div className="@container/lines">
+              <div className="hidden border-b border-border bg-surface-2 px-5 py-2 text-xs font-medium text-text-muted @4xl/lines:grid @4xl/lines:grid-cols-[minmax(0,1fr)_9rem_6.5rem_4.5rem_8.5rem_7rem_7.5rem_2.25rem] @4xl/lines:gap-x-3" aria-hidden="true">
+                <span>Description</span>
+                <span>Service</span>
+                <span>SAC</span>
+                <span className="text-right">Qty</span>
+                <span className="text-right">Rate</span>
+                <span>GST</span>
+                <span className="text-right">Amount</span>
+                <span />
+              </div>
+              <ul aria-label="Invoice lines">
+                {lines.fields.map((field, index) => (
+                  <LineRow
+                    key={(field as unknown as { _k: string })._k}
+                    control={control as never}
+                    index={index}
+                    setValue={setValue as never}
+                    settings={settings}
+                    rateOptions={gst.rateOptions}
+                    amountPaise={totals.linePaise[index] ?? 0}
+                    canRemove={lines.fields.length > 1}
+                    onRemove={() => lines.remove(index)}
+                  />
+                ))}
+              </ul>
             </div>
-            <ul aria-label="Invoice lines">
-              {lines.fields.map((field, index) => (
-                <LineRow
-                  key={(field as unknown as { _k: string })._k}
-                  control={control as never}
-                  index={index}
-                  setValue={setValue as never}
-                  settings={settings}
-                  rateOptions={gst.rateOptions}
-                  amountPaise={totals.linePaise[index] ?? 0}
-                  canRemove={lines.fields.length > 1}
-                  onRemove={() => lines.remove(index)}
-                />
-              ))}
-            </ul>
             {f.form.formState.errors.lines?.message ? <p className="px-5 pb-3 text-sm text-danger-text">{String(f.form.formState.errors.lines.message)}</p> : null}
           </SectionCard>
 
@@ -486,8 +490,9 @@ export function InvoiceEditor({ mode, initial, invoice, client: initialClient, s
         </aside>
       </div>
 
-      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-surface px-4 py-3 md:-mx-6 md:px-6">
-        <DraftStamp savedAt={draft.savedAt} saving={draft.saving} error={draft.error} className="mr-auto" />
+      {/* Phones: the draft stamp gets its own line so the three buttons stay together on one row. */}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-surface px-4 py-3 max-sm:justify-end md:-mx-6 md:px-6">
+        <DraftStamp savedAt={draft.savedAt} saving={draft.saving} error={draft.error} className="mr-auto max-sm:basis-full" />
         {invoiceId ? (
           <Button type="button" variant="ghost" size="sm" className="text-danger-text" onClick={() => setConfirmDelete(true)}>
             <Trash2Icon aria-hidden="true" />

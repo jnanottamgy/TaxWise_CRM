@@ -14,7 +14,7 @@ import { FilterBar, type FilterDef } from "@/components/app/filter-bar"
 import { ErrorBlock } from "@/components/app/error-block"
 import { EmptyState } from "@/components/app/empty-state"
 import { KpiStrip } from "@/components/app/kpi-strip"
-import { PageGuide } from "@/components/shell/page-slots"
+import { PageGuide, ShellTitle } from "@/components/shell/page-slots"
 import { AuditsTable } from "@/components/audits/audits-table"
 import { NewAuditButton } from "@/components/audits/new-audit-button"
 import { STAGE_CHIP } from "@/lib/schemas/audits"
@@ -79,6 +79,8 @@ export default async function AuditsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="flex min-w-0 flex-col">
+      {/* The sidebar keeps audits under Quality (lib/nav.ts); the top bar names the page itself. */}
+      <ShellTitle crumbs={[{ label: "Practice" }, { label: "Quality", href: "/quality" }, { label: "Audit engagements" }]} />
       <PageGuide title="Audit engagements">
         <p>Each audit runs Acceptance, Planning, Risk assessment, Execution, Completion, Reporting and Archive. Every step of a stage is prepared, then reviewed by someone else, and the engagement partner approves the move to the next stage.</p>
         <p className="mt-2">Acceptance holds the engagement until the client&apos;s KYC is complete, the conflict check is accepted, the SA 210 letter is issued and, where another CA audited before, the letter to them is recorded with proof of delivery.</p>

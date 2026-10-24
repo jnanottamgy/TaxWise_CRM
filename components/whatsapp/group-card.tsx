@@ -113,8 +113,9 @@ export function GroupCard({
 
   return (
     <section aria-labelledby={`group-${group.id}`} className="min-w-0 rounded-lg border border-border bg-surface">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-4 pt-4 pb-3 md:px-5">
-        <div className="min-w-0 flex-1">
+      {/* Phones: the actions go under the name, which otherwise shrinks to a sliver beside them. */}
+      <div className="flex flex-col gap-3 px-4 pt-4 pb-3 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4 md:px-5">
+        <div className="min-w-0 sm:flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 id={`group-${group.id}`} className="min-w-0 text-md leading-6 font-semibold [overflow-wrap:anywhere] text-text">
               {group.name}
@@ -130,7 +131,7 @@ export function GroupCard({
           {facts.length ? <p className="mt-1 text-sm text-text-muted">{facts.join(" · ")}</p> : null}
           {group.status === "active" ? <p className="mt-0.5 text-sm text-text-muted" suppressHydrationWarning>{lastOpenedSentence(group.last_opened_at, group.last_opened_by_name, now)}</p> : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:flex-none sm:justify-end">
           {group.status === "active" ? (
             <OpenChatButton clientId={clientId} groupId={group.id} groupName={group.name} isPrimary={group.is_primary} browserAllowed={browserAllowed} />
           ) : null}

@@ -216,7 +216,10 @@ function InvoiceRows({ rows, today }: { rows: InvoiceListRow[]; today: string })
                 <td className="px-2 py-2.5 text-right">
                   <Money value={r.total_amount} />
                 </td>
-                <td className="px-4 py-2.5 text-right md:pr-5">{open ? <Money value={r.outstanding_amount} /> : <span className="text-text-muted">None</span>}</td>
+                <td className="px-4 py-2.5 text-right md:pr-5">
+                  {/* A paid invoice owes a real zero; a draft or cancelled one owes nothing yet (em dash, §3.4). */}
+                  {open ? <Money value={r.outstanding_amount} /> : r.status === "paid" && !r.cancelled_at ? <Money value={0} className="text-text-muted" /> : <span className="text-text-muted" aria-label="Not applicable">—</span>}
+                </td>
               </tr>
             )
           })}

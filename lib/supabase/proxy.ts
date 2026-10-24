@@ -329,9 +329,46 @@ function finish(request: NextRequest, response: NextResponse): NextResponse {
   return response;
 }
 
+/**
+ * Whether the session cookie's copy of the user lists a verified authenticator: the "turned on
+ * two-step sign-in" HINT for a role that doesn't require it. Pages, actions and API routes re-check it
+ * on the verified session, so the proxy only sends the person to /mfa sooner.
+ *
+ * It is the same stored data `mfa.getAuthenticatorAssuranceLevel()` reads for `nextLevel`, but that
+ * call reads it through supabase-js's insecure-user proxy, which logs "Using the user object as
+ * returned from supabase.auth.getSession() … could be insecure" on every such request (getClaims
+ * verifies the token, not the stored user, so the warning is never switched off here). Reading the
+ * field's own property descriptor gets the stored value without that warning and without a network
+ * call (the proxy makes none of its own). We know the value is unverified and use it only as a hint.
+ */
+export function storedUserHasVerifiedFactor(user: object | null | undefined): boolean {
+  if (!user) return false;
+  const factors: unknown = Object.getOwnPropertyDescriptor(user, "factors")?.value;
+  return Array.isArray(factors) && factors.some((f) => typeof f === "object" && f !== null && (f as { status?: unknown }).status === "verified");
+}
+
+/**
+ * Whether every segment of a path percent-decodes. A malformed escape (`/clients/%E0%A4%A`) makes
+ * Next's own route-parameter decoding throw, which it answers with a bare 500; such a request can
+ * only be a broken or hand-made link, so the proxy answers 400 instead.
+ */
+export function isDecodablePath(pathname: string): boolean {
+  try {
+    for (const segment of pathname.split("/")) decodeURIComponent(segment);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
   const secure = isSecure(request);
+
+  if (!isDecodablePath(pathname)) {
+    const bad = new NextResponse("Bad request: the address isn't valid. Check the link.", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
+    return finish(request, bad);
+  }
 
   // Server Components read this to build "?next=" links (lib/auth/guards.ts). Always overwritten,
   // so a client can't inject its own value.
@@ -376,9 +413,10 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       const role = isAppRole(appMeta.role) ? appMeta.role : null;
       let mfaEnrolled = false;
       const aal = toAal(claims.aal);
-      if (aal !== "aal2") {
-        const { data: levels } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        mfaEnrolled = levels?.nextLevel === "aal2";
+      // Only a role for which two-step sign-in is optional needs the hint (required roles go to /mfa anyway).
+      if (aal !== "aal2" && !mfaRequiredFor(role)) {
+        const { data: stored } = await supabase.auth.getSession();
+        mfaEnrolled = storedUserHasVerifiedFactor(stored.session?.user);
       }
       session = { role, mustChangePassword: appMeta.must_change_password === true, aal, mfaEnrolled };
     }

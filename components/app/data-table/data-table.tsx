@@ -19,6 +19,7 @@ import {
   nextSort,
   normaliseDefaultSort,
   pageCount,
+  PAGE_SIZES,
   RESERVED_PARAMS,
   type DefaultSort,
   type SortDir,
@@ -176,6 +177,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const onRowClick = (e: React.MouseEvent<HTMLElement>, href: string | null | undefined) => {
     if (!href) return
     const target = e.target as HTMLElement
+    // A click inside a dialog opened from the row (Pay, a menu) reaches the row through React's
+    // portal bubbling although the dialog isn't in the row: never navigate away under it.
+    if (!e.currentTarget.contains(target)) return
     const hit = target.closest(INTERACTIVE)
     if (hit && e.currentTarget.contains(hit)) return
     if (typeof window !== "undefined" && window.getSelection()?.toString()) return
@@ -269,10 +273,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
         </div>
       ) : (
         <>
-          {/* Desktop and tablet: the table. */}
+          {/* Desktop and tablet: the table. `relative` makes this scroll frame the containing block of
+              the cells' absolutely positioned children (sr-only labels): without it they escape the
+              frame's clipping and stretch the page by the height of the rows scrolled out of view. */}
           <div
             className={cn(
-              "hidden overflow-auto md:block",
+              "relative hidden overflow-auto md:block",
               maxHeight === "viewport" && "md:max-h-[max(22rem,calc(100dvh-13rem))]"
             )}
           >
@@ -445,7 +451,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   const rid = getRowId(row)
                   const href = getRowHref?.(row)
                   const isSelected = selected.has(rid)
-                  const secondary = secondaryCols.map((c) => ({ id: c.id, node: (c.mobileCell ?? c.cell)(row) }))
+                  // A cell with nothing to say (null, false, "") is left out, so the card never shows a lone "·".
+                  const secondary = secondaryCols
+                    .map((c) => ({ id: c.id, node: (c.mobileCell ?? c.cell)(row) }))
+                    .filter((s) => s.node !== null && s.node !== undefined && s.node !== false && s.node !== "")
                   return (
                     <li
                       key={rid}
@@ -518,7 +527,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-8 w-40" />
             </div>
-          ) : total > 0 ? (
+          ) : total > 0 && !(page === 1 && total <= PAGE_SIZES[0]) ? (
+            // No footer when every row is already on the first page at the smallest page size: the
+            // count is in the table bar, and there is nothing to page through or resize.
             <TablePagination
               page={page}
               pageSize={pageSize}

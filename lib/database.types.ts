@@ -3763,7 +3763,7 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           run_id: string
-          supplier_gstin: string
+          supplier_gstin: string | null
           supplier_name: string | null
           updated_at: string
           updated_by: string | null
@@ -3787,7 +3787,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           run_id: string
-          supplier_gstin: string
+          supplier_gstin?: string | null
           supplier_name?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -3811,7 +3811,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           run_id?: string
-          supplier_gstin?: string
+          supplier_gstin?: string | null
           supplier_name?: string | null
           updated_at?: string
           updated_by?: string | null

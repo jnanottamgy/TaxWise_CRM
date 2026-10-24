@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PORTAL_NAV, navMatchScore } from "@/lib/nav";
@@ -36,12 +37,31 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
     }
   }
 
+  // Phones: the active tab can sit past the right edge of the scrolling bar (Documents, Invoices,
+  // Messages, Help at 390px). Bring it into view on every navigation so the client sees where they are.
+  const navRef = React.useRef<HTMLUListElement>(null);
+  React.useEffect(() => {
+    const list = navRef.current;
+    const active = list?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!list || !active || list.scrollWidth <= list.clientWidth) return;
+    const left = active.offsetLeft - (list.clientWidth - active.offsetWidth) / 2;
+    list.scrollTo({ left: Math.max(0, left), behavior: "instant" });
+  }, [activeHref]);
+
   const brand = (
     <>
       <span className="flex size-9 flex-none items-center justify-center rounded-md bg-brand-navy">
         <FirmMark logoUrl={firm.logoUrl} firmName={firm.name} className="size-7" />
       </span>
-      <span className="truncate text-base font-semibold tracking-[-0.01em] text-text">{firm.name}</span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-base font-semibold tracking-[-0.01em] text-text">{firm.name}</span>
+        {/* Phones: the client's name under the firm's, instead of a row of its own in the sticky header. */}
+        {clientName ? (
+          <span aria-hidden="true" className="truncate text-xs text-text-muted sm:hidden">
+            {clientName}
+          </span>
+        ) : null}
+      </span>
     </>
   );
 
@@ -70,7 +90,7 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
           )}
           <div className="ml-auto flex min-w-0 items-center gap-2">
             {clientName ? (
-              <p className="hidden min-w-0 truncate text-right text-sm text-text-muted sm:block">
+              <p className="sr-only min-w-0 truncate text-right text-sm text-text-muted sm:not-sr-only">
                 <span className="sr-only">Signed in for </span>
                 <span className="font-medium text-text">{clientName}</span>
               </p>
@@ -78,12 +98,9 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
             <UserMenu name={user.fullName} email={user.email} role="client" variant="portal" />
           </div>
         </div>
-        {clientName ? (
-          <p className="mx-auto w-full max-w-5xl truncate px-4 pb-2 text-sm font-medium text-text sm:hidden">{clientName}</p>
-        ) : null}
         {welcome ? null : (
           <nav aria-label="Portal" className="mx-auto w-full max-w-5xl">
-            <ul className="flex gap-1 overflow-x-auto overscroll-x-contain px-2 [scrollbar-width:none] md:px-4 [&::-webkit-scrollbar]:hidden">
+            <ul ref={navRef} className="flex gap-1 overflow-x-auto overscroll-x-contain px-2 [scrollbar-width:none] md:px-4 [&::-webkit-scrollbar]:hidden">
               {PORTAL_NAV.map((item) => {
                 const active = item.href === activeHref;
                 const Icon = item.icon;

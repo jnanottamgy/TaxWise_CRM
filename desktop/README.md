@@ -41,6 +41,12 @@ TAXWISE_APP_URL=http://localhost:3000 npm start   # a local CRM (development bui
 npm run e2e                 # Playwright + Electron; on Linux run under xvfb-run
 ```
 
+The end-to-end tests run the app with Chromium's sandbox on, as in production; on Linux they check that every
+renderer has its own namespaces and a seccomp filter. Chromium can't sandbox root, so when the suite runs as root
+(a container) it starts Electron as an unprivileged user instead (`TAXWISE_E2E_UID` / `TAXWISE_E2E_GID`, else the
+user who ran sudo, else `nobody`; needs `setpriv`). If a Linux CI runner reports "No usable sandbox", let it create
+unprivileged user namespaces (or install Electron's `chrome-sandbox` setuid root) rather than turning the sandbox off.
+
 A development build may load `http://localhost` or `http://127.0.0.1`; a release build only loads the baked
 `https://` URL. Development builds keep DevTools; release builds have none, and no "Inspect" menu.
 
@@ -49,7 +55,8 @@ script) runs locked down whatever its executable is called, and so does any pack
 (`src/main/hardening.ts`). Locked down means: no DevTools or Inspect menu, `TAXWISE_APP_URL`,
 `TAXWISE_USER_DATA_DIR` and `TAXWISE_E2E_WHATSAPP_FIXTURES` are ignored, and the app refuses to start with a
 debugging or security-off switch (`--remote-debugging-port`, `--remote-debugging-pipe`, `--inspect*`,
-`--js-flags`, `--disable-web-security`, `--ignore-certificate-errors`, `--host-resolver-rules`, …). Electron's
+`--js-flags`, `--disable-web-security`, `--ignore-certificate-errors`, `--host-resolver-rules`, `--no-sandbox`,
+`--single-process`, …). Electron's
 own `app.isPackaged` is decided from the executable's file name, so it is not trusted alone: a copy of the
 installed app renamed to `electron.exe` would otherwise get DevTools on the WhatsApp panel. Playwright always
 starts Electron with `--remote-debugging-port`, so `npm run e2e` uses a development build.

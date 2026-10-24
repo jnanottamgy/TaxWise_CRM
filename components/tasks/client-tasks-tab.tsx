@@ -103,7 +103,7 @@ export default async function ClientTasksTab({ clientId, user, supabase, searchP
                 <ArrowRightIcon aria-hidden="true" />
               </Link>
             </Button>
-            {taskOptions ? <NewTaskButton options={taskOptions} defaultFy={fy ?? fyOptions(today)[1]} client={{ id: clientId, label }} openParam="apply_template" size="sm" /> : null}
+            {taskOptions ? <NewTaskButton options={taskOptions} defaultFy={fy ?? fyOptions(today)[1]} client={{ id: clientId, label }} openParam="apply_template" size="sm" variant="outline" /> : null}
           </div>
         }
       >

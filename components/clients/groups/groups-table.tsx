@@ -24,6 +24,7 @@ export function GroupsTable({
   sort,
   dir,
   today,
+  now,
   seesMoney,
 }: {
   rows: GroupListRow[]
@@ -33,6 +34,8 @@ export function GroupsTable({
   sort: string | null
   dir: SortDir
   today: string
+  /** The server's clock at render (ISO), so "2 hours ago" reads the same after hydration. */
+  now: string
   seesMoney: boolean
 }) {
   const columns = React.useMemo<DataTableColumn<GroupListRow>[]>(() => {
@@ -97,10 +100,10 @@ export function GroupsTable({
       sortable: true,
       align: "right",
       hideBelow: "lg",
-      cell: (r) => <span className="text-text-muted">{formatTimeAgo(r.updated_at)}</span>,
+      cell: (r) => <span className="text-text-muted">{formatTimeAgo(r.updated_at, new Date(now))}</span>,
     })
     return cols
-  }, [seesMoney, today])
+  }, [seesMoney, today, now])
 
   return (
     <DataTable

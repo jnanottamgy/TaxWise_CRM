@@ -56,10 +56,14 @@ export async function OverviewTab({ data, user, supabase }: { data: Client360; u
   const kpis: KpiItem[] = [
     { label: "Open tasks", value: o.openTasks, sub: o.openTasks === 0 ? "Nothing open" : undefined, href: `${base}?tab=tasks` },
     {
+      // Everything past its date: tasks and statutory deadlines, so "0" never sits beside an overdue return.
       label: "Overdue",
-      value: <span className={o.overdueTasks > 0 ? "text-danger-text" : undefined}>{o.overdueTasks}</span>,
-      sub: `${o.overdueTasks === 1 ? "task" : "tasks"} past due${o.overdueDeadlines > 0 ? ` · ${o.overdueDeadlines} deadline${o.overdueDeadlines === 1 ? "" : "s"} overdue` : ""}`,
-      href: `${base}?tab=tasks`,
+      value: <span className={o.overdueTasks + o.overdueDeadlines > 0 ? "text-danger-text" : undefined}>{o.overdueTasks + o.overdueDeadlines}</span>,
+      sub:
+        o.overdueTasks + o.overdueDeadlines === 0
+          ? "Nothing past due"
+          : `${o.overdueTasks} ${o.overdueTasks === 1 ? "task" : "tasks"} · ${o.overdueDeadlines} ${o.overdueDeadlines === 1 ? "deadline" : "deadlines"}`,
+      href: o.overdueTasks === 0 && o.overdueDeadlines > 0 ? `${base}?tab=compliance` : `${base}?tab=tasks`,
     },
     {
       label: "Next deadline",

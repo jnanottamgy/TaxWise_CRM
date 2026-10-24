@@ -55,6 +55,11 @@ export default async function ClientGroupPage({ params }: { params: Promise<{ id
   }
   if (!detail) notFound()
   const { group, members, tasks, tasksTotal, deadlines, deadlinesTotal } = detail
+  // "Next deadline" is the next one still ahead (the view's next_due_date), named by that event, not
+  // by the soonest pending one, which may be overdue. Overdue ones are counted beside it.
+  const upcoming = group.next_due_date ? deadlines.find((d) => !d.is_overdue && d.due_date === group.next_due_date) : undefined
+  const overdueShown = deadlines.filter((d) => d.is_overdue).length
+  const overdueLabel = overdueShown && overdueShown === deadlines.length && deadlinesTotal > deadlines.length ? `${overdueShown}+` : String(overdueShown)
   const fy = seesMoney ? await getSelectedFy() : null
   const statementHref = fy ? `/api/pdf/statement/group/${group.id}?from=${fyStart(fy)}&to=${fyEnd(fy) < today ? fyEnd(fy) : today}` : null
 
@@ -91,7 +96,18 @@ export default async function ClientGroupPage({ params }: { params: Promise<{ id
             value: group.open_tasks,
             sub: group.overdue_tasks ? <span className="text-danger-text">{group.overdue_tasks} overdue</span> : "None overdue",
           },
-          { label: "Next deadline", value: group.next_due_date ? formatDate(group.next_due_date) : EMPTY, sub: deadlines[0]?.title ?? undefined },
+          {
+            label: "Next deadline",
+            value: group.next_due_date ? formatDate(group.next_due_date) : EMPTY,
+            sub:
+              overdueShown || upcoming ? (
+                <>
+                  {overdueShown ? <span className="text-danger-text">{overdueLabel} overdue</span> : null}
+                  {overdueShown && upcoming ? " · " : null}
+                  {upcoming?.title ?? null}
+                </>
+              ) : undefined,
+          },
           ...(seesMoney ? [{ label: "Outstanding", value: <Money value={group.outstanding} />, sub: "Across its clients' invoices" }] : []),
         ]}
       />
@@ -141,8 +157,8 @@ export default async function ClientGroupPage({ params }: { params: Promise<{ id
 
         <SectionCard
           id="group-deadlines"
-          title="Upcoming deadlines"
-          description={deadlinesTotal > deadlines.length ? `The ${deadlines.length} soonest of ${deadlinesTotal} pending` : undefined}
+          title="Pending deadlines"
+          description={deadlinesTotal > deadlines.length ? `The ${deadlines.length} soonest of ${deadlinesTotal}, overdue first` : "Soonest first, overdue at the top"}
           flush
         >
           {deadlines.length ? (

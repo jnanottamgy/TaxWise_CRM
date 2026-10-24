@@ -221,8 +221,15 @@ export function copyName(name: string, taken: readonly string[]): string {
   return `${base.slice(0, TEMPLATE_NAME_MAX - 20)} (copy ${Date.now() % 100000})`;
 }
 
-/** The first line of a body, for the list: variables kept as written, trimmed to `max` characters. */
+/** "Dear {{contact_name}}," alone on its line: every email template starts that way, so it says nothing in a list. */
+const SALUTATION_LINE = /^(dear|hi|hello|namaste|namaskara|respected|greetings)\b[^.!?]{0,60},$/i;
+
+/**
+ * The first line of a body that says something, for the list: a salutation on its own line is
+ * skipped when more follows. Variables kept as written, trimmed to `max` characters.
+ */
 export function bodySnippet(body: string, max = 110): string {
-  const line = body.split(/\r?\n/).map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+  const lines = body.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const line = (lines.length > 1 && SALUTATION_LINE.test(lines[0]) ? lines[1] : lines[0]) ?? "";
   return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
 }

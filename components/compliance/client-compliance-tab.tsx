@@ -71,7 +71,7 @@ export default async function ClientComplianceTab({ clientId, user, supabase, se
 
   const sheet = <EventSheetSlot eventId={readParam(sp, "event")} user={user} supabase={supabase} closeHref={withParams(base, sp, {})} />
   const actions = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-none flex-wrap items-center gap-2 lg:justify-end">
       <GenerateButton clientIds={[clientId]} />
       {client ? <ReportButton clientId={clientId} clientCode={client.client_code} fy={fy} /> : null}
       {manager && client ? (
@@ -156,8 +156,8 @@ export default async function ClientComplianceTab({ clientId, user, supabase, se
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-text-muted">Deadlines due in FY {fy}, or for it. Planned from the statutory calendar, the ops templates and dates added by hand.</p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+        <p className="min-w-0 max-w-prose text-sm text-text-muted">Deadlines due in FY {fy}, or for it. Planned from the statutory calendar, the ops templates and dates added by hand.</p>
         {actions}
       </div>
 

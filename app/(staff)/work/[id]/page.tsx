@@ -84,6 +84,8 @@ export default async function TaskPage({ params }: Params) {
   const { id } = await params
   if (!UUID.test(id)) notFound()
   const today = todayIST()
+  // One clock for the page: client blocks compute "12 hours ago" from it, so hydration matches the server.
+  const now = new Date().toISOString()
   const viewer = { employeeId: user.employeeId, role: user.role, today }
 
   let bundle: TaskDetailBundle | null
@@ -291,6 +293,7 @@ export default async function TaskPage({ params }: Params) {
               people={people.data}
               viewerId={user.id}
               canModerate={canManage}
+              now={now}
             />
           ) : (
             <SectionCard title="Comments">
@@ -305,6 +308,7 @@ export default async function TaskPage({ params }: Params) {
             viewerId={user.id}
             canModerate={canManage}
             defaults={{ category: (task.service_type && CATEGORY_BY_SERVICE[task.service_type]) || "other", financialYear: task.financial_year ?? fy, period: task.period_label ?? "" }}
+            now={now}
           />
         </div>
         <div className="flex min-w-0 flex-col gap-4 lg:gap-6">

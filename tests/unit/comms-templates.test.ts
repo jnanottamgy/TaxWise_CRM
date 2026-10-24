@@ -104,8 +104,10 @@ describe("helpers", () => {
     expect(copyName("x".repeat(120), []).length).toBeLessThanOrEqual(120);
   });
 
-  it("shows the first line of the body, trimmed", () => {
-    expect(bodySnippet("\n\n  Dear {{contact_name}},\nmore")).toBe("Dear {{contact_name}},");
+  it("shows the first line of the body that says something, trimmed", () => {
+    expect(bodySnippet("\n\n  Dear {{contact_name}},\n\nYour {{compliance_type}} is due.")).toBe("Your {{compliance_type}} is due.");
+    expect(bodySnippet("Dear {{contact_name}},")).toBe("Dear {{contact_name}},");
+    expect(bodySnippet("Hi {{contact_name}}, a gentle reminder\nmore")).toBe("Hi {{contact_name}}, a gentle reminder");
     expect(bodySnippet("a".repeat(200), 20)).toBe(`${"a".repeat(19)}…`);
   });
 });

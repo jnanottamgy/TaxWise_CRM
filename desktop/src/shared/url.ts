@@ -23,3 +23,13 @@ export function originOf(raw: string): string | null {
   if (u.protocol !== "https:" && u.protocol !== "http:") return null;
   return u.origin === "null" ? null : u.origin;
 }
+
+/**
+ * True if a preload may set itself up in this document: only a document with an origin of its own (the
+ * CRM, WhatsApp Web, the panel header). A view's preload also runs in the view's initial empty document
+ * (about:blank), just before its first page commits; the main process refuses every message from that
+ * document, and nothing there should get a bridge. Nor should a blob:, data: or error page.
+ */
+export function preloadMayRun(href: string): boolean {
+  return originOf(href) !== null;
+}

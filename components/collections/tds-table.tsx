@@ -50,7 +50,8 @@ export function TdsTable(props: { rows: TdsCreditRow[]; total: number; page: num
         width: "24%",
         cell: (r) => (
           <span className="inline-flex min-w-0 flex-col leading-5" title={`${r.client_code} · ${r.client_name}`}>
-            <span className="truncate">{r.client_name}</span>
+            {/* Capped, so a long company name can't push Status out of view; the title has it whole. */}
+            <span className="max-w-60 truncate">{r.client_name}</span>
             <span className="text-xs text-text-muted">{r.client_code}</span>
           </span>
         ),
@@ -72,7 +73,7 @@ export function TdsTable(props: { rows: TdsCreditRow[]; total: number; page: num
       },
       { id: "payment_date", header: "Paid on", sortable: true, align: "right", cell: (r) => <DateText date={r.payment_date} today={today} /> },
       { id: "quarter", header: "Quarter", sortable: true, mobile: "secondary", cell: (r) => <span className="whitespace-nowrap">{r.quarter}</span> },
-      { id: "section", header: "Section", hideBelow: "lg", cell: (r) => (r.tds_section ? <span className="whitespace-nowrap">{r.tds_section === "393" ? "s.393" : r.tds_section}</span> : <span className="text-text-muted">—</span>) },
+      { id: "section", header: "Section", hideBelow: "2xl", cell: (r) => (r.tds_section ? <span className="whitespace-nowrap">{r.tds_section === "393" ? "s.393" : r.tds_section}</span> : <span className="text-text-muted">—</span>) },
       {
         id: "tan",
         header: "Deductor TAN",

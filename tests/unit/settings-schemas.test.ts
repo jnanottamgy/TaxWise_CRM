@@ -21,6 +21,7 @@ import {
 } from "@/lib/schemas/settings";
 import {
   ConcordanceSchema,
+  describeParameterValue,
   DueDateRuleChangeSchema,
   formatParameterValue,
   OverrideSchema,
@@ -509,5 +510,25 @@ describe("law schemas", () => {
     expect(ConcordanceSchema.safeParse({ topic: "Tax audit", old_section: "s.44AB", new_section: "s.63" }).success).toBe(true);
     expect(errorPaths(ConcordanceSchema.safeParse({ topic: "Tax audit" }))).toContain("new_section");
     expect(errorPaths(ConcordanceSchema.safeParse({ id, topic: "Tax audit", old_section: "s.44AB" }))).toContain("topic"); // an edit needs its token
+  });
+});
+
+describe("describeParameterValue (the parameters table, in words)", () => {
+  it("reads objects as labelled parts, numbers in Indian grouping", () => {
+    expect(describeParameterValue({ months: 3 })).toBe("months 3");
+    expect(describeParameterValue({ amount: 50000, inclusive: false })).toBe("amount 50,000 · inclusive no");
+    expect(describeParameterValue({ turnover: 1000000000, paid_up_capital: 100000000 })).toBe("turnover 1,00,00,00,000 · paid up capital 10,00,00,000");
+    expect(describeParameterValue({ counted: ["a", "b"], notCounted: [] })).toBe("counted a, b · notCounted none");
+    expect(describeParameterValue({ access: { days: 90 } })).toBe("access (days 90)");
+  });
+
+  it("reads plain values as they are, and cuts long ones", () => {
+    expect(describeParameterValue(18)).toBe("18");
+    expect(describeParameterValue("44AB")).toBe("44AB");
+    expect(describeParameterValue(null)).toBe("—");
+    expect(describeParameterValue(true)).toBe("yes");
+    const long = describeParameterValue({ text: "x".repeat(200) }, 40);
+    expect(long).toHaveLength(40);
+    expect(long.endsWith("…")).toBe(true);
   });
 });

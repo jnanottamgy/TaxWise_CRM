@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { EmptyState } from "@/components/app/empty-state"
 import { formatMinutes } from "@/lib/format"
 import { diffDays, type DateString } from "@/lib/domain/fy"
-import { dayHeading, formatDurationInput, parseDuration, MAX_ENTRY_MINUTES, type GridRow } from "@/lib/schemas/timesheet"
+import { dayHeading, formatDurationInput, parseDuration, MAX_ENTRY_MINUTES, NOT_ON_LIST, type GridRow } from "@/lib/schemas/timesheet"
 import type { RowLabel, WeekView } from "@/lib/data/timesheet"
 import { copyLastWeekRows, removeGridRow, setGridCell } from "@/server/actions/timesheet"
 import { AddRowDialog } from "@/components/timesheet/add-row-dialog"
@@ -28,14 +28,17 @@ import { AddRowDialog } from "@/components/timesheet/add-row-dialog"
 type CellPos = { rowKey: string; index: number }
 
 function rowName(label: RowLabel | undefined, row: GridRow): { title: string; sub: string | null; href: string | null } {
+  // No name means RLS no longer shows the viewer that task or client (they left its team, a cover
+  // ended): say so plainly, and don't link to a page that would refuse them.
   if (row.task_id) {
+    if (!label?.task_title) return { title: NOT_ON_LIST.task, sub: null, href: null }
     return {
-      title: label?.task_title ?? "Task",
-      sub: [label?.task_number, label?.client_name].filter(Boolean).join(" · ") || null,
+      title: label.task_title,
+      sub: [label.task_number, label.client_name].filter(Boolean).join(" · ") || null,
       href: `/work/${row.task_id}`,
     }
   }
-  if (row.client_id) return { title: label?.client_name ?? "Client", sub: "No task", href: `/clients/${row.client_id}` }
+  if (row.client_id) return label?.client_name ? { title: label.client_name, sub: "No task", href: `/clients/${row.client_id}` } : { title: NOT_ON_LIST.client, sub: "No task", href: null }
   return { title: "Internal work", sub: null, href: null }
 }
 
@@ -507,7 +510,7 @@ function CellInput({
         }
       }}
       className={cn(
-        "num h-9 w-full min-w-16 rounded-md border border-border/70 bg-surface px-2 text-right text-sm text-text tabular-nums transition-colors duration-150 outline-none placeholder:text-text-muted/60 hover:border-border focus:border-ring focus:ring-2 focus:ring-ring/30 pointer-coarse:h-11",
+        "num h-9 w-full min-w-16 rounded-md border border-border/70 bg-surface px-2 text-right text-sm text-text tabular-nums transition-colors duration-150 outline-none placeholder:text-transparent hover:border-border focus:placeholder:text-text-muted/60 focus:border-ring focus:ring-2 focus:ring-ring/30 pointer-coarse:h-11",
         invalid && "border-danger focus:border-danger focus:ring-danger/30",
         saving && "opacity-70",
         className,

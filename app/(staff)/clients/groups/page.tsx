@@ -50,7 +50,7 @@ export default async function ClientGroupsPage({ searchParams }: { searchParams:
       />
       <FilterBar searchLabel="Search groups" searchPlaceholder="Group name or notes" filters={[]} />
       {list.ok ? (
-        <GroupsTable rows={list.rows} total={list.total} page={t.page} pageSize={t.pageSize} sort={t.sort} dir={t.dir} today={todayIST()} seesMoney={seesMoney} />
+        <GroupsTable rows={list.rows} total={list.total} page={t.page} pageSize={t.pageSize} sort={t.sort} dir={t.dir} today={todayIST()} now={new Date().toISOString()} seesMoney={seesMoney} />
       ) : (
         <div className="rounded-lg border border-border bg-surface">
           <ErrorBlock message="Couldn't load the client groups." errorRef={list.ref} />

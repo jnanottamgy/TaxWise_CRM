@@ -48,9 +48,10 @@ export function WorkViewsMenu({ views, canShare }: { views: WorkViewOption[]; ca
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" aria-label={active ? `Views: ${active.name}` : "Views"}>
+          {/* Phones stack it under the view tabs: its own width with its label, not a full-width icon-only bar. */}
+          <Button variant="outline" size="sm" className="max-md:self-start" aria-label={active ? `Views: ${active.name}` : "Views"}>
             <BookmarkIcon aria-hidden="true" />
-            <span className="max-w-40 truncate max-sm:sr-only">{active ? active.name : "Views"}</span>
+            <span className="max-w-40 truncate">{active ? active.name : "Views"}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">

@@ -41,6 +41,7 @@ export function TaskAttachments({
   viewerId,
   canModerate,
   defaults,
+  now: serverNow,
 }: {
   taskId: string
   clientId: string
@@ -50,8 +51,11 @@ export function TaskAttachments({
   viewerId: string
   canModerate: boolean
   defaults: { category: DocumentCategory; financialYear: string; period: string }
+  /** The server's render time (ISO), so "2 minutes ago" hydrates to the same text. */
+  now?: string
 }) {
   const router = useRouter()
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
   const [adding, setAdding] = React.useState(false)
   const live = attachments.filter((a) => a.document_id)
   return (
@@ -106,7 +110,7 @@ export function TaskAttachments({
                 <p className="truncate text-base text-text">{a.title ?? a.file_name ?? "Removed document"}</p>
                 <p className="truncate text-xs text-text-muted">
                   {a.document_id ? `${formatFileSize(a.file_size)} · ` : "Moved to the recycle bin · "}
-                  {a.uploaded_by_name ?? "Someone"} · {formatTimeAgo(a.created_at)}
+                  {a.uploaded_by_name ?? "Someone"} · {formatTimeAgo(a.created_at, now)}
                 </p>
               </div>
               {a.document_id ? (

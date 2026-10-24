@@ -42,6 +42,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const show: InboxShow = (INBOX_SHOW as readonly string[]).includes(rawShow ?? "") ? (rawShow as InboxShow) : "inbox"
   const t = parseTableParams(sp, { sortable: ["created_at"], defaultSort: { sort: "created_at", dir: "desc" }, filters: INBOX_FILTERS })
   const today = todayIST()
+  // One clock for the page: client lists compute "2 hours ago" from it, so hydration matches the server.
+  const now = new Date().toISOString()
 
   const [actions, marks, updates, counts] = await Promise.all([
     attempt("actions", user.id, () => getActionItems(supabase)),
@@ -82,7 +84,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       />
 
       {actions.ok ? (
-        <ActionItems groups={groups} unread={unread} today={today} />
+        <ActionItems groups={groups} unread={unread} today={today} now={now} />
       ) : (
         <section aria-label="Needs your action" className="rounded-lg border border-border bg-surface">
           <ErrorBlock message="Couldn't load what needs your action." errorRef={actions.ref} />
@@ -103,7 +105,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <FilterBar searchLabel="Search updates" searchPlaceholder="Words in the title or message" filters={[{ id: "group", label: "About", options: groupOptions }]} />
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
           {updates.ok ? (
-            <UpdatesList rows={updates.data.rows} total={updates.data.total} page={t.page} pageSize={t.pageSize} show={show} filtered={hasActiveFilters(sp, ["group"])} />
+            <UpdatesList rows={updates.data.rows} total={updates.data.total} page={t.page} pageSize={t.pageSize} show={show} filtered={hasActiveFilters(sp, ["group"])} now={now} />
           ) : (
             <ErrorBlock message="Couldn't load your updates." errorRef={updates.ref} />
           )}

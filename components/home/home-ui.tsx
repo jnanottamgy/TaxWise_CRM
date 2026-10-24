@@ -8,6 +8,7 @@ import { StatusChip } from "@/components/app/status-chip"
 import { formatTimeAgo } from "@/lib/format"
 import type { DeadlineRow, UnreadMessageRow } from "@/lib/data/dashboard"
 import { deadlineHref } from "@/components/home/logic"
+import { MetaLine } from "@/components/tasks/meta-line"
 
 /**
  * Pieces shared by My day, Team today and Firm today (§7.2). Server-safe; StatusChip and ErrorBlock
@@ -62,13 +63,12 @@ export function DeadlineList({ rows, today, showClient = true, emptyMessage, cla
               <RowLink href={deadlineHref(d)}>{deadlineName(d)}</RowLink>
               <StatusChip kind="compliance_workflow" value={d.workflow_status} className="flex-none" />
             </div>
-            <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-text-muted">
-              {showClient ? <span className="truncate">{d.client_name ?? "Firm deadline"}</span> : null}
+            <MetaLine>
+              {showClient ? <span>{d.client_name ?? "Firm deadline"}</span> : null}
               <span className="whitespace-nowrap">
-                {showClient ? "· " : ""}
                 <DateText date={d.due_date} withRelative={open} today={today} />
               </span>
-            </p>
+            </MetaLine>
           </li>
         )
       })}
@@ -99,7 +99,7 @@ export function MessageList({ rows, emptyMessage }: { rows: UnreadMessageRow[]; 
 }
 
 /** A small labelled figure inside a card (not a KPI tile): label above, value, optional sub-line. */
-export function Figure({ label, value, sub, href, className }: { label: string; value: React.ReactNode; sub?: React.ReactNode; href?: string; className?: string }) {
+export function Figure({ label, value, sub, href, className }: { label: React.ReactNode; value: React.ReactNode; sub?: React.ReactNode; href?: string; className?: string }) {
   const body = (
     <>
       <div className="text-sm text-text-muted">{label}</div>

@@ -49,9 +49,25 @@ describe("debugging switches on a locked-down run", () => {
     ]);
   });
 
+  it("finds the switches that weaken the Chromium sandbox, which app.enableSandbox() doesn't undo", () => {
+    expect(forbiddenSwitches(["TaxWise Desktop.exe", "--no-sandbox"])).toEqual(["no-sandbox"]);
+    expect(forbiddenSwitches(["app", "/no-sandbox"])).toEqual(["no-sandbox"]);
+    expect(forbiddenSwitches(["app", "--single-process", "--disable-gpu-sandbox", "--no-zygote-sandbox"])).toEqual([
+      "disable-gpu-sandbox",
+      "no-zygote-sandbox",
+      "single-process",
+    ]);
+    expect(forbiddenSwitches(["app", "--disable-seccomp-filter-sandbox", "--disable-namespace-sandbox", "--disable-setuid-sandbox"])).toEqual([
+      "disable-namespace-sandbox",
+      "disable-seccomp-filter-sandbox",
+      "disable-setuid-sandbox",
+    ]);
+  });
+
   it("leaves ordinary arguments alone", () => {
     expect(forbiddenSwitches(["/Applications/TaxWise Desktop.app/Contents/MacOS/TaxWise Desktop", "--lang=en-IN", "--remote-debugging", "--inspector"])).toEqual([]);
     expect(forbiddenSwitches(["app", "remote-debugging-port=9222"])).toEqual([]);
+    expect(forbiddenSwitches(["app", "--enable-sandbox", "--sandbox"])).toEqual([]);
   });
 
   it("main.ts refuses them before any page exists, and only when locked down (Playwright needs them in development)", () => {

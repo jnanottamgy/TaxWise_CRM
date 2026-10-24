@@ -23,7 +23,8 @@ type Common = { total: number; page: number; pageSize: number; sort: string | nu
 
 const clientCell = (name: string, code: string) => (
   <span className="inline-flex min-w-0 flex-col leading-5" title={`${code} · ${name}`}>
-    <span className="truncate">{name}</span>
+    {/* Capped, so one long company name can't push the amounts out of view; the title has it whole. */}
+    <span className="max-w-60 truncate">{name}</span>
     <span className="text-xs text-text-muted">{code}</span>
   </span>
 )
@@ -37,7 +38,7 @@ export function RevenueInvoicesTable({ rows, ...p }: Common & { rows: LedgerInvo
       { id: "date", header: "Date", sortable: true, align: "right", cell: (r) => <DateText date={r.issue_date} /> },
       { id: "client", header: "Client", sortable: true, mobile: "primary", width: "24%", cell: (r) => clientCell(r.client_name, r.client_code), mobileCell: (r) => r.client_name },
       { id: "taxable_amount", header: "Taxable", sortable: true, align: "right", hideBelow: "lg", cell: (r) => <Money value={r.taxable_amount} /> },
-      { id: "gst_amount", header: "GST", sortable: true, align: "right", hideBelow: "xl", cell: (r) => <Money value={r.gst_amount} /> },
+      { id: "gst_amount", header: "GST", sortable: true, align: "right", hideBelow: "2xl", cell: (r) => <Money value={r.gst_amount} /> },
       { id: "total_amount", header: "Total", sortable: true, align: "right", mobile: "trailing", cell: (r) => <Money value={r.total_amount} /> },
       { id: "received", header: "Received", sortable: true, align: "right", hideBelow: "xl", cell: (r) => <Money value={r.amount_received + r.tds_credited} /> },
       { id: "outstanding_amount", header: "Outstanding", sortable: true, align: "right", cell: (r) => (r.cancelled_at ? <span className="text-text-muted">—</span> : <Money value={r.outstanding_amount} />) },

@@ -12,16 +12,9 @@ import { DateText } from "@/components/app/date-text"
 import { Button } from "@/components/ui/button"
 import { EMPTY } from "@/lib/format"
 import { istDateOf } from "@/lib/domain/fy"
-import { SERVICE_TYPE_LABELS } from "@/lib/domain/enums"
-import { LETTER_AUDIT_TYPE_LABEL, LETTER_EXPIRY_WINDOW_DAYS, type LetterAuditType } from "@/lib/schemas/engagement-letters"
+import { LETTER_EXPIRY_WINDOW_DAYS, servicesSummary } from "@/lib/schemas/engagement-letters"
 import type { LetterRow } from "@/lib/data/engagement-letters"
 import { RenewButton } from "@/components/engagement-letters/renew-button"
-
-export function servicesSummary(r: Pick<LetterRow, "service_types" | "audit_type">): string {
-  return r.service_types
-    .map((s) => (s === "audit" && r.audit_type ? (LETTER_AUDIT_TYPE_LABEL[r.audit_type as LetterAuditType] ?? SERVICE_TYPE_LABELS.audit) : SERVICE_TYPE_LABELS[s]))
-    .join(", ")
-}
 
 /** The status with what it is waiting for: "Issued · sent 22 Oct", "Signed · copy in vault". */
 export function LetterStatusCell({ r }: { r: LetterRow }) {
@@ -79,15 +72,16 @@ export function LettersTable(props: {
             <span className="text-xs text-text-muted">{r.client_code}</span>
           </span>
         ),
-        mobileCell: (r) => `${r.client_name} · FY ${r.financial_year}`,
+        // On a phone the FY leads the second line, so a long client name can truncate without hiding the year.
+        mobileCell: (r) => r.client_name,
       })
     }
     cols.push(
-      { id: "financial_year", header: "FY", sortable: !compact, hideable: false, rowLink: !showClient, mobile: showClient ? undefined : "primary", cell: (r) => <span className="num font-medium text-text">FY {r.financial_year}</span> },
+      { id: "financial_year", header: "FY", sortable: !compact, hideable: false, rowLink: !showClient, mobile: showClient ? "secondary" : "primary", cell: (r) => <span className="num font-medium text-text">FY {r.financial_year}</span> },
       { id: "services", header: "Services", mobile: "secondary", cell: (r) => <span className="block max-w-[18rem] truncate text-text-muted" title={servicesSummary(r)}>{servicesSummary(r)}</span> },
       { id: "fee_agreed", header: "Fee (excl. GST)", sortable: !compact, align: "right", hideBelow: "lg", cell: (r) => <Money value={r.fee_agreed} /> },
       { id: "status", header: "Status", mobile: "trailing", cell: (r) => <LetterStatusCell r={r} /> },
-      { id: "issued_at", header: "Issued", sortable: !compact, align: "right", hideBelow: "xl", cell: (r) => <DateText date={r.issued_at ? istDateOf(r.issued_at) : null} /> },
+      { id: "issued_at", header: "Issued", sortable: !compact, align: "right", hideBelow: "2xl", cell: (r) => <DateText date={r.issued_at ? istDateOf(r.issued_at) : null} /> },
       { id: "signed_at", header: "Signed", align: "right", hideBelow: "2xl", cell: (r) => <DateText date={r.signed_at ? istDateOf(r.signed_at) : null} /> },
       {
         id: "expires_at",

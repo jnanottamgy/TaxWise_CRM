@@ -17,7 +17,8 @@ import { PayButton } from "@/components/portal/pay-dialog"
 
 /**
  * The client's invoices (§7.22 Invoices & payments): number and period, dates, total and what is
- * still due, the status in the client's words, the PDF, and Pay while something is due. Paged and
+ * still due, the status in the client's words, the PDF, and Pay while something is due; the row opens
+ * the invoice page. Paged and
  * sorted on the server; below 768px each row is a card with the number, the amount due and the
  * status (§3.3).
  */
@@ -87,10 +88,8 @@ export function InvoicesTable({
         mobile: "primary",
         cell: (r) => (
           <div className="min-w-0">
-            <a href={`/api/portal/invoices/${r.id}/pdf`} target="_blank" rel="noopener" className="num font-medium text-text tabular-nums hover:underline">
-              {r.invoiceNumber}
-            </a>
-            <p className="truncate text-sm text-text-muted">{r.periodLabel ?? (r.kind === "debit_note" ? "Debit note" : "Tax invoice")}</p>
+            <span className="num font-medium text-text tabular-nums">{r.invoiceNumber}</span>
+            <p className="truncate text-sm font-normal text-text-muted">{r.periodLabel ?? (r.kind === "debit_note" ? "Debit note" : "Tax invoice")}</p>
           </div>
         ),
       },
@@ -154,6 +153,9 @@ export function InvoicesTable({
       columns={columns}
       rows={rows}
       getRowId={(r) => r.id}
+      // The row opens the invoice page (the bill, what's been received, receipts and Pay); the PDF
+      // and Pay buttons in the row still work on their own.
+      getRowHref={(r) => `/portal/invoices/${r.id}`}
       total={total}
       page={page}
       pageSize={pageSize}

@@ -183,7 +183,23 @@ function Composer({
   )
 }
 
-export function TaskComments({ taskId, comments, people, viewerId, canModerate }: { taskId: string; comments: CommentRow[]; people: MentionPerson[]; viewerId: string; canModerate: boolean }) {
+export function TaskComments({
+  taskId,
+  comments,
+  people,
+  viewerId,
+  canModerate,
+  now: serverNow,
+}: {
+  taskId: string
+  comments: CommentRow[]
+  people: MentionPerson[]
+  viewerId: string
+  canModerate: boolean
+  /** The server's render time (ISO), so "12 hours ago" hydrates to the same text. */
+  now?: string
+}) {
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
   const router = useRouter()
   const [editing, setEditing] = React.useState<string | null>(null)
   const [removing, setRemoving] = React.useState<CommentRow | null>(null)
@@ -198,7 +214,7 @@ export function TaskComments({ taskId, comments, people, viewerId, canModerate }
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
               <span className="text-sm font-medium text-text">{c.author_name ?? "A colleague"}</span>
               <span className="text-xs text-text-muted" title={formatDateTime(c.created_at)}>
-                {formatTimeAgo(c.created_at)}
+                {formatTimeAgo(c.created_at, now)}
                 {c.edited_at ? " · edited" : ""}
               </span>
             </div>

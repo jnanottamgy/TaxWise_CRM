@@ -43,9 +43,13 @@ export function taskColumns(today: string): DataTableColumn<TaskListRow>[] {
       hideable: false,
       mobile: "primary",
       width: "30%",
+      // A one-track grid has no min-content width, so the title truncates at the column's share of
+      // the table instead of widening it and pushing Due off a 1366px screen.
       cell: (r) => (
-        <span className="flex min-w-0 flex-col leading-5">
-          <span className="truncate font-medium">{r.title}</span>
+        <span className="grid grid-cols-[minmax(0,1fr)] leading-5">
+          <span className="truncate font-medium" title={r.title}>
+            {r.title}
+          </span>
           <span className="truncate text-xs font-normal text-text-muted">
             <span className="font-mono">{r.task_number}</span>
             {r.period_label ? ` · ${r.period_label}` : ""}
@@ -60,7 +64,13 @@ export function taskColumns(today: string): DataTableColumn<TaskListRow>[] {
       sortable: true,
       mobile: "secondary",
       width: "18%",
-      cell: (r) => <span className="block max-w-[14rem] truncate">{r.client_name ?? "—"}</span>,
+      cell: (r) => (
+        <span className="grid grid-cols-[minmax(0,1fr)]">
+          <span className="truncate" title={r.client_name ?? undefined}>
+            {r.client_name ?? "—"}
+          </span>
+        </span>
+      ),
     },
     {
       id: "status",
@@ -76,7 +86,8 @@ export function taskColumns(today: string): DataTableColumn<TaskListRow>[] {
     },
     { id: "priority", header: "Priority", sortable: true, hideBelow: "lg", cell: (r) => <PriorityChip kind="task_priority" value={r.priority} /> },
     { id: "assignee_name", header: "Assignee", sortable: true, mobile: "secondary", cell: (r) => <PersonCell name={r.assignee_name} /> },
-    { id: "reviewer_name", header: "Reviewer", hideBelow: "xl", cell: (r) => <PersonCell name={r.reviewer_name} empty="Any Manager" /> },
+    // Reviewer, checklist and time give way first on a 1366px laptop (§0.1 rule 4), so Due stays on screen.
+    { id: "reviewer_name", header: "Reviewer", hideBelow: "2xl", cell: (r) => <PersonCell name={r.reviewer_name} empty="Any Manager" /> },
     {
       id: "due_date",
       header: "Due",
@@ -86,8 +97,8 @@ export function taskColumns(today: string): DataTableColumn<TaskListRow>[] {
       cell: (r) => <DateText date={r.due_date} withRelative={r.status !== "filed_done"} stacked today={today} />,
       mobileCell: (r) => (r.due_date ? `Due ${formatDate(r.due_date)}` : "No due date"),
     },
-    { id: "checklist", header: "Checklist", align: "right", hideBelow: "lg", cell: (r) => <ChecklistCell done={r.checklist_done} total={r.checklist_total} /> },
-    { id: "time", header: "Time", align: "right", hideBelow: "xl", cell: (r) => <TimeCell logged={r.logged_minutes} estimate={r.estimated_minutes} /> },
+    { id: "checklist", header: "Checklist", align: "right", hideBelow: "2xl", cell: (r) => <ChecklistCell done={r.checklist_done} total={r.checklist_total} /> },
+    { id: "time", header: "Time", align: "right", hideBelow: "2xl", cell: (r) => <TimeCell logged={r.logged_minutes} estimate={r.estimated_minutes} /> },
     { id: "service", header: "Service", defaultHidden: true, cell: (r) => (r.service_type ? SERVICE_TYPE_LABELS[r.service_type] : <span className="text-text-muted">—</span>) },
     { id: "financial_year", header: "FY", defaultHidden: true, cell: (r) => r.financial_year ?? <span className="text-text-muted">—</span> },
     { id: "updated_at", header: "Updated", sortable: true, align: "right", defaultHidden: true, cell: (r) => <DateText date={r.updated_at} /> },

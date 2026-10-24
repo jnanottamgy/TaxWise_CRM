@@ -20,7 +20,9 @@ export type ReportColumn = {
   header: string
   kind: ReportCellKind
   /** Hide below this width on screen (the exports keep every column). */
-  hideBelow?: "lg" | "xl"
+  hideBelow?: "lg" | "xl" | "2xl"
+  /** Keep a short text value (a person's name) on one line instead of wrapping it word by word. */
+  nowrap?: boolean
   /** Its place in the phone card: line 1 left (identity) or right (the key figure), or line 2. */
   mobile?: "primary" | "trailing" | "secondary"
 }

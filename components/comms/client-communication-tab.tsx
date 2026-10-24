@@ -99,6 +99,7 @@ export default async function ClientCommunicationTab({ clientId, user, supabase,
         portalLink={`${env.appUrl().replace(/\/+$/, "")}/portal`}
         me={user.id}
         today={todayIST()}
+        now={new Date().toISOString()}
         newSince={thread.myLastReadAt}
         unreadInbound={thread.unreadInbound}
         seenBy={thread.seenBy}

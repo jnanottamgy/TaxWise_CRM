@@ -9,7 +9,7 @@ export default function ClientGroupLoading() {
       <SkeletonTable headers={["Client", "Code", "Status", "Owner", "Next deadline", "Open tasks", "Outstanding", "Actions"]} rows={6} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <SkeletonCard title="Open tasks" />
-        <SkeletonCard title="Upcoming deadlines" />
+        <SkeletonCard title="Pending deadlines" />
       </div>
     </div>
   )

@@ -150,7 +150,7 @@ export function Wizard({
             ))}
           </ol>
         </nav>
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
+        <div data-slot="wizard-body" className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
             <h2 ref={headingRef} tabIndex={-1} className="text-lg leading-7 font-semibold text-text outline-none">
               {step?.title}
@@ -165,9 +165,10 @@ export function Wizard({
         data-slot="wizard-footer"
         className="sticky bottom-0 flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6"
       >
-        <Button type="button" variant="outline" onClick={() => go(current - 1)} disabled={current === 0 || busy}>
+        {/* Phones: Back is icon-only, so Back · Save draft · Complete stay on one row above the stamp. */}
+        <Button type="button" variant="outline" onClick={() => go(current - 1)} disabled={current === 0 || busy} className="max-sm:px-2.5">
           <ChevronLeftIcon aria-hidden="true" />
-          Back
+          <span className="max-sm:sr-only">Back</span>
         </Button>
         <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">{draftStatus}</div>
         <div className="ml-auto flex items-center gap-2">
@@ -270,6 +271,19 @@ export function WizardDialog({
         <DialogPrimitive.Content
           className="fixed inset-0 z-50 flex h-dvh w-full flex-col overflow-hidden bg-surface text-text shadow-2 outline-none transition-[opacity,scale] duration-200 ease-out starting:opacity-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:h-[min(92dvh,56rem)] sm:w-[min(calc(100vw-2rem),76rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-border sm:starting:scale-[0.98]"
           onInteractOutside={(e) => e.preventDefault()}
+          onOpenAutoFocus={(e) => {
+            // Radix would focus the first button, the header's Close, and ring it. With a mouse or
+            // trackpad start in the step's first field instead; on touch screens focus the step's
+            // heading, so the keyboard doesn't jump up over the step before the person reads it.
+            e.preventDefault()
+            const content = e.currentTarget as HTMLElement | null
+            const body = content?.querySelector<HTMLElement>('[data-slot="wizard-body"]')
+            if (!content || !body) return
+            const field = window.matchMedia("(pointer: fine)").matches
+              ? body.querySelector<HTMLElement>("input:not([type=hidden]):not(:disabled), textarea:not(:disabled), select:not(:disabled)")
+              : null
+            ;(field ?? body.querySelector<HTMLElement>("h2[tabindex]") ?? content).focus({ preventScroll: true })
+          }}
         >
           <DialogPrimitive.Title className="sr-only">{typeof wizard.title === "string" ? wizard.title : "Wizard"}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">{stepLabel(wizard.current, wizard.steps.length)}</DialogPrimitive.Description>

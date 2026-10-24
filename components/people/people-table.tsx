@@ -10,20 +10,21 @@ import { DataTable, type DataTableColumn } from "@/components/app/data-table/dat
 import { EmptyState } from "@/components/app/empty-state"
 import { RoleBadge } from "@/components/app/role-badge"
 import type { SortDir } from "@/components/app/data-table/params"
-import { formatTimeAgo } from "@/lib/format"
+import { formatDateTime, formatTimeAgo } from "@/lib/format"
 import type { PersonListRow } from "@/lib/data/people"
 import { issueLogins, type LoginHandout } from "@/server/actions/people"
 import { CapacityChip, LoginStatusChip, PersonInitials, PresenceChip } from "@/components/people/people-bits"
 import { LoginCreatedDialog } from "@/components/people/login-created-dialog"
 
-const columns: DataTableColumn<PersonListRow>[] = [
+function peopleColumns(now: Date): DataTableColumn<PersonListRow>[] {
+  return [
   {
     id: "full_name",
     header: "Name",
     sortable: true,
     hideable: false,
     mobile: "primary",
-    width: "26%",
+    width: "22%",
     cell: (r) => (
       <span className="inline-flex min-w-0 items-center gap-2.5">
         <PersonInitials name={r.full_name} />
@@ -33,9 +34,28 @@ const columns: DataTableColumn<PersonListRow>[] = [
     mobileCell: (r) => r.full_name,
   },
   { id: "role", header: "Role", sortable: true, mobile: "secondary", cell: (r) => <RoleBadge role={r.role} /> },
-  { id: "designation", header: "Designation", sortable: true, cell: (r) => r.designation ?? <span className="text-text-muted">—</span>, mobile: "secondary" },
-  { id: "department", header: "Department", sortable: true, hideBelow: "xl", cell: (r) => r.department ?? <span className="text-text-muted">—</span> },
-  { id: "email", header: "Email", hideBelow: "xl", cell: (r) => <span className="text-text-muted">{r.email}</span> },
+  {
+    id: "designation",
+    header: "Designation",
+    sortable: true,
+    width: "18%",
+    // A one-track grid has no min-content width, so a long designation truncates at the column's share.
+    cell: (r) =>
+      r.designation ? (
+        <span className="grid grid-cols-[minmax(0,1fr)]">
+          <span className="truncate" title={r.designation}>
+            {r.designation}
+          </span>
+        </span>
+      ) : (
+        <span className="text-text-muted">—</span>
+      ),
+    mobile: "secondary",
+  },
+  // Department and email give way first on a 1366px laptop, so status, open tasks, capacity, online
+  // now and last seen (the columns a Manager scans) stay on screen (§7.11.1, §0.1 rule 4).
+  { id: "department", header: "Department", sortable: true, hideBelow: "2xl", cell: (r) => r.department ?? <span className="text-text-muted">—</span> },
+  { id: "email", header: "Email", hideBelow: "2xl", cell: (r) => <span className="text-text-muted">{r.email}</span> },
   { id: "phone", header: "Phone", hideBelow: "2xl", cell: (r) => (r.phone ? <span className="num">{r.phone}</span> : <span className="text-text-muted">—</span>) },
   { id: "status", header: "Status", mobile: "trailing", cell: (r) => <LoginStatusChip status={r.login_status} onLeave={r.on_leave_today} /> },
   { id: "open_tasks", header: "Open tasks", sortable: true, align: "right", cell: (r) => r.open_tasks },
@@ -51,9 +71,10 @@ const columns: DataTableColumn<PersonListRow>[] = [
     sortable: true,
     align: "right",
     hideBelow: "lg",
-    cell: (r) => (r.last_seen_at ? <span title={new Date(r.last_seen_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}>{formatTimeAgo(r.last_seen_at)}</span> : <span className="text-text-muted">Never</span>),
+    cell: (r) => (r.last_seen_at ? <span title={formatDateTime(r.last_seen_at)}>{formatTimeAgo(r.last_seen_at, now)}</span> : <span className="text-text-muted">Never</span>),
   },
-]
+  ]
+}
 
 /**
  * The team list (§7.11.1): name, role badge, designation, department, email, phone, status
@@ -68,8 +89,12 @@ export function PeopleTable(props: {
   sort: string | null
   dir: SortDir
   canAdd: boolean
+  /** The server's render time (ISO), so "27 minutes ago" hydrates to the same text. */
+  now?: string
 }) {
-  const { canAdd, ...tableProps } = props
+  const { canAdd, now: serverNow, ...tableProps } = props
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
+  const columns = React.useMemo(() => peopleColumns(now), [now])
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
   const [result, setResult] = React.useState<{ created: LoginHandout[]; failed: Array<{ name: string; error: string }> } | null>(null)

@@ -138,7 +138,7 @@ export async function PersonPerformanceTab({ person, viewer, supabase }: PersonT
             value: p.onTimePercent === null ? "—" : formatPercent(p.onTimePercent, { decimals: 1 }),
             sub: p.filed ? `${p.filedOnTime} of ${p.filed} filed tasks` : "nothing filed yet this year",
           },
-          { label: "Average days late", value: p.averageDaysLate === null ? "0" : String(p.averageDaysLate), sub: p.filedLate ? `over ${p.filedLate} late ${p.filedLate === 1 ? "task" : "tasks"}` : "no late filings" },
+          { label: "Average days late", value: p.filed === 0 ? "—" : p.averageDaysLate === null ? "0" : String(p.averageDaysLate), sub: p.filed === 0 ? "nothing filed yet" : p.filedLate ? `over ${p.filedLate} late ${p.filedLate === 1 ? "task" : "tasks"}` : "no late filings" },
           {
             label: "Sent back from review",
             value: p.sendBackPercent === null ? "—" : formatPercent(p.sendBackPercent, { decimals: 1 }),

@@ -56,6 +56,8 @@ function href(sp: SearchParamsInput, patch: Record<string, string | null>): stri
  */
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { user, supabase } = await requireStaff()
+  // One clock for the page: the client lists compute "12 minutes ago" from it, so hydration matches the server.
+  const now = new Date().toISOString()
   const sp = await searchParams
   const t = parseTableParams(sp, { sortable: [], filters: THREAD_FILTERS })
   const rawClient = readParam(sp, "client")
@@ -115,6 +117,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
               hrefFor={listHrefs}
               filtered={hasActiveFilters(sp, THREAD_FILTER_NAMES)}
               canFilterMine={canFilterMine}
+              now={now}
             />
           ) : (
             <ErrorBlock message="Couldn't load the conversations." errorRef={list.ref} />
@@ -187,6 +190,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                 portalLink={`${env.appUrl().replace(/\/+$/, "")}/portal`}
                 me={user.id}
                 today={todayIST()}
+                now={now}
                 newSince={selected.myLastReadAt}
                 unreadInbound={selected.unreadInbound}
                 seenBy={selected.seenBy}

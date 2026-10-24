@@ -91,10 +91,11 @@ export function UdinTable(props: {
         id: "document_type",
         header: "Document",
         mobile: "secondary",
+        className: "whitespace-normal min-w-[8rem]",
         cell: (r) => (
-          <span className="inline-flex min-w-0 flex-col leading-5">
-            <span className="truncate">{r.document_type}</span>
-            {r.report_form ? <span className="truncate text-xs text-text-muted">{reportFormLabel(r.report_form)}</span> : null}
+          <span className="flex min-w-0 flex-col leading-5">
+            <span>{r.document_type}</span>
+            {r.report_form ? <span className="text-xs text-text-muted">{reportFormLabel(r.report_form)}</span> : null}
           </span>
         ),
         mobileCell: (r) => r.document_type,
@@ -131,7 +132,7 @@ export function UdinTable(props: {
       {
         id: "counts",
         header: "Ceiling",
-        hideBelow: "xl",
+        hideBelow: "2xl",
         cell: (r) =>
           r.is_revised ? (
             <span className="text-text-muted">Revised</span>

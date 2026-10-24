@@ -130,7 +130,7 @@ export default async function ProfilePage() {
         {security.ok ? (
           <>
             <TwoStepCard enrolled={security.data.enrolled} required={mfaRequiredFor(user.role)} since={security.data.since} />
-            <SessionsCard sessions={security.data.sessions} />
+            <SessionsCard sessions={security.data.sessions} now={new Date().toISOString()} />
           </>
         ) : (
           <div className="rounded-lg border border-border bg-surface">

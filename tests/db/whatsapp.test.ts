@@ -169,7 +169,7 @@ describe("mark_whatsapp_group_created (§7.25.2 step 7, §18.3 Partner 10)", () 
       const wrongDigits = JSON.stringify([{ kind: "firm_number", firm_number_id: n.staff, display_name: "Staff office", number: "919876599999" }]);
       expect(userMessage(await s.fails("select mark_whatsapp_group_created($1, null, current_date, $2, null, $3::jsonb)", [g.id, n.mgr, wrongDigits]))).toMatch(/numbers changed/);
       expect(userMessage(await s.fails("select mark_whatsapp_group_created($1, '2020-01-01', current_date, $2, null, '[]')", [g.id, n.mgr]))).toMatch(/changed by someone else/);
-      expect(userMessage(await s.fails("select mark_whatsapp_group_created($1, null, current_date + 1, $2, null, '[]')", [g.id, n.mgr]))).toMatch(/future/);
+      expect(userMessage(await s.fails("select mark_whatsapp_group_created($1, null, today_ist() + 1, $2, null, '[]')", [g.id, n.mgr]))).toMatch(/future/);
       expect(userMessage(await s.fails("select mark_whatsapp_group_created($1, null, current_date, $2, 'not a link', '[]')", [g.id, n.mgr]))).toMatch(/invite link/);
       const r = await s.value<{ members: number; admins: number }>("select mark_whatsapp_group_created($1, null, current_date, $2, null, '[]')", [g.id, n.mgr]);
       expect(r).toMatchObject({ members: 1, admins: 1 });

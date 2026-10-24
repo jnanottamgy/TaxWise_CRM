@@ -93,6 +93,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <SearchBox placeholder={placeholder} />
       <RememberQuery q={q} />
 
+      {!searching && q.length > 0 ? (
+        // A query too short to search: say so, rather than show the recent list as if it were the answer.
+        <p className="text-sm text-text-muted">
+          Type at least {SEARCH_MIN_LENGTH} characters to search. Your recent searches are below.
+        </p>
+      ) : null}
+
       {!searching ? (
         recent?.ok ? (
           <RecentSearches searches={recent.data} />

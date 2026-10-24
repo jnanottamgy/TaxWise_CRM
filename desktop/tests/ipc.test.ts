@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { expectedOrigin, isAllowedSender, registerInvoke, registerSend, type SenderRules } from "../src/main/ipc";
 import { ViewRegistry } from "../src/main/registry";
 import { INVOKE, PayloadError, readArg, SEND } from "../src/shared/channels";
+import { preloadMayRun } from "../src/shared/url";
 
 const APP = "https://app.twchartered.com";
 const registry = new ViewRegistry();
@@ -51,6 +52,24 @@ describe("IPC sender validation (§7.25.3)", () => {
     expect(expectedOrigin("crm", APP)).toBe(APP);
     expect(expectedOrigin("whatsapp", APP)).toBe("https://web.whatsapp.com");
     expect(expectedOrigin("panel", APP)).toBe("taxwise://panel");
+  });
+});
+
+describe("where a preload sets itself up", () => {
+  it("on the pages each view must show", () => {
+    expect(preloadMayRun(`${APP}/clients/42`)).toBe(true);
+    expect(preloadMayRun("http://127.0.0.1:3000/")).toBe(true); // a development CRM
+    expect(preloadMayRun("https://web.whatsapp.com/send?phone=919845012345")).toBe(true);
+    expect(preloadMayRun("taxwise://panel/panel-header.html")).toBe(true);
+  });
+
+  it("never in a view's initial empty document, a file, or an error page", () => {
+    expect(preloadMayRun("about:blank")).toBe(false);
+    expect(preloadMayRun("")).toBe(false);
+    expect(preloadMayRun(`blob:${APP}/6a1f0c4e-1111-4000-8000-000000000001`)).toBe(false);
+    expect(preloadMayRun("data:text/html,<h1>x</h1>")).toBe(false);
+    expect(preloadMayRun("chrome-error://chromewebdata/")).toBe(false);
+    expect(preloadMayRun("file:///C:/Users/x/invoice.html")).toBe(false);
   });
 });
 

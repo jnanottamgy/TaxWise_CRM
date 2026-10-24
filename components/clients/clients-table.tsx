@@ -13,7 +13,9 @@ import { DateText } from "@/components/app/date-text"
 import { EmptyState } from "@/components/app/empty-state"
 import type { ComboOption } from "@/components/app/form/combobox"
 import { Button } from "@/components/ui/button"
-import { EMPTY, formatTimeAgo } from "@/lib/format"
+import { cn } from "@/lib/utils"
+import { urgencyTextClass } from "@/components/app/tones"
+import { EMPTY, formatDate, formatDateTime, formatTimeAgo, relativeDue } from "@/lib/format"
 import { WHATSAPP_GROUP_LABELS } from "@/lib/schemas/clients"
 import type { ClientListRow } from "@/lib/data/clients"
 import { ClientRowActions, type MessagingProps, type RowContact } from "@/components/clients/client-row-actions"
@@ -30,28 +32,59 @@ function Muted({ children }: { children?: React.ReactNode }) {
   return <span className="text-text-muted">{children ?? EMPTY}</span>
 }
 
+/**
+ * The identity cell: name and entity badge, then the code (on screens where the Code column is
+ * hidden, below 1536px) and the viewer's cover badge (§4.7) on a grey second line, so a long badge
+ * never squeezes the name.
+ */
 function NameCell({ r }: { r: ClientTableRow }) {
   const entity = r.entity_type ? ENTITY_SHORT[r.entity_type] : null
   return (
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <span className="min-w-0 truncate">{r.display_name}</span>
-      {entity ? (
-        <span
-          title={entityLabel(r.entity_type, r.entity_type_other) ?? undefined}
-          className="flex-none rounded-full border border-border bg-surface-2 px-1.5 text-xs leading-5 font-normal text-text-muted"
-        >
-          {entity}
-        </span>
-      ) : null}
-      {r.cover_badge ? (
-        <span title="You're covering this client for a colleague. Access ends by itself at the time shown (§4.7)." className="flex-none rounded-full bg-info-soft px-1.5 text-xs leading-5 font-normal text-info-text">
-          {r.cover_badge}
-        </span>
-      ) : r.covered_now ? (
-        <span title="Someone is covering this client while its owner or team member is away (§4.7)." className="flex-none text-xs font-normal text-info-text">
-          Covered
-        </span>
-      ) : null}
+    <span className="flex max-w-56 min-w-0 flex-col">
+      <span className="inline-flex min-w-0 items-center gap-2 leading-5">
+        <span className="min-w-0 truncate" title={r.display_name}>{r.display_name}</span>
+        {entity ? (
+          <span
+            title={entityLabel(r.entity_type, r.entity_type_other) ?? undefined}
+            className="flex-none rounded-full border border-border bg-surface-2 px-1.5 text-xs leading-5 font-normal text-text-muted"
+          >
+            {entity}
+          </span>
+        ) : null}
+        {!r.cover_badge && r.covered_now ? (
+          <span title="Someone is covering this client while its owner or a team member is away." className="flex-none text-xs font-normal text-info-text">
+            Covered
+          </span>
+        ) : null}
+      </span>
+      <span className={cn("flex min-w-0 items-center gap-1.5 text-xs leading-4 font-normal text-text-muted", !r.cover_badge && "2xl:hidden")}>
+        <span className="flex-none font-mono 2xl:hidden">{r.client_code}</span>
+        {r.cover_badge ? (
+          <span title="You're covering this client for a colleague. Access ends by itself at the time shown." className="min-w-0 truncate text-info-text">
+            <span className="2xl:hidden" aria-hidden="true">
+              ·{" "}
+            </span>
+            {r.cover_badge}
+          </span>
+        ) : null}
+      </span>
+    </span>
+  )
+}
+
+/**
+ * "07 Sep 2026" over "48 days overdue · TDS/TCS deposit": the date, then how far off it is (coloured
+ * by urgency, §3.4) and what is due, in a column narrow enough for 1366px screens.
+ */
+function NextDeadline({ date, title, today }: { date: string; title: string | null; today: string }) {
+  const rel = relativeDue(date, today)
+  return (
+    <span className="inline-flex flex-col items-end" title={title ? `${title}, due ${formatDate(date)}` : undefined}>
+      <DateText date={date} today={today} className="leading-5" />
+      <span className="flex max-w-40 min-w-0 items-center text-xs leading-4">
+        <span className={cn("flex-none", urgencyTextClass(rel.urgency))}>{rel.text}</span>
+        {title ? <span className="min-w-0 truncate text-text-muted">&nbsp;· {title}</span> : null}
+      </span>
     </span>
   )
 }
@@ -91,6 +124,8 @@ export function ClientsTable(props: {
   sort: string | null
   dir: SortDir
   today: string
+  /** The server's clock at render (ISO): "Last contact 5 minutes ago" must read the same in the browser. */
+  now: string
   seesMoney: boolean
   canManage: boolean
   canDelete: boolean
@@ -98,7 +133,7 @@ export function ClientsTable(props: {
   groups: ComboOption[]
   messaging: MessagingProps
 }) {
-  const { rows, total, page, pageSize, sort, dir, today, seesMoney, canManage, canDelete, staff, groups, messaging } = props
+  const { rows, total, page, pageSize, sort, dir, today, now, seesMoney, canManage, canDelete, staff, groups, messaging } = props
   const [statusTarget, setStatusTarget] = React.useState<StatusTarget | null>(null)
   const [statusOpen, setStatusOpen] = React.useState(false)
   const [deleting, setDeleting] = React.useState<ClientTableRow | null>(null)
@@ -108,15 +143,15 @@ export function ClientsTable(props: {
 
   const columns = React.useMemo<DataTableColumn<ClientTableRow>[]>(() => {
     const cols: DataTableColumn<ClientTableRow>[] = [
-      { id: "display_name", header: "Client", sortable: true, hideable: false, mobile: "primary", width: "26%", cell: (r) => <NameCell r={r} />, mobileCell: (r) => (r.cover_badge ? `${r.display_name} · ${r.cover_badge}` : r.display_name) },
-      { id: "client_code", header: "Code", sortable: true, mobile: "secondary", cell: (r) => <MonoId value={r.client_code} copy label="client code" /> },
+      { id: "display_name", header: "Client", sortable: true, hideable: false, mobile: "primary", width: "24%", cell: (r) => <NameCell r={r} />, mobileCell: (r) => (r.cover_badge ? `${r.display_name} · ${r.cover_badge}` : r.display_name) },
+      { id: "client_code", header: "Code", sortable: true, mobile: "secondary", hideBelow: "2xl", cell: (r) => <MonoId value={r.client_code} copy label="client code" /> },
       { id: "pan", header: "PAN", defaultHidden: true, cell: (r) => <MonoId value={r.pan} copy label="PAN" /> },
       { id: "gstin", header: "GSTIN", defaultHidden: true, cell: (r) => <MonoId value={r.gstin} copy label="GSTIN" /> },
       { id: "status", header: "Status", sortable: true, mobile: "trailing", cell: (r) => <StatusChip kind="client_status" value={r.status} /> },
-      { id: "priority", header: "Priority", sortable: true, hideBelow: "lg", cell: (r) => <PriorityChip kind="client_priority" value={r.priority} /> },
+      { id: "priority", header: "Priority", sortable: true, hideBelow: "2xl", cell: (r) => <PriorityChip kind="client_priority" value={r.priority} /> },
       { id: "owner_name", header: "Owner", sortable: true, mobile: "secondary", cell: (r) => (r.owner_name ? <span className="text-text-muted">{r.owner_name}</span> : <Muted>Unassigned</Muted>) },
       { id: "group_name", header: "Group", sortable: true, defaultHidden: true, cell: (r) => (r.group_name ? <span className="text-text-muted">{r.group_name}</span> : <Muted />) },
-      { id: "services", header: "Services", hideBelow: "xl", cell: (r) => <ServiceChips services={r.service_types} /> },
+      { id: "services", header: "Services", hideBelow: "2xl", cell: (r) => <ServiceChips services={r.service_types} /> },
       {
         id: "next_due_date",
         header: "Next deadline",
@@ -125,10 +160,7 @@ export function ClientsTable(props: {
         mobile: "secondary",
         cell: (r) =>
           r.next_due_date ? (
-            <span className="inline-flex flex-col items-end leading-5" title={r.next_due_title ?? undefined}>
-              <DateText date={r.next_due_date} withRelative today={today} />
-              <span className="max-w-48 truncate text-xs text-text-muted">{r.next_due_title}</span>
-            </span>
+            <NextDeadline date={r.next_due_date} title={r.next_due_title} today={today} />
           ) : (
             <Muted />
           ),
@@ -167,10 +199,10 @@ export function ClientsTable(props: {
         header: "Last contact",
         sortable: true,
         align: "right",
-        hideBelow: "xl",
+        hideBelow: "2xl",
         cell: (r) =>
           r.last_contact_at ? (
-            <span title={new Date(r.last_contact_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}>{formatTimeAgo(r.last_contact_at)}</span>
+            <span title={`${formatDateTime(r.last_contact_at)} IST`}>{formatTimeAgo(r.last_contact_at, new Date(now))}</span>
           ) : r.unreachable ? (
             <span className="text-warning-text">No email or phone</span>
           ) : (
@@ -205,7 +237,7 @@ export function ClientsTable(props: {
       },
     )
     return cols
-  }, [seesMoney, today, messaging, canManage, canDelete])
+  }, [seesMoney, today, now, messaging, canManage, canDelete])
 
   return (
     <>

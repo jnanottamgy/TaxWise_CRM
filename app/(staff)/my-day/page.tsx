@@ -124,7 +124,7 @@ export default async function MyDayPage() {
                   description="Accept to take it on, or decline with a reason and it goes back to the Managers."
                   viewAll={moreLink(workHref.myWaiting(), q.waiting.total, q.waiting.rows.length)}
                 >
-                  <TaskList rows={q.waiting.rows} today={today} running={runningRef} viewerEmployeeId={employeeId} />
+                  <TaskList rows={q.waiting.rows} today={today} running={runningRef} viewerEmployeeId={employeeId} waitingNote={false} />
                 </SectionCard>
               ) : null}
 

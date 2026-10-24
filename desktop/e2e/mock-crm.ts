@@ -10,6 +10,10 @@ export type Role = "partner" | "manager" | "employee";
 
 export interface MockState {
   role: Role | null;
+  /** The signed-in user's employee id (defaults by role; e-vinay is the Partner who owns n-vinay). */
+  employeeId: string | null;
+  /** Plays a server that wrongly sends every number, a Partner's own included, to anyone. */
+  overshareNumbers: boolean;
   revoked: boolean;
   clientMode: boolean;
   employeeNotifications: boolean;
@@ -58,6 +62,8 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
 export async function startMockCrm(): Promise<{ url: string; state: MockState; close(): Promise<void> }> {
   const state: MockState = {
     role: "employee",
+    employeeId: null,
+    overshareNumbers: false,
     revoked: false,
     clientMode: true,
     employeeNotifications: false,
@@ -76,14 +82,16 @@ export async function startMockCrm(): Promise<{ url: string; state: MockState; c
       switch (url.pathname) {
         case "/api/desktop/context": {
           const role = state.role;
-          const employeeId = role === "partner" ? "e-vinay" : role === "manager" ? "e-m1" : "e-emp2";
+          const employeeId = state.employeeId ?? (role === "partner" ? "e-vinay" : role === "manager" ? "e-m1" : "e-emp2");
           return send(res, 200, {
             ok: true,
             data: {
               user: { id: `u-${employeeId}`, employeeId, name: role, role },
               clientMode: state.clientMode,
               employeeNotifications: state.employeeNotifications,
-              numbers: NUMBERS.filter((n) => n.usableBy.includes(role) && (n.ownerEmployeeId === null || n.ownerEmployeeId === employeeId)),
+              numbers: state.overshareNumbers
+                ? NUMBERS
+                : NUMBERS.filter((n) => n.usableBy.includes(role) && (n.ownerEmployeeId === null || n.ownerEmployeeId === employeeId)),
               allowedGroups: role === "employee" ? state.allowedGroups : null,
             },
           });
@@ -114,6 +122,11 @@ export async function startMockCrm(): Promise<{ url: string; state: MockState; c
   return {
     url: `http://127.0.0.1:${port}`,
     state,
-    close: () => new Promise<void>((r) => server.close(() => r())),
+    close: () =>
+      new Promise<void>((r) => {
+        server.close(() => r());
+        // The app's network service keeps idle connections open for reuse; don't wait for them.
+        server.closeAllConnections();
+      }),
   };
 }

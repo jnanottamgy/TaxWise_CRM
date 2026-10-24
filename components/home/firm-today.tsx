@@ -258,7 +258,11 @@ export function PipelineBlock({ p, fy }: { p: Pipeline; fy: string }) {
         href={moneyHref.quotationsAwaiting()}
       />
       <Figure
-        label={`Conversion, FY ${fy}`}
+        label={
+          <>
+            Conversion, <span className="whitespace-nowrap">FY {fy}</span>
+          </>
+        }
         value={p.conversion.percent === null ? <span className="text-text-muted">—</span> : `${p.conversion.percent}%`}
         sub={p.conversion.decided ? `${p.conversion.accepted} accepted of ${p.conversion.decided} decided` : "No quotation decided yet"}
         href={moneyHref.quotationsDecided()}

@@ -103,7 +103,7 @@ export async function ProfileTab({ data, user, supabase, messaging }: { data: Cl
     nextReviewOn: kyc?.next_review_on ?? "",
   }
   const kycState = !kyc
-    ? { label: "Not started", tone: "muted" as const, meaning: "No KYC record yet. Audit and certification work can't move past acceptance until it is complete (§6.8)." }
+    ? { label: "Not started", tone: "muted" as const, meaning: "No KYC record yet. Audit and certification work can't move past acceptance until it is complete." }
     : !kycCheck?.complete
       ? { label: "Incomplete", tone: "warning" as const, meaning: "Some details the KYC Norms ask for are missing. Audit and certification work can't move past acceptance until they are filled in." }
       : kycCheck.reviewDue

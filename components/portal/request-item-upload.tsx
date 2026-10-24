@@ -57,7 +57,7 @@ export function RequestItemUpload({
 
   if (!open) {
     return (
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setOpen(true)}>
         <RotateCcwIcon aria-hidden="true" />
         Upload again
         <span className="sr-only">: {itemTitle}</span>

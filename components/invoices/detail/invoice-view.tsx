@@ -77,7 +77,29 @@ export function InvoiceView({
         />
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Phones: one row per line, the amount on the right (a seven-column table can't fit 390px). */}
+      <ul aria-label="Invoice lines" className="border-b border-border md:hidden">
+        {items.map((i, n) => (
+          <li key={i.id} className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3 last:border-b-0">
+            <div className="min-w-0 text-sm">
+              <p className="text-text">
+                <span className="num text-text-muted">{n + 1}. </span>
+                <span className="whitespace-pre-line">{i.description}</span>
+              </p>
+              {i.service_type && isEnumValue("service_type", i.service_type) ? <p className="text-xs text-text-muted">{SERVICE_TYPE_LABELS[i.service_type]}</p> : null}
+              <p className="num mt-0.5 text-xs text-text-muted">
+                SAC {i.sac_code} · {Number(i.quantity)} × <Money value={i.rate} /> · {i.is_reimbursement ? "Reimbursement, no GST" : `GST ${Number(i.tax_rate)}%`}
+              </p>
+              {i.tax_rate_reason ? <p className="text-xs text-text-muted">GST rate: {i.tax_rate_reason}</p> : null}
+              {i.time_entry_ids.length ? <p className="text-xs text-text-muted">{i.time_entry_ids.length} time {i.time_entry_ids.length === 1 ? "entry" : "entries"}</p> : null}
+            </div>
+            <Money value={i.amount} className="flex-none text-sm text-text" />
+          </li>
+        ))}
+      </ul>
+
+      {/* `relative` keeps the sr-only caption inside the scroller, so it can't widen the page. */}
+      <div className="relative hidden overflow-x-auto md:block">
         <table className="w-full min-w-[40rem] text-sm">
           <caption className="sr-only">Invoice lines</caption>
           <thead>

@@ -195,11 +195,16 @@ export function SetupChecklist({
     add_numbers: (
       <div className="mt-2 flex flex-col gap-3">
         {firmList.length ? (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Firm numbers to add">
+          // One number per row, like the client's people below: the chip says whose it is, the number
+          // stays whole beside it (on a phone it wraps under the chip instead of running off screen).
+          <ul className="flex flex-col gap-1.5" aria-label="Firm numbers to add">
             {firmList.map((n) => (
-              <li key={n.key} className="inline-flex items-center gap-1">
-                <MemberChip member={{ id: n.key, kind: n.kind, firm_kind: n.firmKind, display_name: `${n.displayName} · ${n.display}`, is_admin: false }} />
-                <CopyButton value={n.display} label={`${n.displayName} number`} />
+              <li key={n.key} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <MemberChip member={{ id: n.key, kind: n.kind, firm_kind: n.firmKind, display_name: n.displayName, is_admin: false }} />
+                <span className="inline-flex flex-none items-center gap-1">
+                  <span className="num text-sm text-text">{n.display}</span>
+                  <CopyButton value={n.display} label={`${n.displayName} number`} />
+                </span>
               </li>
             ))}
           </ul>
@@ -218,21 +223,25 @@ export function SetupChecklist({
               const id = `wa-${groupId}-${c.id}`
               const checked = selected.includes(c.id)
               return (
+                // The number follows the name, as for the firm's numbers above; on a phone it drops under
+                // the name rather than squeezing it to a word a line.
                 <div key={c.id} className="flex min-h-9 items-center gap-2.5 pointer-coarse:min-h-11">
                   <Checkbox id={id} checked={checked && !!digits} disabled={!editable || !digits || !!busy} onCheckedChange={(v) => toggleContact(c.id, v === true)} />
-                  <label htmlFor={id} className={cn("min-w-0 flex-1 text-base text-text", (!editable || !digits) && "cursor-default")}>
-                    {c.name}
-                    {c.role ? <span className="text-text-muted"> ({c.role})</span> : null}
-                    {c.is_primary ? <span className="ml-1.5 text-xs text-text-muted">Primary contact</span> : null}
-                  </label>
-                  {digits ? (
-                    <span className="inline-flex flex-none items-center gap-1">
-                      <span className="num text-sm text-text-muted">{formatWhatsAppNumber(digits)}</span>
-                      <CopyButton value={formatWhatsAppNumber(digits)} label={`${c.name}'s number`} />
-                    </span>
-                  ) : (
-                    <span className="flex-none text-sm text-text-muted">No WhatsApp number</span>
-                  )}
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                    <label htmlFor={id} className={cn("min-w-0 text-base text-text", (!editable || !digits) && "cursor-default")}>
+                      {c.name}
+                      {c.role ? <span className="text-text-muted"> ({c.role})</span> : null}
+                      {c.is_primary ? <span className="ml-1.5 text-xs text-text-muted">Primary contact</span> : null}
+                    </label>
+                    {digits ? (
+                      <span className="inline-flex flex-none items-center gap-1">
+                        <span className="num text-sm text-text">{formatWhatsAppNumber(digits)}</span>
+                        <CopyButton value={formatWhatsAppNumber(digits)} label={`${c.name}'s number`} />
+                      </span>
+                    ) : (
+                      <span className="flex-none text-sm text-text-muted">No WhatsApp number</span>
+                    )}
+                  </div>
                 </div>
               )
             })
@@ -260,10 +269,11 @@ export function SetupChecklist({
       </ul>
     ),
     managers_admin: managers.length ? (
-      <ul className="mt-2 flex flex-wrap gap-1.5">
+      <ul className="mt-2 flex flex-col gap-1.5">
         {managers.map((n) => (
-          <li key={n.id}>
-            <MemberChip member={{ id: n.id, kind: "firm_number", firm_kind: n.kind, display_name: `${n.label} · ${formatWhatsAppNumber(n.number!)}`, is_admin: true }} />
+          <li key={n.id} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <MemberChip member={{ id: n.id, kind: "firm_number", firm_kind: n.kind, display_name: n.label, is_admin: true }} />
+            <span className="num text-sm text-text">{formatWhatsAppNumber(n.number!)}</span>
           </li>
         ))}
       </ul>

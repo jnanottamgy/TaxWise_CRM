@@ -85,7 +85,7 @@ describe("describeActionItem", () => {
   it("leave shows the type, the days and the start", () => {
     const v = describeActionItem(item({ kind: "leave_approval", title: "casual", item_count: 1, reason: null, note: "Family function", due_date: "2026-11-02", client_name: null }), NOW);
     expect(v.primary).toBe("Ravi Kumar");
-    expect(v.secondary).toBe("Casual leave · 1 day · Family function");
+    expect(v.secondary).toBe("Casual leave · 1 working day · Family function");
     expect(v.trailing).toEqual({ kind: "date", text: "from 02 Nov 2026" });
     expect(describeActionItem(item({ kind: "leave_approval", title: "sick", reason: "half_day", item_count: 1 }), NOW).secondary).toBe("Sick leave · Half day");
   });

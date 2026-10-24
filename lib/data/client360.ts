@@ -26,6 +26,8 @@ import { kycCompleteness, type KycCheck, type KycCategory } from "@/lib/domain/c
 import { fyStart, isFinancialYear, todayIST, type DateString } from "@/lib/domain/fy";
 import { sumPaise, toPaise, type Paise } from "@/lib/domain/money";
 import type { SacMap } from "@/lib/domain/gst";
+import { serviceTypesOfEvent } from "@/lib/domain/statutory-calendar";
+import { isEnumValue } from "@/lib/domain/enums";
 import { getEmployeeNames, getNamesByProfile } from "@/lib/data/people";
 import { loadScaleParameterRows } from "@/lib/data/clients";
 import { readPrincipalPersons } from "@/lib/schemas/client-kyc";
@@ -667,6 +669,12 @@ export interface FeeHistoryRow {
 
 export interface ServicesData {
   services: ServiceRow[];
+  /**
+   * Each service's next statutory deadline from the client's compliance calendar (the earliest one
+   * still pending, overdue included): what "Next due" shows (§7.3.3 tab 3). The stored
+   * `client_services.next_due_date` is only a hand-set date for services the calendar doesn't fill.
+   */
+  nextDue: Partial<Record<Enums<"service_type">, { date: DateString; title: string }>>;
   history: FeeHistoryRow[];
   firm: { state_code: string; default_tax_rate: number; default_sac: string; sac_by_service: SacMap | null };
 }
@@ -683,7 +691,7 @@ function readSacMap(value: Json | null): SacMap | null {
 
 /** Partner/Manager only: the caller checks the role first; RLS refuses everyone else anyway. */
 export async function getServices(supabase: ServerSupabase, clientId: string): Promise<ServicesData> {
-  const [services, history, firm] = await Promise.all([
+  const [services, history, firm, events] = await Promise.all([
     supabase.from("client_services").select(SERVICE_COLUMNS).eq("client_id", clientId).order("is_active", { ascending: false }).order("created_at", { ascending: true }),
     supabase
       .from("client_service_fee_history")
@@ -692,13 +700,30 @@ export async function getServices(supabase: ServerSupabase, clientId: string): P
       .order("changed_at", { ascending: false })
       .limit(200),
     supabase.from("firm_settings").select("state_code, default_tax_rate, default_sac, sac_by_service").eq("id", 1).maybeSingle(),
+    supabase
+      .from("compliance_events")
+      .select("type, form_code, rule_code, due_date, title")
+      .eq("client_id", clientId)
+      .eq("status", "pending")
+      .eq("is_statutory", true)
+      .order("due_date", { ascending: true })
+      .limit(500),
   ]);
   if (services.error) throw services.error;
   if (history.error) throw history.error;
   if (firm.error) throw firm.error;
+  if (events.error) throw events.error;
+  const nextDue: ServicesData["nextDue"] = {};
+  for (const e of events.data ?? []) {
+    if (!isEnumValue("compliance_type", e.type)) continue;
+    for (const service of serviceTypesOfEvent({ type: e.type, formCode: e.form_code, ruleCode: e.rule_code, dueDate: e.due_date })) {
+      if (!nextDue[service]) nextDue[service] = { date: e.due_date, title: e.title };
+    }
+  }
   const names = await getNamesByProfile(supabase, (history.data ?? []).map((h) => h.changed_by));
   return {
     services: (services.data ?? []) as ServiceRow[],
+    nextDue,
     history: (history.data ?? []).map((h) => ({
       id: h.id,
       client_service_id: h.client_service_id,

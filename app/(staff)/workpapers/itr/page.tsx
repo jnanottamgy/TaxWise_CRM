@@ -4,7 +4,7 @@ import { unstable_rethrow } from "next/navigation"
 import { PlusIcon } from "lucide-react"
 import { requireStaff } from "@/lib/auth/guards"
 import { logUnexpected } from "@/lib/log"
-import { isFinancialYear, taxYearLabel, todayIST } from "@/lib/domain/fy"
+import { isFinancialYear, previousFinancialYear, taxYearLabel, todayIST } from "@/lib/domain/fy"
 import { fyOptions, getSelectedFy } from "@/lib/fy-context"
 import { ITR_LIST_FILTERS, ITR_LIST_SORTABLE, ITR_STATUSES, ITR_STATUS_INFO, REGIME_LABEL } from "@/lib/schemas/itr"
 import { getItrStatusCounts, listItrComputations } from "@/lib/data/itr"
@@ -76,6 +76,9 @@ export default async function ItrListPage({ searchParams }: { searchParams: Prom
   const scope = fy ? `FY ${fy} (${taxYearLabel(fy)})` : "All years"
   const description = list.ok ? `${scope} · ${formatCount(list.data.total)} ${list.data.total === 1 ? "computation" : "computations"}` : "Both regimes side by side for individuals and HUFs."
   const newHref = clientId ? `/workpapers/itr/new?client=${clientId}` : "/workpapers/itr/new"
+  // Nothing in this year: say so, and offer the year before (the returns being filed now).
+  const earlier = fy ? previousFinancialYear(fy) : null
+  const emptyYear = fy && earlier ? { label: scope, other: { label: `FY ${earlier} (${taxYearLabel(earlier)})`, href: tableHref("/workpapers/itr", { page: 1 }, { ...sp, fy: earlier }) } } : null
   const href = (status: string) => tableHref("/workpapers/itr", { filters: { status: [status] }, page: 1 }, sp)
   const c = counts.ok ? counts.data : null
 
@@ -126,7 +129,7 @@ export default async function ItrListPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       {list.ok ? (
-        <ItrTable rows={list.data.rows} total={list.data.total} page={t.page} pageSize={t.pageSize} sort={t.sort} dir={t.dir} newHref={newHref} />
+        <ItrTable rows={list.data.rows} total={list.data.total} page={t.page} pageSize={t.pageSize} sort={t.sort} dir={t.dir} newHref={newHref} emptyYear={emptyYear} />
       ) : (
         <div className="rounded-lg border border-border bg-surface">
           <ErrorBlock message="Couldn't load the computations." errorRef={list.ref} />

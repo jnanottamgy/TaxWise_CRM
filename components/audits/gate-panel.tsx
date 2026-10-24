@@ -23,7 +23,7 @@ export function GatePanel({ stage, gate, isEngagementPartner, partnerName, canWo
   return (
     <section aria-labelledby="gate-title" className="rounded-lg border border-border bg-surface">
       <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-start md:justify-between md:px-5">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 id="gate-title" className="text-md leading-6 font-semibold text-text">
             {ready ? `Ready for ${nextLabel}` : `Before ${nextLabel}`}
           </h2>

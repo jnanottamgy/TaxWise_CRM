@@ -3,7 +3,7 @@ import Link from "next/link"
 import { FileTextIcon, IndianRupeeIcon, MessageSquareIcon } from "lucide-react"
 import { requireClient } from "@/lib/auth/guards"
 import { todayIST } from "@/lib/domain/fy"
-import { formatDate, formatTimeAgo } from "@/lib/format"
+import { formatDate, formatTimeAgo, relativeDue } from "@/lib/format"
 import { formatINR, fromPaise } from "@/lib/domain/money"
 import { explainDeadline, homeSummary, invoiceStatus, outstandingItemCount } from "@/lib/domain/portal-copy"
 import {
@@ -91,7 +91,19 @@ export default async function PortalHomePage() {
           {
             label: "Next deadline",
             value: next ? <DateText date={next.dueDate} /> : <span className="text-text-muted">—</span>,
-            sub: next ? explainDeadline({ formCode: next.formCode, type: next.type, filingPeriod: next.filingPeriod, title: next.title }).headline : "Nothing planned",
+            sub: next ? (
+              next.isOverdue ? (
+                <>
+                  <span className="text-danger-text">{relativeDue(next.dueDate, today).text}</span>
+                  {" · "}
+                  {explainDeadline({ formCode: next.formCode, type: next.type, filingPeriod: next.filingPeriod, title: next.title }).headline}
+                </>
+              ) : (
+                explainDeadline({ formCode: next.formCode, type: next.type, filingPeriod: next.filingPeriod, title: next.title }).headline
+              )
+            ) : (
+              "Nothing planned"
+            ),
             href: "/portal/deadlines",
           },
           {
@@ -183,18 +195,17 @@ export default async function PortalHomePage() {
                     return (
                       <li key={inv.id} className="flex flex-col gap-1.5 py-3 first:pt-1 last:pb-1">
                         <div className="flex items-start justify-between gap-3">
-                          <a href={`/api/portal/invoices/${inv.id}/pdf`} target="_blank" rel="noopener" className="num min-w-0 truncate text-base font-medium text-text tabular-nums hover:underline">
+                          {/* The invoice page ("View & pay"): the bill, what's been received, receipts and Pay. */}
+                          <Link href={`/portal/invoices/${inv.id}`} className="num min-w-0 truncate text-base font-medium text-text tabular-nums hover:underline">
                             {inv.invoiceNumber}
-                          </a>
+                          </Link>
                           <Money value={inv.outstanding} className="text-base font-medium text-text" />
                         </div>
+                        <p className="text-sm text-text-muted">
+                          Due <DateText date={inv.dueDate} withRelative today={today} />
+                        </p>
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-text-muted">
-                            <StatusChip label={s.label} tone={s.tone} meaning={s.meaning} />
-                            <span>
-                              · due <DateText date={inv.dueDate} withRelative today={today} />
-                            </span>
-                          </p>
+                          <StatusChip label={s.label} tone={s.tone} meaning={s.meaning} />
                           {details && clientId ? (
                             <PayButton
                               invoice={{ id: inv.id, invoiceNumber: inv.invoiceNumber, outstanding: inv.outstanding, dueDate: inv.dueDate, isOverdue: inv.isOverdue, pendingClaim: inv.pendingClaim }}
@@ -233,7 +244,7 @@ export default async function PortalHomePage() {
                         <Link href="/portal/messages" className="min-w-0 truncate text-base font-medium text-text hover:underline">
                           {m.senderName ?? (firm.ok ? firm.data.firmName : "The firm")}
                         </Link>
-                        <span className="flex-none text-xs text-text-muted">{formatTimeAgo(m.sentAt ?? m.createdAt)}</span>
+                        <span className="flex-none text-xs text-text-muted">{formatTimeAgo(m.createdAt)}</span>
                       </div>
                       <p className="line-clamp-2 text-sm text-text-muted">
                         {!m.readAt ? <span className="mr-1 font-medium text-text">New ·</span> : null}

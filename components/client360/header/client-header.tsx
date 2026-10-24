@@ -11,7 +11,7 @@ import { renderTemplate, type TemplateValues } from "@/lib/domain/templates"
 import { coverBadge, formatCoverUntil } from "@/lib/domain/cover"
 import type { CurrentUser } from "@/lib/auth/current-user"
 import type { MessagingContext } from "@/lib/data/clients"
-import type { Client360 } from "@/lib/data/client360"
+import type { Client360, CoverBadge } from "@/lib/data/client360"
 import { ContactButtons, type ContactTarget } from "@/components/client360/header/contact-buttons"
 import { HeaderActions } from "@/components/client360/header/header-actions"
 
@@ -86,20 +86,9 @@ export function ClientHeader({
           <>
             <StatusChip kind="client_status" value={client.status} variant="pill" />
             <PriorityChip kind="client_priority" value={client.priority} />
-            {covers.map((c) => {
-              const absent = c.absent_name ?? client.owner_name ?? "the team"
-              const label = coverBadge(firstNameOf(absent) || absent, c.ends_at)
-              const who = c.cover_employee_id === user.employeeId ? "You are" : `${c.cover_name} is`
-              return (
-                <StatusChip
-                  key={c.cover_id}
-                  label={label}
-                  tone="info"
-                  variant="pill"
-                  meaning={`${who} covering for ${absent} until ${formatCoverUntil(c.ends_at)} (${c.kind === "person" ? `all of ${firstNameOf(absent) || absent}'s clients` : "this client"}). They work on it exactly as if on its team, but never see fees. Access ends by itself at that time.`}
-                />
-              )
-            })}
+            {coverChips(covers, client.owner_name, user.employeeId).map((chip) => (
+              <StatusChip key={chip.key} label={chip.label} tone="info" variant="pill" meaning={chip.meaning} />
+            ))}
           </>
         }
         description={[client.legal_name && client.legal_name !== client.display_name ? client.legal_name : null, client.city].filter(Boolean).join(" · ") || undefined}
@@ -173,6 +162,36 @@ export function ClientHeader({
       </section>
     </div>
   )
+}
+
+/**
+ * One chip per distinct badge (§4.7: "Covering for Ravi · until Sat 25 Oct, 11:59 pm", the same chip
+ * for everyone). Two covers for the same absent person ending at the same time (a client cover by
+ * Meghana and a person cover by Kiran, say) read identically, so they share one chip, and its
+ * explanation names every cover person and what each cover reaches.
+ */
+function coverChips(covers: CoverBadge[], ownerName: string | null, viewerEmployeeId: string | null): Array<{ key: string; label: string; meaning: string }> {
+  const byLabel = new Map<string, { key: string; label: string; absent: string; until: string; who: string[] }>()
+  for (const c of covers) {
+    const absent = c.absent_name ?? ownerName ?? "the team"
+    const short = firstNameOf(absent) || absent
+    const label = coverBadge(short, c.ends_at)
+    const person = c.cover_employee_id === viewerEmployeeId ? "you" : c.cover_name
+    const who = `${person} (${c.kind === "person" ? `all of ${short}'s clients` : "this client"})`
+    const chip = byLabel.get(label)
+    if (chip) chip.who.push(who)
+    else byLabel.set(label, { key: c.cover_id, label, absent, until: formatCoverUntil(c.ends_at), who: [who] })
+  }
+  return Array.from(byLabel.values()).map((chip) => {
+    const names = chip.who.length === 1 ? chip.who[0] : `${chip.who.slice(0, -1).join(", ")} and ${chip.who[chip.who.length - 1]}`
+    const verb = chip.who.length === 1 && !chip.who[0].startsWith("you ") ? "is" : "are"
+    const subject = names[0].toUpperCase() + names.slice(1)
+    return {
+      key: chip.key,
+      label: chip.label,
+      meaning: `${subject} ${verb} covering for ${chip.absent} until ${chip.until}, working on it exactly as if on its team but never seeing fees. Access ends by itself at that time.`,
+    }
+  })
 }
 
 function Fact({ term, children }: { term: string; children: React.ReactNode }) {

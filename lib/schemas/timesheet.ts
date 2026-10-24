@@ -383,3 +383,6 @@ export const ReopenWeekSchema = z.object({
   week_start: mondayField,
   reason: z.string().trim().min(1, { error: "Give a reason for reopening this week." }).max(500),
 });
+
+/** What a time entry shows when RLS no longer lets the viewer see its task or client (left the team, a cover ended). */
+export const NOT_ON_LIST = { task: "A task no longer on your list", client: "A client no longer on your list" } as const;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound, unstable_rethrow } from "next/navigation"
 import { requireStaff, denyAccess } from "@/lib/auth/guards"
+import { getSession } from "@/lib/auth/current-user"
 import { can } from "@/lib/auth/roles"
 import { logUnexpected } from "@/lib/log"
 import { formatDate, formatTimeAgo } from "@/lib/format"
@@ -18,7 +19,20 @@ import { PersonActivityTab, PersonPerformanceTab, PersonTimeTab } from "@/compon
 import { AttendanceTab } from "@/components/attendance/attendance-tab"
 import { PersonLeaveTab } from "@/components/leave/person-leave-tab"
 
-export const metadata: Metadata = { title: "Person" }
+/** The person's name as the tab title (and so in the sidebar's Recent list), like a task's number and title. */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  try {
+    const { id } = await params
+    if (!UUID.test(id)) return { title: "Person" }
+    const s = await getSession()
+    if (s.status !== "ok" || s.user.role === "client") return { title: "Person" }
+    const { data } = await s.supabase.from("employee_directory").select("full_name").eq("id", id).maybeSingle()
+    return { title: data?.full_name || "Person" }
+  } catch (err) {
+    unstable_rethrow(err)
+    return { title: "Person" }
+  }
+}
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -83,12 +97,8 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
       <PageHeader
         breadcrumbs={crumbs}
         className="pb-0 md:pb-0"
-        title={
-          <span className="inline-flex items-center gap-3">
-            <PersonInitials name={person.full_name} size="lg" className="max-sm:hidden" />
-            {person.full_name}
-          </span>
-        }
+        leading={<PersonInitials name={person.full_name} size="lg" className="max-sm:hidden" />}
+        title={person.full_name}
         meta={
           <>
             <RoleBadge role={person.role} />

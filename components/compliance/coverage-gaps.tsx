@@ -76,9 +76,13 @@ export function FirmGapsReport({ rows, canFix }: { rows: ClientGapsRow[]; canFix
             {rows.length} {rows.length === 1 ? "client has" : "clients have"} active services with nothing planned ahead
           </h2>
           <p className="text-sm text-text-muted">
-            {plannable.length > 0
-              ? `${plannable.length} can be fixed by planning their deadlines; the rest need the profile or a deadline added by hand.`
-              : "None of these can be planned from the profile as it stands: fix the profile, or add the dates by hand."}
+            {plannable.length === rows.length
+              ? rows.length === 1
+                ? "Planning its deadlines from the statutory calendar fixes it."
+                : "Planning their deadlines from the statutory calendar fixes all of them."
+              : plannable.length > 0
+                ? `${plannable.length} can be fixed by planning their deadlines; the rest need the profile or a deadline added by hand.`
+                : "None of these can be planned from the profile as it stands: fix the profile, or add the dates by hand."}
           </p>
         </div>
         {canFix && plannable.length > 1 ? <GenerateButton clientIds={plannable.slice(0, 200)} label={`Plan deadlines for ${plannable.length} clients`} variant="default" size="sm" /> : null}

@@ -62,7 +62,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         </PageGuide>
         <PageHeader title="Leave" description="Your leave this year and every request you've made." actions={<RequestLeaveDialog />} />
         {user.employeeId ? (
-          <PersonLeaveTab employeeId={user.employeeId} viewer={user} supabase={supabase} searchParams={sp} />
+          <PersonLeaveTab employeeId={user.employeeId} viewer={user} supabase={supabase} searchParams={sp} requestButton={false} />
         ) : (
           <div className="rounded-lg border border-border bg-surface">
             <EmptyState message="Your staff record is missing, so leave can't be requested yet. Ask a Partner." />
@@ -105,7 +105,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       ) : tab === "all" ? (
         <AllLeave sp={sp} today={today} user={user} supabase={supabase} staff={staffList} />
       ) : user.employeeId ? (
-        <PersonLeaveTab employeeId={user.employeeId} viewer={user} supabase={supabase} searchParams={sp} />
+        <PersonLeaveTab employeeId={user.employeeId} viewer={user} supabase={supabase} searchParams={sp} requestButton={false} />
       ) : (
         <div className="rounded-lg border border-border bg-surface">
           <EmptyState message="Your staff record is missing. Ask a Partner." />

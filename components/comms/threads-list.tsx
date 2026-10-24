@@ -28,6 +28,7 @@ export function ThreadsList({
   hrefFor,
   filtered,
   canFilterMine,
+  now: serverNow,
 }: {
   rows: ThreadListRow[]
   total: number
@@ -38,10 +39,12 @@ export function ThreadsList({
   hrefFor: Record<string, string>
   filtered: boolean
   canFilterMine: boolean
+  /** The server's render time (ISO), so "12 minutes ago" hydrates to the same text. */
+  now?: string
 }) {
   const url = useTableUrlState()
   const [read, setRead] = React.useState<Set<string>>(() => new Set())
-  const [now] = React.useState(() => new Date())
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
 
   React.useEffect(() => {
     const onRead = (e: Event) => {

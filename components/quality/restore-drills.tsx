@@ -34,7 +34,7 @@ function DrillDialog({ onClose, today }: { onClose: () => void; today: string })
       onOpenChange={(o) => (!o ? onClose() : undefined)}
       size="md"
       title="Record a restore drill"
-      description="§12: a backup restored to a scratch database every quarter, to prove the backups work."
+      description="A backup restored to a scratch database every quarter, to prove the backups work."
       onSubmit={f.onSubmit}
       pending={f.pending}
       dirty={f.form.formState.isDirty}

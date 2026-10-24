@@ -44,6 +44,8 @@ export async function ServicesTab({ data, user, supabase }: { data: Client360; u
 
   const views: ServiceView[] = s.services.map((row) => ({
     row,
+    // The calendar's next deadline for this service; a hand-set date only where the calendar has none.
+    nextDue: (row.is_active ? s.nextDue[row.service_type] : null) ?? (row.next_due_date ? { date: row.next_due_date, title: null } : null),
     defaultSac: sacOf(row.service_type),
     preview: nextInvoicePreview({
       service: row,

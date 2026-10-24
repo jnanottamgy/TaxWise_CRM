@@ -62,10 +62,12 @@ export function NoticesTable(props: {
         width: showClient ? "24%" : "34%",
         cell: (r) => {
           const sub = noticeSubline(r)
+          // The notice type ("GST ASMT-10 scrutiny of returns") and its reference wrap rather than
+          // widen the table past its frame at 1366.
           return (
-            <span className="inline-flex min-w-0 flex-col leading-5">
-              <span className="truncate font-medium">{r.notice_type}</span>
-              {sub ? <span className="truncate text-xs text-text-muted">{sub}</span> : null}
+            <span className="flex min-w-[10rem] flex-col leading-5 whitespace-normal">
+              <span className="font-medium">{r.notice_type}</span>
+              {sub ? <span className="text-xs text-text-muted">{sub}</span> : null}
             </span>
           )
         },

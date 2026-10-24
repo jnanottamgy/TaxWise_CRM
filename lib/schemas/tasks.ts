@@ -490,6 +490,12 @@ export const BUILT_IN_VIEWS: readonly BuiltInView[] = [
 /** Where an Employee lands on a bare /work: their own open tasks ("My tasks", §4.2). */
 export const EMPLOYEE_DEFAULT_QUERY = BUILT_IN_VIEWS[0].query;
 
+/**
+ * Where a Partner or Manager lands on a bare /work: every open task, soonest due first. Without it the
+ * table opens on months-old Filed/Done work (the earliest due dates); "Clear filters" shows everything.
+ */
+export const FIRM_DEFAULT_QUERY = `status=${OPEN_STATUS_PARAM}&sort=due_date&dir=asc`;
+
 export const SaveViewSchema = z.object({
   name: z.string().trim().min(1, { error: "Name the view." }).max(60, { error: "Keep the name under 60 characters." }),
   shared: z.boolean().default(false),

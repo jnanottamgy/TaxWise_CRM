@@ -31,7 +31,7 @@ const isHeld = (r: RetainerQueueRow) => r.requires_approval && !r.approved_at &&
 
 function QueueStatus({ r }: { r: RetainerQueueRow }) {
   if (r.status === "draft" && isHeld(r)) {
-    return <StatusChip label="Held for a Partner" tone="violet" meaning="Over the invoice approval limit: a Partner issues it, or a Manager sends it for approval first (§7.9.2)." />
+    return <StatusChip label="Held for a Partner" tone="violet" meaning="Over the invoice approval limit: a Partner issues it, or a Manager sends it for approval first." />
   }
   if (r.status === "draft") return <StatusChip label="Ready to issue" tone="info" meaning="Ready to issue: check it, then issue it. Nothing has been sent to the client." />
   return <StatusChip kind="invoice_status" value={r.status} />

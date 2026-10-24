@@ -68,7 +68,9 @@ export function CredentialsTable(props: {
             <span className="text-xs text-text-muted">{r.client_code}</span>
           </span>
         ),
-        mobileCell: (r) => `${r.client_name} · ${portalName(r.portal, r.portal_label)}`,
+        // On a phone the portal leads the second line ("GST · a_gst_login"), so a long client name
+        // can truncate without hiding which portal the login is for.
+        mobileCell: (r) => r.client_name,
       })
     }
     cols.push(
@@ -77,7 +79,7 @@ export function CredentialsTable(props: {
         header: "Portal",
         sortable: !compact,
         hideable: false,
-        mobile: showClient ? undefined : "primary",
+        mobile: showClient ? "secondary" : "primary",
         cell: (r) => <span className="font-medium text-text">{portalName(r.portal, r.portal_label)}</span>,
       },
       {

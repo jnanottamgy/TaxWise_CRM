@@ -529,10 +529,11 @@ export function QuotationBuilder({
         </div>
       </SectionCard>
 
-      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-surface px-4 py-3 md:-mx-6 md:px-6">
-        <div className="mr-auto flex min-w-0 flex-col">
+      {/* Phones: the stamp and the total get their own line, so the three buttons stay on one row. */}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-surface px-4 py-3 max-sm:justify-end md:-mx-6 md:px-6">
+        <div className="mr-auto flex min-w-0 flex-col max-sm:basis-full max-sm:flex-row max-sm:items-baseline max-sm:justify-between max-sm:gap-3">
           <DraftStamp savedAt={draft.savedAt} saving={draft.saving} error={draft.error} />
-          <p className="num text-sm text-text tabular-nums max-sm:sr-only">
+          <p className="num text-sm text-text tabular-nums">
             Total <Money value={fromPaise(totals.totalPaise)} /> incl. GST
           </p>
         </div>

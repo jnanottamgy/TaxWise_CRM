@@ -27,7 +27,7 @@ import { KpiStrip } from "@/components/app/kpi-strip"
 import { Money } from "@/components/app/money"
 import { FilterBar } from "@/components/app/filter-bar"
 import { ErrorBlock } from "@/components/app/error-block"
-import { PageGuide } from "@/components/shell/page-slots"
+import { PageGuide, ShellTitle } from "@/components/shell/page-slots"
 import { TdsTable } from "@/components/collections/tds-table"
 import { TdsImportButton } from "@/components/collections/tds-import-dialog"
 import { StatementIssues, TdsCorrections, type CorrectionGroup } from "@/components/collections/tds-mismatches"
@@ -77,6 +77,8 @@ export default async function TdsCreditsPage({ searchParams }: { searchParams: P
 
   return (
     <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
+      {/* Opened from Invoices in the sidebar; the top bar names this page, not the list. */}
+      <ShellTitle crumbs={[{ label: "Invoices", href: "/invoices" }, { label: "TDS credits" }]} />
       <PageGuide title="TDS credits">
         <p>
           Every receipt with TDS starts as Expected. It becomes Reflected when it shows in our Form 26AS or AIS (Form 168 under the Income-tax Act, 2025), and Claimed once it is claimed in our

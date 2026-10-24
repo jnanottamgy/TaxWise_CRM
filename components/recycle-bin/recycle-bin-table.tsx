@@ -155,7 +155,7 @@ export function RecycleBinTable(props: {
         sortable: true,
         hideable: false,
         mobile: "primary",
-        width: "32%",
+        width: "26%",
         cell: (r) => {
           const Icon = ENTITY_ICON[r.entity]
           const sub = r.entity === "client" ? withSummary(r) : null
@@ -201,12 +201,15 @@ export function RecycleBinTable(props: {
         cell: (r) => (
           <span className="inline-flex flex-col items-end leading-5" title={formatDateTime(r.deletedAt)}>
             <span>{formatDate(r.deletedAt)}</span>
-            <span className="text-xs text-text-muted">{formatTimeAgo(r.deletedAt)}</span>
+            {/* Below 2xl the "Deleted by" column is folded in here (who, in place of "3 days ago"), so
+                Restore stays in view at 1366. */}
+            <span className="text-xs text-text-muted 2xl:hidden">{r.deletedByName ?? formatTimeAgo(r.deletedAt)}</span>
+            <span className="hidden text-xs text-text-muted 2xl:inline">{formatTimeAgo(r.deletedAt)}</span>
           </span>
         ),
         mobileCell: (r) => <span title={formatDateTime(r.deletedAt)}>{formatDate(r.deletedAt)}</span>,
       },
-      { id: "deleted_by", header: "Deleted by", hideBelow: "lg", cell: (r) => (r.deletedByName ? <span className="text-text-muted">{r.deletedByName}</span> : <span className="text-text-muted">{EMPTY}</span>) },
+      { id: "deleted_by", header: "Deleted by", hideBelow: "2xl", cell: (r) => (r.deletedByName ? <span className="text-text-muted">{r.deletedByName}</span> : <span className="text-text-muted">{EMPTY}</span>) },
     ]
     if (canPurge) cols.push({ id: "purge", header: "Purge", hideBelow: "xl", cell: (r) => <PurgeStatus row={r} /> })
     cols.push({

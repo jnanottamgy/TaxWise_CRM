@@ -8,6 +8,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { ARG, ID_PATTERN, PUSH, readArg } from "../shared/channels";
 import type { DesktopDownloadPayload, OpenChatResult } from "../shared/types";
+import { preloadMayRun } from "../shared/url";
 
 /** What a CRM page receives for each file saved from WhatsApp. */
 export interface DesktopDownload extends Omit<DesktopDownloadPayload, "bytes"> {
@@ -24,7 +25,7 @@ function announceListeners(): void {
   ipcRenderer.send("crm:download-listeners", { count: callbacks.size });
 }
 
-ipcRenderer.on(PUSH.crmDownload, (_e, payload: DesktopDownloadPayload) => {
+function onDownloadPush(_e: unknown, payload: DesktopDownloadPayload): void {
   let done = false;
   const complete = (result: { uploaded: boolean }) => {
     if (done) return;
@@ -53,7 +54,7 @@ ipcRenderer.on(PUSH.crmDownload, (_e, payload: DesktopDownloadPayload) => {
       // A page bug must not keep the temp file: the 10-minute timer still deletes it.
     }
   }
-});
+}
 
 const bridge = {
   version: readArg(process.argv, ARG.version) ?? "0.0.0",
@@ -86,7 +87,10 @@ const bridge = {
 
 export type TaxwiseDesktopBridge = typeof bridge;
 
-contextBridge.exposeInMainWorld("taxwiseDesktop", Object.freeze(bridge));
-
-// A fresh page load has no listeners yet.
-announceListeners();
+// Only on the CRM's own pages (preloadMayRun): never in the view's initial empty document.
+if (preloadMayRun(location.href)) {
+  ipcRenderer.on(PUSH.crmDownload, onDownloadPush);
+  contextBridge.exposeInMainWorld("taxwiseDesktop", Object.freeze(bridge));
+  // A fresh page load has no listeners yet.
+  announceListeners();
+}

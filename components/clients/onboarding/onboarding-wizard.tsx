@@ -49,6 +49,14 @@ import { draftKeyFor, type WizardSetup, type WizardSource } from "@/components/c
 const STEP_INDEX: Record<OnboardingStepId, number> = Object.fromEntries(ONBOARDING_STEPS.map((s, i) => [s.id, i])) as Record<OnboardingStepId, number>
 /** Issues with no field of their own: shown in the step (and the alert), never via setError. */
 const UNPLACED = new Set(["services", "acceptance_id", "independence", "_form"])
+/**
+ * What the step's alert says when the only problem is a field that sits below the fold: the alert
+ * takes focus (and the scroll) on a failed Continue, so "the highlighted field" alone would point
+ * at nothing on screen.
+ */
+const ALERT_FOR: Partial<Record<string, string>> = {
+  checklist_reviewed: "Tick “I’ve reviewed this checklist” at the end of the list to continue.",
+}
 const NETWORK = "We couldn't reach the server. Check your connection and try again."
 const noSubscription = () => () => undefined
 const onClient = () => true
@@ -361,8 +369,12 @@ export function OnboardingWizard({ setup, initial, source, servicesLocked }: { s
     markStep(id, list)
     const unplaced = list.filter((i) => UNPLACED.has(i.path))
     const placed = list.length - unplaced.length
+    const onlyPlaced = placed === 1 ? list.find((i) => !UNPLACED.has(i.path)) : undefined
     showAlert({
-      message: unplaced[0]?.message ?? (placed > 1 ? `Please check the ${placed} highlighted fields.` : "Please check the highlighted field."),
+      message:
+        unplaced[0]?.message ??
+        (onlyPlaced && ALERT_FOR[onlyPlaced.path]) ??
+        (placed > 1 ? `Please check the ${placed} highlighted fields.` : "Please check the highlighted field."),
       client: true,
     })
     return false

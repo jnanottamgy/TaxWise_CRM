@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { redirect, unstable_rethrow } from "next/navigation"
+import { unstable_rethrow } from "next/navigation"
 import { requireStaff } from "@/lib/auth/guards"
 import { can } from "@/lib/auth/roles"
 import { logUnexpected } from "@/lib/log"
@@ -18,6 +18,7 @@ import {
   DUE_WINDOW_LABELS,
   DUE_WINDOWS,
   EMPLOYEE_DEFAULT_QUERY,
+  FIRM_DEFAULT_QUERY,
   ME,
   NONE,
   OPEN_TASK_STATUSES,
@@ -47,6 +48,7 @@ import { TaskCalendar } from "@/components/tasks/task-calendar"
 import { WorkViewTabs } from "@/components/tasks/work-view-tabs"
 import { WorkViewsMenu } from "@/components/tasks/work-views"
 import { NewTaskButton } from "@/components/tasks/new-task-button"
+import { LandingQuery } from "@/components/tasks/landing-query"
 import type { TaskFormOptions } from "@/components/tasks/task-form"
 
 export const metadata: Metadata = { title: "Work tracker" }
@@ -81,8 +83,13 @@ function toParams(sp: SearchParams): URLSearchParams {
  */
 export default async function WorkPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { user, supabase } = await requireStaff()
-  const sp = await searchParams
-  if (user.role === "employee" && Object.keys(sp).length === 0) redirect(`/work?${EMPLOYEE_DEFAULT_QUERY}`)
+  const asked = await searchParams
+  // A bare /work (the sidebar link; `new=1` aside) lands on open work, soonest due first, and an
+  // Employee on their own. It renders that view now and LandingQuery puts its params in the address:
+  // one server render, where a redirect would load the page twice.
+  const bare = Object.keys(asked).every((k) => k === "new")
+  const landing = user.role === "employee" ? EMPLOYEE_DEFAULT_QUERY : FIRM_DEFAULT_QUERY
+  const sp: SearchParams = bare ? { ...Object.fromEntries(new URLSearchParams(landing)), ...asked } : asked
 
   const view = readWorkView(readParam(sp, "view"))
   const t = parseTableParams(sp, { sortable: WORK_SORTABLE, defaultSort: { sort: "due_date", dir: "asc" }, filters: WORK_FILTERS })
@@ -189,6 +196,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="flex min-w-0 flex-col">
+      {bare ? <LandingQuery query={landing} /> : null}
       <PageGuide title={canManage ? "Work tracker" : "My tasks"}>
         <p>Every task has a client, a status and, usually, a due date. The relative date beside it turns amber three days ahead and red once it is overdue.</p>
         <p className="mt-2">
@@ -206,7 +214,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
         <WorkViewTabs active={view} params={params} reviewCount={summary.ok ? summary.data.reviewQueue : null} />
         {views.ok ? <WorkViewsMenu views={views.data} canShare={canManage} /> : null}
       </div>
-      <FilterBar searchLabel="Search tasks" searchPlaceholder="Title, task number, client or period" filters={view === "review" ? filters.filter((f) => f.id !== "status" && f.id !== "reviewer") : filters} />
+      <FilterBar searchLabel="Search tasks" searchPlaceholder="Title, number, client or period" filters={view === "review" ? filters.filter((f) => f.id !== "status" && f.id !== "reviewer") : filters} />
 
       {!main.ok ? (
         <div className="rounded-lg border border-border bg-surface">

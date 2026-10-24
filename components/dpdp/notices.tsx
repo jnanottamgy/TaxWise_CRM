@@ -69,7 +69,7 @@ function DraftForm({ draft, startBody, nextVersion, onCancel }: { draft: NoticeR
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium text-text">It covers</p>
           <TopicChecklist body={body} />
-          <p className="text-xs text-text-muted">A reminder of §6.10&apos;s items, looked for in the text; it never blocks.</p>
+          <p className="text-xs text-text-muted">A reminder of what a privacy notice must cover under the DPDP Rules, looked for in the text. It never blocks publishing.</p>
         </div>
       </div>
       <TextField control={f.control} name="changeSummary" label="What changed" placeholder="Added the retention periods for GST records" autoComplete="off" />

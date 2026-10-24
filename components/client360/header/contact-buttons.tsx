@@ -60,7 +60,8 @@ export function ContactButtons({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    // Phones: a 2 × 2 grid of full-width buttons instead of three in a row and a stray fourth.
+    <div className={compact ? "flex flex-wrap items-center gap-2" : "grid grid-cols-2 gap-2 *:w-full sm:flex sm:flex-wrap sm:items-center sm:*:w-auto"}>
       {tel ? (
         <Button asChild variant="outline" size={compact ? "icon-sm" : "sm"} aria-label={compact ? `Call ${target.recipientName}` : undefined}>
           <a href={tel}>

@@ -18,9 +18,9 @@ import { announceInboxChanged } from "@/components/comms/comms-ui"
  * disappears as soon as it is dealt with. A dot marks an item whose notification you haven't read;
  * opening the item reads it.
  */
-export function ActionItems({ groups, unread, today }: { groups: ActionGroup[]; unread: Record<string, number>; today: string }) {
+export function ActionItems({ groups, unread, today, now: serverNow }: { groups: ActionGroup[]; unread: Record<string, number>; today: string; /** The server's render time (ISO), so "45 minutes ago" hydrates to the same text. */ now?: string }) {
   const [seen, setSeen] = React.useState<Set<string>>(() => new Set())
-  const [now] = React.useState(() => new Date())
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
   const total = groups.reduce((n, g) => n + g.total, 0)
 
   const open = (item: ActionItem) => {

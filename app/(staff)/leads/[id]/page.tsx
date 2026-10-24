@@ -237,7 +237,7 @@ export default async function LeadPage({ params }: Params) {
             )}
           </SectionCard>
 
-          <SectionCard title="Conflict checks" description="Before taking them on: required for audit work (§7.5.4)" flush>
+          <SectionCard title="Conflict checks" description="Before taking them on. Required for audit work." flush>
             {detail.acceptances.length ? (
               <ul className="divide-y divide-border/70 border-t border-border">
                 {detail.acceptances.map((a) => (

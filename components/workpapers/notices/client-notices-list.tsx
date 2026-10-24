@@ -63,13 +63,19 @@ export async function ClientNoticesList({ clientId, user, supabase, limit = 6 }:
               <li key={r.id} className="border-t border-border first:border-t-0">
                 <Link
                   href={`/workpapers/notices/${r.id}`}
-                  className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 transition-colors duration-150 hover:bg-surface-2/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring md:px-5"
+                  className="flex min-h-11 flex-col gap-y-1 px-4 py-2 transition-colors duration-150 hover:bg-surface-2/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:flex-row sm:items-center sm:justify-between sm:gap-x-4 md:px-5"
                 >
-                  <span className="flex min-w-0 flex-col leading-5">
-                    <span className="text-base text-text">{r.notice_type}</span>
-                    {sub ? <span className="truncate text-xs text-text-muted">{sub}</span> : null}
+                  {/* The notice takes the room left and truncates its reference; the next action and the
+                      status stay on its line, aligned with the other rows. */}
+                  <span className="flex min-w-0 flex-1 flex-col leading-5">
+                    <span className="truncate text-base text-text">{r.notice_type}</span>
+                    {sub ? (
+                      <span className="truncate text-xs text-text-muted" title={sub}>
+                        {sub}
+                      </span>
+                    ) : null}
                   </span>
-                  <span className="flex items-center gap-4">
+                  <span className="flex flex-none items-center gap-4">
                     <NextActionCell row={r} today={today} />
                     <NoticeStatusChip status={r.status} />
                   </span>

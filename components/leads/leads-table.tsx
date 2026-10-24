@@ -48,13 +48,13 @@ export function LeadsTable(props: { rows: LeadListRow[]; total: number; page: nu
         width: "26%",
         cell: (r) => (
           <span className="flex min-w-0 flex-col leading-5">
-            <span className="truncate font-medium">{r.company || r.name}</span>
+            <span className="max-w-60 truncate font-medium">{r.company || r.name}</span>
             {r.company ? <span className="truncate text-xs text-text-muted">{r.name}</span> : null}
           </span>
         ),
         mobileCell: (r) => r.company || r.name,
       },
-      { id: "lead_number", header: "Number", sortable: true, hideBelow: "xl", cell: (r) => <MonoId value={r.lead_number} copy label="lead number" /> },
+      { id: "lead_number", header: "Number", sortable: true, hideBelow: "2xl", cell: (r) => <MonoId value={r.lead_number} copy label="lead number" /> },
       {
         id: "status",
         header: "Stage",
@@ -67,7 +67,7 @@ export function LeadsTable(props: { rows: LeadListRow[]; total: number; page: nu
           </span>
         ),
       },
-      { id: "source", header: "Source", sortable: true, hideBelow: "lg", cell: (r) => <span className="text-text-muted">{LEAD_SOURCE_LABELS[r.source]}{r.source_detail ? ` · ${r.source_detail}` : ""}</span> },
+      { id: "source", header: "Source", sortable: true, hideBelow: "2xl", cell: (r) => <span className="text-text-muted">{LEAD_SOURCE_LABELS[r.source]}{r.source_detail ? ` · ${r.source_detail}` : ""}</span> },
       {
         id: "services",
         header: "Services",
@@ -120,7 +120,7 @@ export function LeadsTable(props: { rows: LeadListRow[]; total: number; page: nu
         id: "open_quotations",
         header: "Open quotations",
         align: "right",
-        hideBelow: "xl",
+        hideBelow: "2xl",
         cell: (r) =>
           r.open_quotations ? (
             <span className="inline-flex flex-col items-end leading-5">

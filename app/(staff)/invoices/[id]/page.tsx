@@ -347,61 +347,101 @@ export default async function InvoicePage({ params }: Params) {
               {detail.receipts.length === 0 ? (
                 <EmptyState size="compact" message={actions.recordReceipt ? "No payment recorded yet. Record a receipt when the money reaches the bank." : "No payment recorded."} />
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[40rem] text-sm">
-                    <caption className="sr-only">Receipts against this invoice</caption>
-                    <thead>
-                      <tr className="border-b border-border text-left text-xs text-text-muted">
-                        <th scope="col" className="px-4 py-2 font-medium md:pl-5">Receipt</th>
-                        <th scope="col" className="px-2 py-2 font-medium">Date</th>
-                        <th scope="col" className="px-2 py-2 font-medium">Method</th>
-                        <th scope="col" className="px-2 py-2 text-right font-medium">Received</th>
-                        <th scope="col" className="px-2 py-2 text-right font-medium">TDS</th>
-                        <th scope="col" className="px-4 py-2 md:pr-5"><span className="sr-only">Actions</span></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.receipts.map((r) => (
-                        <tr key={r.id} className="border-b border-border/70 align-top last:border-b-0">
-                          <td className="px-4 py-2.5 md:pl-5">
-                            <MonoId value={r.receipt_number} />
-                            {r.reversed_at ? (
-                              <span className="mt-0.5 block text-xs text-danger-text">Reversed: {r.reversal_reason}</span>
-                            ) : r.recorded_by_name ? (
-                              <span className="mt-0.5 block text-xs text-text-muted">By {r.recorded_by_name}</span>
-                            ) : null}
-                          </td>
-                          <td className="px-2 py-2.5 text-text">
+                <>
+                  {/* Phones: one row per receipt with the amount on the right; the table from md up. */}
+                  <ul aria-label="Receipts against this invoice" className="md:hidden">
+                    {detail.receipts.map((r) => (
+                      <li key={r.id} className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3 last:border-b-0">
+                        <div className="min-w-0 flex-1 text-sm">
+                          <MonoId value={r.receipt_number} />
+                          <p className="mt-0.5 text-text">
                             <DateText date={r.payment_date} today={today} />
-                          </td>
-                          <td className="px-2 py-2.5 text-text">
-                            {isEnumValue("payment_method", r.method) ? PAYMENT_METHOD_LABELS[r.method] : r.method}
-                            {r.reference ? <span className="block text-xs text-text-muted">{r.reference}</span> : null}
-                            {r.deposited_to ? <span className="block text-xs text-text-muted">To {r.deposited_to}</span> : null}
-                          </td>
-                          <td className={r.reversed_at ? "px-2 py-2.5 text-right text-text-muted line-through" : "px-2 py-2.5 text-right"}>
+                            <span className="text-text-muted"> · {isEnumValue("payment_method", r.method) ? PAYMENT_METHOD_LABELS[r.method] : r.method}</span>
+                          </p>
+                          {r.reference ? <p className="text-xs break-all text-text-muted">{r.reference}</p> : null}
+                          {r.deposited_to ? <p className="text-xs text-text-muted">To {r.deposited_to}</p> : null}
+                          {Number(r.tds_amount) > 0 ? (
+                            <p className="text-xs text-text-muted">
+                              TDS {r.tds_section} · {r.tds_quarter} · {TDS_STATUS_LABEL[r.tds_status] ?? r.tds_status}
+                            </p>
+                          ) : null}
+                          {r.reversed_at ? (
+                            <p className="mt-0.5 text-xs text-danger-text">Reversed: {r.reversal_reason}</p>
+                          ) : r.recorded_by_name ? (
+                            <p className="mt-0.5 text-xs text-text-muted">By {r.recorded_by_name}</p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-none items-start gap-1">
+                          <div className={r.reversed_at ? "text-right text-sm text-text-muted line-through" : "text-right text-sm text-text"}>
                             <Money value={r.amount_received} />
-                          </td>
-                          <td className={r.reversed_at ? "px-2 py-2.5 text-right text-text-muted line-through" : "px-2 py-2.5 text-right"}>
                             {Number(r.tds_amount) > 0 ? (
-                              <>
-                                <Money value={r.tds_amount} />
-                                <span className="block text-xs text-text-muted">
-                                  {r.tds_section} · {r.tds_quarter} · {TDS_STATUS_LABEL[r.tds_status] ?? r.tds_status}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-text-muted">None</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-right md:pr-5">
-                            <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} defaultEmail={primaryEmail} emailReady={send.emailReady} canSetUpEmail={send.canSetUpEmail} />
-                          </td>
+                              <span className="block text-xs text-text-muted">
+                                + TDS <Money value={r.tds_amount} />
+                              </span>
+                            ) : null}
+                          </div>
+                          <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} defaultEmail={primaryEmail} emailReady={send.emailReady} canSetUpEmail={send.canSetUpEmail} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* `relative` keeps the sr-only caption and header inside the scroller, so they can't widen the page. */}
+                  <div className="relative hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[40rem] text-sm">
+                      <caption className="sr-only">Receipts against this invoice</caption>
+                      <thead>
+                        <tr className="border-b border-border text-left text-xs text-text-muted">
+                          <th scope="col" className="px-4 py-2 font-medium md:pl-5">Receipt</th>
+                          <th scope="col" className="px-2 py-2 font-medium">Date</th>
+                          <th scope="col" className="px-2 py-2 font-medium">Method</th>
+                          <th scope="col" className="px-2 py-2 text-right font-medium">Received</th>
+                          <th scope="col" className="px-2 py-2 text-right font-medium">TDS</th>
+                          <th scope="col" className="px-4 py-2 md:pr-5"><span className="sr-only">Actions</span></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {detail.receipts.map((r) => (
+                          <tr key={r.id} className="border-b border-border/70 align-top last:border-b-0">
+                            <td className="px-4 py-2.5 md:pl-5">
+                              <MonoId value={r.receipt_number} />
+                              {r.reversed_at ? (
+                                <span className="mt-0.5 block text-xs text-danger-text">Reversed: {r.reversal_reason}</span>
+                              ) : r.recorded_by_name ? (
+                                <span className="mt-0.5 block text-xs text-text-muted">By {r.recorded_by_name}</span>
+                              ) : null}
+                            </td>
+                            <td className="px-2 py-2.5 text-text">
+                              <DateText date={r.payment_date} today={today} />
+                            </td>
+                            <td className="px-2 py-2.5 text-text">
+                              {isEnumValue("payment_method", r.method) ? PAYMENT_METHOD_LABELS[r.method] : r.method}
+                              {r.reference ? <span className="block text-xs text-text-muted">{r.reference}</span> : null}
+                              {r.deposited_to ? <span className="block text-xs text-text-muted">To {r.deposited_to}</span> : null}
+                            </td>
+                            <td className={r.reversed_at ? "px-2 py-2.5 text-right text-text-muted line-through" : "px-2 py-2.5 text-right"}>
+                              <Money value={r.amount_received} />
+                            </td>
+                            <td className={r.reversed_at ? "px-2 py-2.5 text-right text-text-muted line-through" : "px-2 py-2.5 text-right"}>
+                              {Number(r.tds_amount) > 0 ? (
+                                <>
+                                  <Money value={r.tds_amount} />
+                                  <span className="block text-xs text-text-muted">
+                                    {r.tds_section} · {r.tds_quarter} · {TDS_STATUS_LABEL[r.tds_status] ?? r.tds_status}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-text-muted">None</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-right md:pr-5">
+                              <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} defaultEmail={primaryEmail} emailReady={send.emailReady} canSetUpEmail={send.canSetUpEmail} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </SectionCard>
           ) : null}
@@ -521,7 +561,7 @@ export default async function InvoicePage({ params }: Params) {
               ) : null}
               <dt className="border-t border-border pt-2 text-base font-semibold text-text">Outstanding</dt>
               <dd className={detail.isOverdue ? "border-t border-border pt-2 text-right text-base font-semibold text-danger-text" : "border-t border-border pt-2 text-right text-base font-semibold"}>
-                {unissued || cancelled ? <span className="text-text-muted">Not payable</span> : <Money value={fromPaise(outstandingPaise)} />}
+                {cancelled ? <span className="text-text-muted">Cancelled</span> : unissued ? <span className="text-text-muted">Not issued yet</span> : <Money value={fromPaise(outstandingPaise)} />}
               </dd>
             </dl>
             {detail.isOverdue ? (

@@ -183,6 +183,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           sort={t.sort}
           dir={t.dir}
           today={today}
+          now={new Date().toISOString()}
           seesMoney={seesMoney}
           canManage={canManage}
           canDelete={canDelete}

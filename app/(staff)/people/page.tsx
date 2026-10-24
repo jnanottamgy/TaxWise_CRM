@@ -76,7 +76,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
       />
       <FilterBar
         searchLabel="Search people"
-        searchPlaceholder="Name, email, designation or department"
+        searchPlaceholder="Name, email or designation"
         filters={[
           { id: "role", label: "Role", options: STAFF_ROLE_VALUES.map((r) => ({ value: r, label: ROLE_SCOPE[r].label })) },
           {
@@ -89,7 +89,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         ]}
       />
       {list.ok ? (
-        <PeopleTable rows={list.data.rows} total={list.data.total} page={t.page} pageSize={t.pageSize} sort={t.sort} dir={t.dir} canAdd={can.manageEmployees(user.role)} />
+        <PeopleTable rows={list.data.rows} total={list.data.total} page={t.page} pageSize={t.pageSize} sort={t.sort} dir={t.dir} canAdd={can.manageEmployees(user.role)} now={new Date().toISOString()} />
       ) : (
         <div className="rounded-lg border border-border bg-surface">
           <ErrorBlock message="Couldn't load the team." errorRef={list.ref} />

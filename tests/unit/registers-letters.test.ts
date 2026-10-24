@@ -20,6 +20,7 @@ import {
   sa210Sections,
   scheduleAnnualPaise,
   scheduleFromServices,
+  servicesSummary,
 } from "@/lib/schemas/engagement-letters";
 
 const CLIENT = "6d2f1f0e-0d3a-4b8e-9a51-8f0f1d2c3b4a";
@@ -189,5 +190,14 @@ describe("the letter as printed (§7.15.3, SA 210)", () => {
     expect(close[1]).toContain("until 2027-03-31");
     expect(close).toHaveLength(3);
     expect(closingParagraphs({ expiresAt: null, renewedFromFy: null, formatDate: (d) => d })).toHaveLength(2);
+  });
+});
+
+describe("servicesSummary (letters table and the letter page, server and client alike)", () => {
+  it("names each service, an audit by its audit type", () => {
+    expect(servicesSummary({ service_types: ["gst", "income_tax"], audit_type: null })).toBe("GST returns, Income tax");
+    expect(servicesSummary({ service_types: ["audit"], audit_type: "statutory_companies_act" })).toBe("Statutory audit (Companies Act)");
+    expect(servicesSummary({ service_types: ["audit"], audit_type: null })).toBe("Audit");
+    expect(servicesSummary({ service_types: [], audit_type: null })).toBe("");
   });
 });

@@ -125,7 +125,8 @@ const CLOSED: Record<string, string> = {
   day_end: "Closed at day end",
 }
 
-export function SessionsCard({ sessions }: { sessions: ProfileSession[] }) {
+export function SessionsCard({ sessions, now: serverNow }: { sessions: ProfileSession[]; /** The server's render time (ISO), so "last seen 2 minutes ago" hydrates to the same text. */ now?: string }) {
+  const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
   const router = useRouter()
   const [confirm, setConfirm] = React.useState(false)
   return (
@@ -154,7 +155,7 @@ export function SessionsCard({ sessions }: { sessions: ProfileSession[] }) {
                     {s.ip ? <span className="num ml-2 text-sm font-normal text-text-muted">{s.ip}</span> : null}
                   </p>
                   <p className="num text-sm text-text-muted">
-                    Signed in {formatDateTime(s.loginAt)} · {s.isActive ? `last seen ${formatTimeAgo(s.lastActiveAt)}` : `${CLOSED[s.closedReason ?? ""] ?? "Ended"} ${formatDateTime(s.logoutAt ?? s.lastActiveAt)}`} · active{" "}
+                    Signed in {formatDateTime(s.loginAt)} · {s.isActive ? `last seen ${formatTimeAgo(s.lastActiveAt, now)}` : `${CLOSED[s.closedReason ?? ""] ?? "Ended"} ${formatDateTime(s.logoutAt ?? s.lastActiveAt)}`} · active{" "}
                     {formatMinutes(s.activeMinutes)}
                   </p>
                 </div>

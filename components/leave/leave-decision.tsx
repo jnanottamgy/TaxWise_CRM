@@ -41,7 +41,8 @@ export function DecideLeaveButtons({ leave, actorRole, staff }: { leave: LeaveRo
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" onClick={() => setDecision("approved")}>
+        {/* Outline: these sit one per row in lists, and a column of filled buttons drowns the page's own primary action. */}
+        <Button type="button" size="sm" variant="outline" onClick={() => setDecision("approved")}>
           <CheckIcon aria-hidden="true" />
           Approve
         </Button>

@@ -21,7 +21,18 @@ import { respondToTask } from "@/server/actions/tasks"
  * Decline asks for a reason code (and a note for "Something else"), unassigns the task and tells the
  * assigner and Managers. Shown only to the assignee; the database refuses anyone else.
  */
-export function AcceptDecline({ task, size = "sm", layout = "row" }: { task: { id: string; task_number: string; title: string }; size?: "sm" | "default"; layout?: "row" | "stack" }) {
+export function AcceptDecline({
+  task,
+  size = "sm",
+  layout = "row",
+  quiet = false,
+}: {
+  task: { id: string; task_number: string; title: string }
+  size?: "sm" | "default"
+  layout?: "row" | "stack"
+  /** Outline Accept, for a list where every row has one: one filled button per region (DESIGN.md §3). */
+  quiet?: boolean
+}) {
   const router = useRouter()
   const [accepting, setAccepting] = React.useState(false)
   const [declining, setDeclining] = React.useState(false)
@@ -46,7 +57,7 @@ export function AcceptDecline({ task, size = "sm", layout = "row" }: { task: { i
 
   return (
     <div className={cn("flex gap-2", layout === "stack" ? "flex-col sm:flex-row" : "flex-wrap items-center")}>
-      <Button size={size} onClick={accept} disabled={accepting} aria-busy={accepting}>
+      <Button size={size} variant={quiet ? "outline" : "default"} onClick={accept} disabled={accepting} aria-busy={accepting}>
         {accepting ? <Spinner /> : <CheckIcon aria-hidden="true" />}
         Accept
       </Button>

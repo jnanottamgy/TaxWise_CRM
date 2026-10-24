@@ -61,13 +61,16 @@ export function RetainerRunSummary({ run, runs, selectedRunId }: { run: Retainer
         </div>
         <div>
           <dt className="text-text-muted">Skipped ({skippedTotal})</dt>
-          <dd className="mt-0.5 text-text">
-            {skipped.map((s, i) => (
-              <span key={s.label} className="whitespace-nowrap">
-                {s.label} <span className="num">{s.n}</span>
-                {i < skipped.length - 1 ? <span className="text-text-muted"> · </span> : null}
-              </span>
-            ))}
+          <dd className="mt-0.5">
+            {/* Every reason the spec lists, zero or not; the ones that skipped something stand out. Wraps
+                between reasons, never inside one. */}
+            <ul className="flex flex-wrap gap-x-3 gap-y-0.5">
+              {skipped.map((s) => (
+                <li key={s.label} className={s.n ? "whitespace-nowrap text-text" : "whitespace-nowrap text-text-muted"}>
+                  {s.label} <span className={s.n ? "num font-medium" : "num"}>{s.n}</span>
+                </li>
+              ))}
+            </ul>
           </dd>
         </div>
         <div>

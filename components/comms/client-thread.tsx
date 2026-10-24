@@ -26,6 +26,12 @@ export type ClientThreadProps = {
   portalLink: string
   me: string
   today: string
+  /**
+   * The server's clock when the page was rendered (ISO). "Seen by Anita (5 minutes ago)" is worked
+   * out from it on the server and again in the browser, so both must use the same instant or the
+   * text differs across a minute boundary and hydration fails.
+   */
+  now?: string
   newSince: string | null
   unreadInbound: number
   seenBy: Array<{ name: string; at: string }>
@@ -57,7 +63,7 @@ function ThreadReadMarker({ clientId, unread }: { clientId: string; unread: numb
 
 export function ClientThread(props: ClientThreadProps) {
   const { client, messages, channel } = props
-  const [now] = React.useState(() => new Date())
+  const [now] = React.useState(() => (props.now ? new Date(props.now) : new Date()))
   const chips: Array<{ id: CommChannelFilter | "all"; label: string }> = [{ id: "all", label: "All" }, ...(Object.keys(COMM_CHANNEL_FILTERS) as CommChannelFilter[]).map((k) => ({ id: k, label: COMM_CHANNEL_FILTERS[k].label }))]
 
   return (

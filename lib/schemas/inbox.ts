@@ -15,7 +15,7 @@ import {
 import { addDays, diffDays, isDateString, istDateOf, type DateString } from "@/lib/domain/fy";
 import { applySignature, firstNameOf, normalizeWhatsAppNumber, pickContactForService } from "@/lib/domain/messaging";
 import { renderTemplate, type TemplateValues } from "@/lib/domain/templates";
-import { formatDate, formatMoney, formatTimeAgo } from "@/lib/format";
+import { formatDate, formatMoney, formatNumber, formatTimeAgo } from "@/lib/format";
 import { NOTIFICATION_EVENTS, type NotificationEvent } from "@/lib/schemas/profile";
 import type { AppRole } from "@/lib/auth/roles";
 
@@ -174,7 +174,8 @@ export function describeActionItem(item: ActionItem, now: Date = new Date()): Ac
       };
     case "leave_approval": {
       const type = item.title && item.title in LEAVE_TYPE_LABELS ? LEAVE_TYPE_LABELS[item.title as LeaveType] : null;
-      const days = item.reason === "half_day" ? "Half day" : item.item_count ? `${item.item_count} ${item.item_count === 1 ? "day" : "days"}` : null;
+      // item_count is working days (lib/data/inbox.ts recounts the view's calendar days).
+      const days = item.reason === "half_day" ? "Half day" : item.item_count ? `${formatNumber(item.item_count)} working ${item.item_count === 1 ? "day" : "days"}` : null;
       return {
         primary: item.person_name ?? "Leave request",
         secondary: join([type ? `${type} leave` : "Leave", days, item.note]),

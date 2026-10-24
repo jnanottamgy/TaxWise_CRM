@@ -38,7 +38,10 @@ function Err({ id, children }: { id: string; children: string | null }) {
 /**
  * One invoice line (§7.9.2): description, service (fills the SAC from the firm's map), SAC, quantity,
  * rate, GST % (18 default; 0 for a reimbursement; "other" needs a reason), the Reimbursement (pure
- * agent) toggle, and the line amount. A grid row on desktop, a stacked card on phones.
+ * agent) toggle, and the line amount. The layout follows the card's width, not the screen's (container
+ * queries on the editor's `lines` container): one row per line under a column header when the card
+ * is wide (2xl screens); two rows (description and amount, then service, SAC, qty, rate, GST) beside
+ * the totals at 1366px; a stacked card on phones.
  */
 export function LineRow({
   control,
@@ -76,9 +79,9 @@ export function LineRow({
 
   return (
     <li className="border-b border-border/70 px-4 py-3 last:border-b-0 md:px-5">
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2 md:grid-cols-[minmax(0,1fr)_9rem_6.5rem] lg:grid-cols-[minmax(0,1fr)_9rem_6.5rem_4.5rem_8.5rem_7rem_7.5rem_2.25rem] lg:items-start">
-        <div className="col-span-2 md:col-span-1">
-          <label htmlFor={descriptionId} className="text-xs font-medium text-text-muted lg:sr-only">
+      <div className="grid grid-cols-2 items-start gap-x-3 gap-y-2 @2xl/lines:grid-cols-[minmax(0,1fr)_6.5rem_4.5rem_8.5rem_7rem_2.25rem] @4xl/lines:grid-cols-[minmax(0,1fr)_9rem_6.5rem_4.5rem_8.5rem_7rem_7.5rem_2.25rem] @4xl/lines:gap-y-0">
+        <div className="col-span-2 @2xl/lines:col-span-4 @2xl/lines:col-start-1 @2xl/lines:row-start-1 @4xl/lines:col-span-1">
+          <label htmlFor={descriptionId} className="text-xs font-medium text-text-muted @4xl/lines:sr-only">
             Line {n}: description
           </label>
           <Textarea
@@ -99,8 +102,8 @@ export function LineRow({
           <Err id={`${descriptionId}-err`}>{descriptionError}</Err>
           {sourceLabel ? <p className="mt-1 text-xs text-text-muted">{sourceLabel}</p> : null}
         </div>
-        <div>
-          <label htmlFor={serviceId} className="text-xs font-medium text-text-muted lg:sr-only">
+        <div className="@2xl/lines:col-start-1 @2xl/lines:row-start-2 @4xl/lines:col-start-2 @4xl/lines:row-start-1">
+          <label htmlFor={serviceId} className="text-xs font-medium text-text-muted @4xl/lines:sr-only">
             Service
           </label>
           <div className="[&>[data-slot=native-select-wrapper]]:w-full">
@@ -125,8 +128,8 @@ export function LineRow({
             </NativeSelect>
           </div>
         </div>
-        <div>
-          <label htmlFor={sacId} className="text-xs font-medium text-text-muted lg:sr-only">
+        <div className="@2xl/lines:col-start-2 @2xl/lines:row-start-2 @4xl/lines:col-start-3 @4xl/lines:row-start-1">
+          <label htmlFor={sacId} className="text-xs font-medium text-text-muted @4xl/lines:sr-only">
             SAC
           </label>
           <Input
@@ -142,8 +145,8 @@ export function LineRow({
           />
           <Err id={`${sacId}-err`}>{sacError}</Err>
         </div>
-        <div>
-          <label htmlFor={qtyId} className="text-xs font-medium text-text-muted lg:sr-only">
+        <div className="@2xl/lines:col-start-3 @2xl/lines:row-start-2 @4xl/lines:col-start-4 @4xl/lines:row-start-1">
+          <label htmlFor={qtyId} className="text-xs font-medium text-text-muted @4xl/lines:sr-only">
             Qty
           </label>
           <Input
@@ -158,8 +161,8 @@ export function LineRow({
           />
           <Err id={`${qtyId}-err`}>{qtyError}</Err>
         </div>
-        <div>
-          <label htmlFor={rateId} className="text-xs font-medium text-text-muted lg:sr-only">
+        <div className="@2xl/lines:col-start-4 @2xl/lines:row-start-2 @4xl/lines:col-start-5 @4xl/lines:row-start-1">
+          <label htmlFor={rateId} className="text-xs font-medium text-text-muted @4xl/lines:sr-only">
             Rate (₹)
           </label>
           <MoneyInput
@@ -172,8 +175,8 @@ export function LineRow({
           />
           <Err id={`${rateId}-err`}>{rateError}</Err>
         </div>
-        <div>
-          <label htmlFor={taxId} className="text-xs font-medium text-text-muted lg:sr-only">
+        <div className="@2xl/lines:col-span-2 @2xl/lines:col-start-5 @2xl/lines:row-start-2 @4xl/lines:col-span-1 @4xl/lines:col-start-6 @4xl/lines:row-start-1">
+          <label htmlFor={taxId} className="text-xs font-medium text-text-muted @4xl/lines:sr-only">
             GST
           </label>
           {isReimb ? (
@@ -206,13 +209,13 @@ export function LineRow({
           )}
           <Err id={`${taxId}-err`}>{taxError}</Err>
         </div>
-        <div className="flex flex-col items-end justify-center lg:h-9">
-          <span className="text-xs font-medium text-text-muted lg:sr-only">Amount</span>
-          <span className="num text-base text-text tabular-nums">
+        <div className="flex flex-col items-end @2xl/lines:col-start-5 @2xl/lines:row-start-1 @4xl/lines:col-start-7 @4xl/lines:row-start-1">
+          <span className="text-xs font-medium text-text-muted @4xl/lines:sr-only">Amount</span>
+          <span className="num flex h-9 items-center text-base text-text tabular-nums">
             <Money value={fromPaise(amountPaise)} />
           </span>
         </div>
-        <div className="col-span-2 flex items-center justify-end md:col-span-3 lg:col-span-1 lg:h-9">
+        <div className="col-span-2 flex items-center justify-end @2xl/lines:col-span-1 @2xl/lines:col-start-6 @2xl/lines:row-start-1 @2xl/lines:h-9 @2xl/lines:self-end @4xl/lines:col-start-8 @4xl/lines:row-start-1 @4xl/lines:self-start">
           <Button type="button" variant="ghost" size="icon-sm" onClick={onRemove} disabled={!canRemove} aria-label={`Remove line ${n}`} className="text-text-muted hover:text-danger-text">
             <Trash2Icon aria-hidden="true" />
           </Button>

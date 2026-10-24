@@ -90,6 +90,17 @@ export function isAuditLetter(serviceTypes: readonly string[]): boolean {
   return serviceTypes.includes("audit");
 }
 
+/**
+ * The services a letter covers, in words: "GST returns, Statutory audit (Companies Act)". An audit
+ * service reads as its audit type when the letter has one. Plain (not in a client module), so the
+ * letter's Server Component page and the client-side letters table both call it.
+ */
+export function servicesSummary(r: { service_types: readonly ServiceType[]; audit_type: string | null }): string {
+  return r.service_types
+    .map((s) => (s === "audit" && r.audit_type ? (LETTER_AUDIT_TYPE_LABEL[r.audit_type as LetterAuditType] ?? SERVICE_TYPE_LABELS.audit) : SERVICE_TYPE_LABELS[s]))
+    .join(", ")
+}
+
 /** The first FY governed by the Income-tax Act, 2025 (§6.1) is a parameter in lib/domain/fy.ts. */
 function incomeTaxCitation(fy: FinancialYear): { act: string; section: string; report: string; yearLabel: string } {
   if (incomeTaxStatute(fy) === "2025") {

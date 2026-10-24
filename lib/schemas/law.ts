@@ -60,6 +60,35 @@ export function summariseParameterValue(value: unknown, max = 60): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+const valueNumber = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 4 });
+
+function describePart(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "number") return valueNumber.format(v);
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) return v.length ? v.map(describePart).join(", ") : "none";
+  if (typeof v === "object") {
+    return Object.entries(v as Record<string, unknown>)
+      .map(([k, x]) => {
+        const nested = x !== null && typeof x === "object" && !Array.isArray(x);
+        return `${k.replace(/_/g, " ")} ${nested ? `(${describePart(x)})` : describePart(x)}`;
+      })
+      .join(" · ");
+  }
+  return String(v);
+}
+
+/**
+ * The value in words for the parameters table, so a Partner reads it rather than parses it:
+ * `{"months":3}` → "months 3"; `{"amount":50000,"inclusive":false}` → "amount 50,000 · inclusive no";
+ * `18` → "18". Numbers in Indian grouping. Cut at `max` characters (the full JSON is in the editor).
+ */
+export function describeParameterValue(value: unknown, max = 90): string {
+  const text = describePart(value);
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 const parameterValueText = z
   .string({ error: "Enter the value." })
   .superRefine((v, ctx) => {

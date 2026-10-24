@@ -28,11 +28,14 @@ export async function PersonLeaveTab({
   viewer,
   supabase,
   searchParams,
+  requestButton = true,
 }: {
   employeeId: string
   viewer: CurrentUser
   supabase: ServerSupabase
   searchParams: Record<string, string | string[] | undefined>
+  /** Off where the page header already has "Request leave" (/leave), so there is one button, not two. */
+  requestButton?: boolean
 }) {
   const today = todayIST()
   const fy = await getSelectedFy()
@@ -75,7 +78,7 @@ export async function PersonLeaveTab({
             { label: "Waiting for a decision", value: days(summary.pending) },
           ]}
         />
-        {self ? <RequestLeaveDialog variant="outline" /> : null}
+        {self && requestButton ? <RequestLeaveDialog variant="outline" /> : null}
       </div>
       <LeaveTable
         rows={list.rows}

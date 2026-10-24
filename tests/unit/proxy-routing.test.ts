@@ -11,6 +11,7 @@ import {
   parseActivity,
   pathAllowedForRole,
   safeNextPath,
+  storedUserHasVerifiedFactor,
   type RouteInput,
   type SessionHint,
 } from "@/lib/supabase/proxy";
@@ -162,6 +163,34 @@ describe("two-step sign-in (§12)", () => {
   });
 });
 
+describe("storedUserHasVerifiedFactor (the two-step hint from the session cookie)", () => {
+  it("is true only for a verified authenticator", () => {
+    expect(storedUserHasVerifiedFactor({ factors: [{ status: "verified", factor_type: "totp" }] })).toBe(true);
+    expect(storedUserHasVerifiedFactor({ factors: [{ status: "unverified" }, { status: "verified" }] })).toBe(true);
+    expect(storedUserHasVerifiedFactor({ factors: [{ status: "unverified" }] })).toBe(false);
+    expect(storedUserHasVerifiedFactor({ factors: [] })).toBe(false);
+    expect(storedUserHasVerifiedFactor({})).toBe(false);
+    expect(storedUserHasVerifiedFactor({ factors: "verified" })).toBe(false);
+    expect(storedUserHasVerifiedFactor(null)).toBe(false);
+    expect(storedUserHasVerifiedFactor(undefined)).toBe(false);
+  });
+
+  it("reads supabase-js's warning proxy of the stored user without tripping its warning", () => {
+    const warned: string[] = [];
+    const stored = new Proxy(
+      { id: "u1", factors: [{ status: "verified" }] },
+      {
+        get(target, prop, receiver) {
+          if (typeof prop === "string") warned.push(prop);
+          return Reflect.get(target, prop, receiver);
+        },
+      },
+    );
+    expect(storedUserHasVerifiedFactor(stored)).toBe(true);
+    expect(warned).toEqual([]);
+  });
+});
+
 describe("idle timeout (§4.4)", () => {
   const now = Date.UTC(2026, 9, 22, 6, 30);
 
@@ -240,12 +269,12 @@ describe("safeNextPath and destinationFor", () => {
 
 const auth = {
   getClaims: vi.fn(),
+  getSession: vi.fn(),
   signOut: vi.fn(),
-  mfa: { getAuthenticatorAssuranceLevel: vi.fn() },
 };
 vi.mock("@supabase/ssr", () => ({ createServerClient: vi.fn(() => ({ auth })) }));
 
-const { updateSession } = await import("@/lib/supabase/proxy");
+const { isDecodablePath, updateSession } = await import("@/lib/supabase/proxy");
 
 function claims(appMetadata: Record<string, unknown> | null, aal: "aal1" | "aal2" = "aal2") {
   return { data: appMetadata ? { claims: { sub: "u1", aal, app_metadata: appMetadata } } : null, error: null };
@@ -263,7 +292,7 @@ describe("updateSession", () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
     auth.getClaims.mockReset();
     auth.signOut.mockReset().mockResolvedValue({ error: null });
-    auth.mfa.getAuthenticatorAssuranceLevel.mockReset().mockResolvedValue({ data: { currentLevel: "aal1", nextLevel: "aal1" }, error: null });
+    auth.getSession.mockReset().mockResolvedValue({ data: { session: { access_token: "t", user: { id: "u1", factors: [] } } }, error: null });
   });
 
   it("redirects an anonymous visitor to /login with next, marked noindex", async () => {
@@ -272,6 +301,21 @@ describe("updateSession", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("https://crm.twchartered.com/login?next=%2Fclients%3Ftab%3Dbilling");
     expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("answers 400 for a path with a malformed percent escape, before any session work", async () => {
+    const res = await updateSession(request("/clients/%E0%A4%A"));
+    expect(res.status).toBe(400);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(auth.getClaims).not.toHaveBeenCalled();
+    expect((await updateSession(request("/api/pdf/invoice/%ZZ"))).status).toBe(400);
+  });
+
+  it("passes a path with valid escapes through", () => {
+    expect(isDecodablePath("/clients/Sharma%20Traders")).toBe(true);
+    expect(isDecodablePath("/clients/%E0%A4%85")).toBe(true);
+    expect(isDecodablePath("/clients/%E0%A4%A")).toBe(false);
   });
 
   it("leaves the sign-in page indexable", async () => {
@@ -305,6 +349,19 @@ describe("updateSession", () => {
     auth.getClaims.mockResolvedValue(claims({ role: "manager" }, "aal1"));
     const res = await updateSession(request("/work"));
     expect(res.headers.get("location")).toBe("https://crm.twchartered.com/mfa?next=%2Fwork");
+  });
+
+  it("sends an Employee who turned on two-step sign-in to /mfa, from the stored session's factors", async () => {
+    auth.getClaims.mockResolvedValue(claims({ role: "employee" }, "aal1"));
+    expect((await updateSession(request("/my-day"))).headers.get("location")).toBeNull();
+    auth.getSession.mockResolvedValue({ data: { session: { access_token: "t", user: { id: "u1", factors: [{ status: "verified" }] } } }, error: null });
+    expect((await updateSession(request("/my-day"))).headers.get("location")).toBe("https://crm.twchartered.com/mfa?next=%2Fmy-day");
+  });
+
+  it("doesn't read the stored session for a role that always needs the second step", async () => {
+    auth.getClaims.mockResolvedValue(claims({ role: "manager" }, "aal1"));
+    await updateSession(request("/work"));
+    expect(auth.getSession).not.toHaveBeenCalled();
   });
 
   it("sends a temporary password to /set-password", async () => {

@@ -28,6 +28,12 @@ export function buildMode(releaseBuild: boolean, isPackaged: boolean): BuildMode
  * the Node ones (EnableNodeCliInspectArguments off); remote debugging is Chromium's and has no fuse.
  * On a shared office PC this matters: an Employee could start the app with
  * --remote-debugging-port and read every chat that client mode hides.
+ *
+ * The sandbox switches are here because `app.enableSandbox()` doesn't make them harmless. Measured
+ * on Linux with Electron 45: under --no-sandbox every renderer, WhatsApp's included, loses the
+ * namespace layer of the sandbox (it keeps only its seccomp filter), and
+ * --disable-seccomp-filter-sandbox removes the filter. The others switch off the GPU, zygote or
+ * setuid sandboxes, or (--single-process) put the renderers inside the browser process.
  */
 export const FORBIDDEN_SWITCHES: readonly string[] = [
   "remote-debugging-port",
@@ -49,6 +55,13 @@ export const FORBIDDEN_SWITCHES: readonly string[] = [
   "allow-insecure-localhost",
   "host-rules",
   "host-resolver-rules",
+  "no-sandbox",
+  "disable-gpu-sandbox",
+  "disable-namespace-sandbox",
+  "disable-seccomp-filter-sandbox",
+  "disable-setuid-sandbox",
+  "no-zygote-sandbox",
+  "single-process",
 ];
 
 /**

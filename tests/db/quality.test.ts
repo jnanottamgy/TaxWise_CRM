@@ -555,9 +555,9 @@ describe("quality records (§6.8, §7.15.4, §12)", () => {
     await db.asRole(U.P1, async (s) => {
       expect(userMessage(await s.fails("insert into peer_reviews (period_from, period_to, reviewer_name, status) values ('2023-04-01', '2026-03-31', 'CA R', 'completed')"))).toMatch(/certificate number/);
       expect(userMessage(await s.fails("insert into restore_drills (performed_on, outcome) values (current_date, 'failed')"))).toMatch(/restore_drills_issues_when_not_clean|violates/);
-      expect(userMessage(await s.fails("insert into restore_drills (performed_on, outcome) values (current_date + 1, 'passed')"))).toMatch(/future/);
+      expect(userMessage(await s.fails("insert into restore_drills (performed_on, outcome) values (today_ist() + 1, 'passed')"))).toMatch(/future/);
       expect(await s.value<string>("insert into restore_drills (performed_on, outcome, restored_to, duration_minutes) values (current_date, 'passed', 'Staging project', 42) returning performed_by")).toBe(U.P1.id);
-      expect(userMessage(await s.fails("update quality_manual_items set last_reviewed_on = current_date + 1 where id = (select id from quality_manual_items limit 1)"))).toMatch(/future/);
+      expect(userMessage(await s.fails("update quality_manual_items set last_reviewed_on = today_ist() + 1 where id = (select id from quality_manual_items limit 1)"))).toMatch(/future/);
     });
     await db.asRole(U.M1, async (s) => {
       expect(visibleCount(await s.attempt("select 1 from peer_reviews"))).toBeGreaterThan(0);

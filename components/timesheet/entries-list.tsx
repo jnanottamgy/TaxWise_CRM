@@ -10,7 +10,7 @@ import { ConfirmDialog } from "@/components/app/confirm-dialog"
 import { EmptyState } from "@/components/app/empty-state"
 import { formatDate, formatMinutes } from "@/lib/format"
 import { istDateOf, type DateString } from "@/lib/domain/fy"
-import { dayHeading, formatDurationInput, istClock } from "@/lib/schemas/timesheet"
+import { dayHeading, formatDurationInput, istClock, NOT_ON_LIST } from "@/lib/schemas/timesheet"
 import type { EntryRow } from "@/lib/data/timesheet"
 import { deleteTimeEntry } from "@/server/actions/timesheet"
 import { TimeEntryDialog, type EntryInitial } from "@/components/timesheet/time-entry-dialog"
@@ -23,14 +23,15 @@ import { toastResult } from "@/components/tasks/task-ui"
  */
 
 function whatOf(e: EntryRow): { title: string; sub: string | null; href: string | null } {
-  if (e.task_id) return { title: e.task_title ?? "Task", sub: [e.task_number, e.client_name].filter(Boolean).join(" · ") || null, href: `/work/${e.task_id}` }
-  if (e.client_id) return { title: e.client_name ?? "Client", sub: "No task", href: `/clients/${e.client_id}` }
+  // No name: RLS no longer shows the viewer that task or client, so no link to a page that would refuse them.
+  if (e.task_id) return e.task_title ? { title: e.task_title, sub: [e.task_number, e.client_name].filter(Boolean).join(" · ") || null, href: `/work/${e.task_id}` } : { title: NOT_ON_LIST.task, sub: null, href: null }
+  if (e.client_id) return e.client_name ? { title: e.client_name, sub: "No task", href: `/clients/${e.client_id}` } : { title: NOT_ON_LIST.client, sub: "No task", href: null }
   return { title: "Internal work", sub: null, href: null }
 }
 
 function whenOf(e: EntryRow): string {
   if (e.ended_at === null) return `From ${istClock(e.started_at)}`
-  if (e.entry_source === "manual_duration") return "Duration"
+  if (e.entry_source === "manual_duration") return "Duration only"
   return `${istClock(e.started_at)}–${istClock(e.ended_at)}`
 }
 

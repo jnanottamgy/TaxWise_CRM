@@ -27,8 +27,10 @@ export function FileTypeMark({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex flex-none items-end justify-center rounded-md border border-border bg-surface-2 font-medium text-text-muted",
-        size === "lg" ? "h-14 w-11 pb-1.5 text-xs" : "h-10 w-9 pb-1 text-xs leading-none",
+        "inline-flex flex-none justify-center rounded-md border border-border bg-surface-2 font-medium text-text-muted",
+        // lg: a page-shaped tile with the extension at its foot (file cards). md: a compact tile that
+        // leaves air above and below inside a 44px table row.
+        size === "lg" ? "h-14 w-11 items-end pb-1.5 text-xs" : "h-8 w-9 items-center text-xs leading-none",
         className
       )}
     >

@@ -8,6 +8,7 @@ TaxWise Desktop with each client's WhatsApp group beside the CRM. Powered by J-T
 The full product specification is [`docs/SPEC.md`](docs/SPEC.md) (cited as §n throughout the code).
 Engineering conventions: [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md). Design brief: [`docs/DESIGN.md`](docs/DESIGN.md).
 Go-live checklist: [`docs/GO-LIVE.md`](docs/GO-LIVE.md). Desktop ↔ CRM contract: [`docs/DESKTOP-API.md`](docs/DESKTOP-API.md).
+Local QA stack, crawler and the final crawl's results: [`docs/QA.md`](docs/QA.md).
 
 ## Stack
 

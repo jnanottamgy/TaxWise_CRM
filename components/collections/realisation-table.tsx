@@ -40,7 +40,7 @@ export function RealisationTable(props: { rows: RealisationRow[]; total: number;
         width: "22%",
         cell: (r) => (
           <span className="inline-flex min-w-0 flex-col leading-5" title={`${r.clientCode} · ${r.clientName}`}>
-            <span className="truncate">{r.clientName}</span>
+            <span className="max-w-60 truncate">{r.clientName}</span>
             <span className="text-xs text-text-muted">{r.clientCode}</span>
           </span>
         ),
@@ -113,7 +113,9 @@ export function LeakageList({ items, today }: { items: LeakageItem[]; today: str
   if (!items.length) {
     return <EmptyState size="compact" message="Every ended period of a recurring engagement has an invoice. Nothing has slipped." />
   }
-  const shown = items.slice(0, 50)
+  // An overview, not the register: the table above counts the periods per engagement and the Excel
+  // download lists every one.
+  const shown = items.slice(0, 8)
   return (
     <>
       <ul className="flex flex-col divide-y divide-border" aria-label="Periods with no invoice">
@@ -140,7 +142,7 @@ export function LeakageList({ items, today }: { items: LeakageItem[]; today: str
           </li>
         ))}
       </ul>
-      {items.length > shown.length ? <p className="px-4 py-2 text-sm text-text-muted">and {items.length - shown.length} more periods; the Excel download lists them all.</p> : null}
+      {items.length > shown.length ? <p className="px-4 py-2 text-sm text-text-muted">and {items.length - shown.length} more {items.length - shown.length === 1 ? "period" : "periods"}; the table above counts them per engagement and the Excel download lists them all.</p> : null}
     </>
   )
 }

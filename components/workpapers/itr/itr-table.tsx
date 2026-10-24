@@ -23,8 +23,14 @@ function Muted({ children }: { children?: React.ReactNode }) {
  * regime, else the recommended one), who prepared it and when it changed. Server-paged and sorted;
  * a row opens the computation. Below 768px each row is a card: client, year, status, balance.
  */
-export function ItrTable(props: { rows: ItrListRow[]; total: number; page: number; pageSize: number; sort: string | null; dir: SortDir; showClient?: boolean; newHref: string }) {
-  const { rows, total, page, pageSize, sort, dir, showClient = true, newHref } = props
+/**
+ * `emptyYear`: the list is scoped to one FY (the top bar's) and that year has none. Returns filed now
+ * are mostly for the year before, so the empty state says which year it looked at and offers it.
+ */
+export type ItrEmptyYear = { label: string; other: { label: string; href: string } }
+
+export function ItrTable(props: { rows: ItrListRow[]; total: number; page: number; pageSize: number; sort: string | null; dir: SortDir; showClient?: boolean; newHref: string; emptyYear?: ItrEmptyYear | null }) {
+  const { rows, total, page, pageSize, sort, dir, showClient = true, newHref, emptyYear = null } = props
   const columns = React.useMemo<DataTableColumn<ItrListRow>[]>(() => {
     const cols: DataTableColumn<ItrListRow>[] = []
     if (showClient) {
@@ -118,14 +124,25 @@ export function ItrTable(props: { rows: ItrListRow[]; total: number; page: numbe
       empty={
         <EmptyState
           icon={<CalculatorIcon />}
-          message="No ITR computations yet. Start one to compare the old and new regimes for a client."
+          message={
+            emptyYear
+              ? `No ITR computations for ${emptyYear.label}. Start one to compare the old and new regimes for a client.`
+              : "No ITR computations yet. Start one to compare the old and new regimes for a client."
+          }
           action={
-            <Button asChild>
-              <Link href={newHref}>
-                <PlusIcon aria-hidden="true" />
-                New computation
-              </Link>
-            </Button>
+            <span className="flex flex-wrap items-center justify-center gap-2">
+              {emptyYear ? (
+                <Button asChild variant="outline">
+                  <Link href={emptyYear.other.href}>Show {emptyYear.other.label}</Link>
+                </Button>
+              ) : null}
+              <Button asChild>
+                <Link href={newHref}>
+                  <PlusIcon aria-hidden="true" />
+                  New computation
+                </Link>
+              </Button>
+            </span>
           }
         />
       }

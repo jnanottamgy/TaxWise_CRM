@@ -128,13 +128,13 @@ export function LinesTable({
       cols.push({ id: "bucket", header: "Kind", cell: (r) => <StatusChip label={BUCKET_META[r.bucket as ReconBucket]?.label ?? r.bucket} tone={BUCKET_META[r.bucket as ReconBucket]?.tone ?? "neutral"} meaning={BUCKET_META[r.bucket as ReconBucket]?.meaning} /> })
     }
     cols.push(
-      { id: "supplier_name", header: "Supplier", sortable: true, hideable: false, mobile: "primary", width: "24%", cell: (r) => <SupplierCell row={r} />, mobileCell: (r) => r.supplier_name ?? r.supplier_gstin },
+      { id: "supplier_name", header: "Supplier", sortable: true, hideable: false, mobile: "primary", width: "24%", cell: (r) => <SupplierCell row={r} />, mobileCell: (r) => r.supplier_name ?? (r.supplier_gstin || "Import (no GSTIN)") },
       { id: "doc_number", header: "Document", sortable: true, mobile: "secondary", width: "16%", cell: (r) => <DocCell row={r} onOpen={() => setOpen(r)} />, mobileCell: (r) => <DocCell row={r} onOpen={() => setOpen(r)} /> },
       { id: "doc_date", header: "Date", sortable: true, align: "right", hideBelow: "lg", cell: (r) => <DateText date={r.doc_date} /> },
     )
     if (kind === "ims") {
       cols.push(
-        { id: "section", header: "Section", hideBelow: "xl", cell: (r) => <span className="text-text-muted">{r.portal_section && r.portal_section in GSTR2B_SECTION_LABELS ? GSTR2B_SECTION_LABELS[r.portal_section as Gstr2bSection] : EMPTY}</span> },
+        { id: "section", header: "Section", hideBelow: "2xl", cell: (r) => <span className="text-text-muted">{r.portal_section && r.portal_section in GSTR2B_SECTION_LABELS ? GSTR2B_SECTION_LABELS[r.portal_section as Gstr2bSection] : EMPTY}</span> },
         { id: "itc_paise", header: "GST", sortable: true, align: "right", mobile: "trailing", cell: (r) => <PaiseAmount value={r.itc_portal_paise} /> },
         { id: "bucket", header: "In books", cell: (r) => <span className="text-text-muted">{r.bucket === "missing_in_books" ? "No" : r.bucket === "mismatch" ? "Differs" : "Yes"}</span> },
         { id: "ims", header: "IMS action", mobile: "trailing", cell: (r) => <ImsCell row={r} /> },
@@ -143,8 +143,11 @@ export function LinesTable({
           header: "Reason",
           hideBelow: "xl",
           width: "22%",
+          // A sentence: it wraps (DataTable cells stay on one line otherwise, and a line clamp
+          // offers its whole line as its narrowest width), within a readable minimum.
+          className: "whitespace-normal min-w-[12rem]",
           cell: (r) => (
-            <span className="line-clamp-2 text-sm text-text-muted" title={r.ims_reason ?? undefined}>
+            <span className="text-sm text-text-muted" title={r.ims_reason ?? undefined}>
               {r.ims_reason ?? EMPTY}
             </span>
           ),
@@ -182,7 +185,7 @@ export function LinesTable({
         { id: books ? "books_taxable_paise" : "portal_taxable_paise", header: "Taxable", sortable: true, align: "right", hideBelow: "lg", cell: (r) => <PaiseAmount value={r.bucket === "missing_in_2b" ? r.books_taxable_paise : r.portal_taxable_paise} /> },
         { id: "itc_paise", header: "GST", sortable: true, align: "right", mobile: "trailing", cell: (r) => <PaiseAmount value={r.itc_paise} /> },
       )
-      if (kind === "missing_in_books") cols.push({ id: "ims", header: "IMS", hideBelow: "xl", cell: (r) => <ImsCell row={r} /> })
+      if (kind === "missing_in_books") cols.push({ id: "ims", header: "IMS", hideBelow: "2xl", cell: (r) => <ImsCell row={r} /> })
     }
     if (kind !== "matched") cols.push({ id: "resolution", header: "Resolution", sortable: true, mobile: "trailing", width: "18%", cell: (r) => <ResolutionCell row={r} /> })
     return cols
@@ -248,7 +251,7 @@ export function LinesTable({
             updatedAt: deciding.updated_at,
             action: (deciding.ims_action as ImsAction | null) ?? null,
             reason: deciding.ims_reason,
-            label: `${docTypeLabel(deciding.doc_type)} ${deciding.portal_doc_number ?? ""} from ${deciding.supplier_name ?? deciding.supplier_gstin}`,
+            label: `${docTypeLabel(deciding.doc_type)} ${deciding.portal_doc_number ?? ""} from ${deciding.supplier_name ?? (deciding.supplier_gstin || "an import (no GSTIN)")}`,
           }}
           onClose={() => {
             setDeciding(null)

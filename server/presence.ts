@@ -26,7 +26,10 @@ import { log } from "@/lib/log";
  *
  * Concurrency: one open session per person (unique index, 0106). A beat reads the open session,
  * works out the outcome, and writes it only if `last_active_at` is still what it read (compare and
- * swap); a lost race reads again, so two tabs beating at once never double-credit.
+ * swap); a lost race reads again, so two tabs beating at once never double-credit. A beat whose
+ * moment is already covered (the open session's `last_active_at` is at or after it, because a
+ * concurrent beat from another tab just credited it) has nothing left to add and succeeds without
+ * writing, so several tabs of one person beating together all get an answer.
  */
 
 export interface PresenceIdentity {
@@ -40,7 +43,10 @@ export type BeatResult = { outcome: "opened" | "credited" | "reopened"; activeMi
 
 type OpenRow = { id: string; login_at: string; last_active_at: string; active_minutes: number };
 
-const MAX_ATTEMPTS = 4;
+const MAX_ATTEMPTS = 6;
+
+/** A short, jittered pause before re-reading after a lost race, so beats arriving together spread out. */
+const backoff = (attempt: number) => new Promise<void>((resolve) => setTimeout(resolve, 5 * (attempt + 1) + Math.floor(Math.random() * 15)));
 
 /** The presence thresholds in force (§5.12 `presence.thresholds`), falling back to §7.12's values. */
 export async function loadPresenceParams(admin: AdminSupabase, now: Date = new Date()): Promise<PresenceParams> {
@@ -122,6 +128,7 @@ async function writeOpen(admin: AdminSupabase, who: PresenceIdentity, at: Date):
 export async function recordBeat(who: PresenceIdentity, now: Date = new Date(), admin: AdminSupabase = createAdminClient()): Promise<BeatResult> {
   const params = await loadPresenceParams(admin, now);
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) await backoff(attempt);
     const open = await readOpen(admin, who.employeeId);
     const outcome = applyHeartbeat(open ? asOpen(open) : null, now, params);
 
@@ -134,6 +141,10 @@ export async function recordBeat(who: PresenceIdentity, now: Date = new Date(), 
 
     if (outcome.kind === "credit") {
       if (!open) continue;
+      // Already covered: another beat recorded activity at or after this moment. Nothing to credit.
+      if (Date.parse(open.last_active_at) >= now.getTime()) {
+        return { outcome: "credited", activeMinutes: open.active_minutes, lastActiveAt: new Date(open.last_active_at).toISOString() };
+      }
       const { data, error } = await admin
         .from("employee_sessions")
         .update({ last_active_at: outcome.lastActiveAt.toISOString(), active_minutes: outcome.activeMinutes })

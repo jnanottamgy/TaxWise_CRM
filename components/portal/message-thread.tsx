@@ -48,7 +48,9 @@ function Attachment({ a }: { a: PortalMessage["attachments"][number] }) {
 
 function Bubble({ m, firmName }: { m: PortalMessage; firmName: string }) {
   const mine = m.direction === "inbound"
-  const at = m.sentAt ?? m.createdAt
+  // The thread is ordered and paged by created_at (lib/data/portal.ts listThread): show that time,
+  // so a message's day heading can never sit out of order.
+  const at = m.createdAt
   return (
     <li className={cn("flex", mine ? "justify-end" : "justify-start")}>
       <div className={cn("flex max-w-[min(36rem,88%)] flex-col gap-1", mine ? "items-end" : "items-start")}>
@@ -91,7 +93,7 @@ function groupByDay(messages: PortalMessage[]): Array<{ day: string; items: Port
   for (const m of messages) {
     let day: string
     try {
-      day = istDateOf(m.sentAt ?? m.createdAt)
+      day = istDateOf(m.createdAt)
     } catch {
       day = ""
     }

@@ -70,6 +70,24 @@ function useGuardedOpen(open: boolean, onOpenChange: (open: boolean) => void, di
   }
 }
 
+/**
+ * Where focus lands when a form dialog or sheet opens: its first field on a desktop, so typing can
+ * start at once; the panel itself on a touch screen, so the keyboard doesn't jump up over the form.
+ * Never the close button, whose focus ring would be the first thing anyone sees.
+ */
+function focusFirstField(e: Event) {
+  const panel = e.currentTarget as HTMLElement | null
+  if (!panel) return
+  e.preventDefault()
+  const coarse = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches
+  const field = coarse
+    ? null
+    : panel.querySelector<HTMLElement>(
+        '[data-slot$="-body"] :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, select, [role=combobox]):not(:disabled):not([aria-disabled=true])'
+      )
+  ;(field ?? panel).focus({ preventScroll: true })
+}
+
 function FrameInner({
   title,
   description,
@@ -176,6 +194,7 @@ export function FormDialog({
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/45 transition-opacity duration-200 ease-out starting:opacity-0" />
         <DialogPrimitive.Content
           data-slot="form-dialog"
+          onOpenAutoFocus={focusFirstField}
           className={cn(
             "fixed z-50 flex flex-col overflow-hidden border border-border bg-surface text-text shadow-2 outline-none",
             "transition-[opacity,translate,scale] duration-200 ease-out starting:opacity-0",
@@ -229,6 +248,7 @@ export function FormSheet({
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/45 transition-opacity duration-200 ease-out starting:opacity-0" />
         <DialogPrimitive.Content
           data-slot="form-sheet"
+          onOpenAutoFocus={focusFirstField}
           className={cn(
             "fixed inset-y-0 z-50 flex h-dvh w-full flex-col overflow-hidden border-border bg-surface text-text shadow-2 outline-none",
             "transition-[translate,opacity] duration-200 ease-out",

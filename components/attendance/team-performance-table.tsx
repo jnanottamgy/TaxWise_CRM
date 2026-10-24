@@ -24,7 +24,7 @@ export function TeamPerformanceTable({ rows, performance, month, fy }: { rows: T
         </caption>
         <thead>
           <tr>
-            <th scope="col" className={cn(head, "left-0 z-20 pl-4 text-left")} style={{ width: "24%" }}>
+            <th scope="col" className={cn(head, "left-0 z-20 pl-4 text-left")} style={{ width: "20%" }}>
               Person
             </th>
             <th scope="col" className={cn(head, "text-right")}>Present</th>
@@ -50,7 +50,7 @@ export function TeamPerformanceTable({ rows, performance, month, fy }: { rows: T
                     <Link href={`/people/${r.employee_id}?tab=performance`} className="truncate font-medium text-text hover:underline">
                       {r.full_name}
                     </Link>
-                    <RoleBadge role={r.role} className="max-lg:hidden" />
+                    <RoleBadge role={r.role} className="max-2xl:hidden" />
                   </span>
                 </td>
                 <td className={num}>{s.present}</td>
@@ -66,7 +66,8 @@ export function TeamPerformanceTable({ rows, performance, month, fy }: { rows: T
                     <span className="text-text-muted">{EMPTY}</span>
                   )}
                 </td>
-                <td className={num}>{p ? (p.averageDaysLate ?? 0) : EMPTY}</td>
+                {/* Nothing filed yet is "no figure", not "0 days late" (the on-time % beside it is a dash too). */}
+                <td className={num}>{p && p.filed > 0 ? (p.averageDaysLate ?? 0) : <span className="text-text-muted">{EMPTY}</span>}</td>
                 <td className={num}>
                   {p && p.sendBackPercent !== null ? (
                     <span title={`${p.sentBack} of ${p.submittedForReview} submissions sent back`}>{formatPercent(p.sendBackPercent, { decimals: 1 })}</span>
@@ -76,8 +77,10 @@ export function TeamPerformanceTable({ rows, performance, month, fy }: { rows: T
                 </td>
                 <td className={cn(num, "pr-4")}>
                   {p ? (
-                    <span title={`${formatMinutes(p.hoursMinutes)} of ${formatMinutes(p.targetMinutes)}`}>
-                      {formatMinutes(p.hoursMinutes)} <span className="text-text-muted">/ {formatMinutes(p.targetMinutes)}</span>
+                    // Stacked, so the year's target doesn't widen the table past a 1366px screen.
+                    <span title={`${formatMinutes(p.hoursMinutes)} of ${formatMinutes(p.targetMinutes)}`} className="flex flex-col items-end leading-4">
+                      <span>{formatMinutes(p.hoursMinutes)}</span>
+                      <span className="text-xs text-text-muted">of {formatMinutes(p.targetMinutes)}</span>
                     </span>
                   ) : (
                     EMPTY

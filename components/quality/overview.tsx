@@ -148,13 +148,17 @@ export function QualityOverviewView({ o, fy }: { o: QualityOverview; fy: string 
             const t = toneClasses(a.tone)
             return (
               <li key={a.tab}>
+                {/* Phones: the area's name, then its state on the full width under it (side by side, the
+                    sentence was squeezed into a narrow column of four or five lines). */}
                 <Link
                   href={`/quality?tab=${a.tab}`}
                   className="flex min-h-11 items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring md:px-5"
                 >
-                  <span aria-hidden="true" className={cn("size-2 flex-none rounded-full", t.dot)} />
-                  <span className="w-36 flex-none text-sm font-medium text-text md:w-44">{a.label}</span>
-                  <span className={cn("min-w-0 flex-1 text-sm", a.tone === "danger" || a.tone === "warning" ? t.text : "text-text-muted")}>{a.state}</span>
+                  <span aria-hidden="true" className={cn("size-2 flex-none self-start rounded-full max-sm:mt-1.5 sm:self-center", t.dot)} />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+                    <span className="text-sm font-medium text-text sm:w-36 sm:flex-none md:w-44">{a.label}</span>
+                    <span className={cn("min-w-0 flex-1 text-sm", a.tone === "danger" || a.tone === "warning" ? t.text : "text-text-muted")}>{a.state}</span>
+                  </span>
                   <span className="hidden flex-none text-xs text-text-muted md:inline">{a.group}</span>
                   <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
                 </Link>

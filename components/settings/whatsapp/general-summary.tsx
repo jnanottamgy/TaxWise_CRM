@@ -32,7 +32,7 @@ export function WhatsAppGeneralSummary({ row }: { row: WhatsAppSettingsRow }) {
           ]}
         />
       </SettingsCard>
-      <SettingsCard id="house-rules" title="House rules" description="What everyone at the firm follows on WhatsApp (§7.25.10). A Partner keeps them up to date." columns={1}>
+      <SettingsCard id="house-rules" title="House rules" description="What everyone at the firm follows on WhatsApp. A Partner keeps them up to date." columns={1}>
         {row.whatsapp_house_rules ? <HouseRulesText text={row.whatsapp_house_rules} /> : <p className="text-sm text-text-muted">No house rules are written down yet.</p>}
       </SettingsCard>
     </div>

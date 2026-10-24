@@ -39,21 +39,29 @@ export function ClientPreviousAuditors({ client, rows, today }: { client: { id: 
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
           {rows.map((r) => (
-            <li key={r.id}>
-              <button type="button" onClick={() => setOpen(r)} className="flex w-full cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-left hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-base text-text">{r.previous_auditor_name}</span>
-                  <span className="block text-xs text-text-muted">
-                    {auditTypeLabel(r.engagement_type)}
-                    {r.sent_via ? ` · ${SENT_VIA_LABELS[r.sent_via as SentVia] ?? r.sent_via}` : ""}
-                  </span>
+            // The row opens the letter through its name button, whose hit area covers the whole row
+            // (after:inset-0). The status chips are buttons of their own (hover/tap explains them), so
+            // they sit above that area instead of inside it: a button inside a button is invalid HTML
+            // and broke hydration of the whole tab.
+            <li key={r.id} className="relative flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 hover:bg-surface-2">
+              <span className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setOpen(r)}
+                  className="block max-w-full cursor-pointer truncate text-left text-base text-text outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring"
+                >
+                  {r.previous_auditor_name}
+                </button>
+                <span className="block text-xs text-text-muted">
+                  {auditTypeLabel(r.engagement_type)}
+                  {r.sent_via ? ` · ${SENT_VIA_LABELS[r.sent_via as SentVia] ?? r.sent_via}` : ""}
                 </span>
-                {proofChip(Boolean(r.delivery_proof_document_id))}
-                <span className="text-sm">{replyCell(r)}</span>
-                <span className="num w-28 text-right text-sm text-text-muted">
-                  <DateText date={r.letter_sent_on} />
-                </span>
-              </button>
+              </span>
+              <span className="relative z-10 inline-flex">{proofChip(Boolean(r.delivery_proof_document_id))}</span>
+              <span className="relative z-10 inline-flex text-sm">{replyCell(r)}</span>
+              <span className="num w-28 text-right text-sm text-text-muted">
+                <DateText date={r.letter_sent_on} />
+              </span>
             </li>
           ))}
         </ul>

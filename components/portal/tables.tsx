@@ -148,7 +148,9 @@ export function FilingsTable(p: Paged<PortalDeadline> & { today: string }) {
         header: "Return",
         sortable: true,
         hideable: false,
-        width: "34%",
+        width: "32%",
+        // The explanation truncates: cap the column so it gives way to the acknowledgement column.
+        className: "max-w-[18rem]",
         mobile: "primary",
         cell: (d) => {
           const e = explainDeadline({ formCode: d.formCode, type: d.type, filingPeriod: d.filingPeriod, title: d.title })
@@ -176,22 +178,49 @@ export function FilingsTable(p: Paged<PortalDeadline> & { today: string }) {
       },
       { id: "due_date", header: "Due", sortable: true, align: "right", mobile: "secondary", cell: (d) => <DateText date={d.dueDate} withRelative={d.status === "pending"} stacked today={today} />, mobileCell: (d) => <span>due <DateText date={d.dueDate} /></span> },
       {
+        // The filing date sits under the status: seven columns don't fit the portal's 976px frame,
+        // and a horizontal scroll hid the acknowledgement numbers the page exists for.
         id: "status",
         header: "Status",
         mobile: "trailing",
         cell: (d) => {
           const s = deadlineStatus(d.progress, d.isOverdue)
+          return (
+            <span className="inline-flex flex-col items-start gap-0.5">
+              <StatusChip label={s.label} tone={s.tone} meaning={s.meaning} />
+              {d.filedOn ? (
+                <span className="text-sm text-text-muted">
+                  on <DateText date={d.filedOn} />
+                </span>
+              ) : null}
+            </span>
+          )
+        },
+        mobileCell: (d) => {
+          const s = deadlineStatus(d.progress, d.isOverdue)
           return <StatusChip label={s.label} tone={s.tone} meaning={s.meaning} />
         },
       },
-      { id: "filed_on", header: "Filed on", sortable: true, align: "right", hideBelow: "lg", cell: (d) => <DateText date={d.filedOn} /> },
-      { id: "ack", header: "Acknowledgement no.", hideBelow: "lg", cell: (d) => <AckNumber value={d.acknowledgementNo} /> },
       {
-        id: "download",
-        header: "Download",
-        align: "right",
+        id: "ack",
+        header: "Acknowledgement",
         hideable: false,
-        cell: (d) => <AckDownload documentId={d.acknowledgementDocumentId} label={`${d.formCode ?? d.title} ${d.filingPeriod ?? ""}`.trim()} />,
+        cell: (d) => {
+          const label = `${d.formCode ?? d.title} ${d.filingPeriod ?? ""}`.trim()
+          if (!d.acknowledgementNo && !d.acknowledgementDocumentId) return <span className="text-text-muted">—</span>
+          return (
+            <span className="inline-flex max-w-full items-center gap-1">
+              {d.acknowledgementNo ? <AckNumber value={d.acknowledgementNo} /> : null}
+              {d.acknowledgementDocumentId ? (
+                <Button asChild variant="ghost" size="icon-sm">
+                  <a href={`/api/files/documents/${d.acknowledgementDocumentId}`} aria-label={`Download the acknowledgement for ${label}`} title="Download the acknowledgement">
+                    <DownloadIcon aria-hidden="true" />
+                  </a>
+                </Button>
+              ) : null}
+            </span>
+          )
+        },
       },
     ],
     [today]

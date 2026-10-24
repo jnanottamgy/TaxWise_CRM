@@ -67,10 +67,12 @@ export function RegistrationsTable(props: {
         sortable: !compact,
         hideable: false,
         mobile: showClient ? undefined : "primary",
+        // Long names ("Professional tax enrolment certificate") wrap rather than widen the table.
+        className: "whitespace-normal min-w-[8rem]",
         cell: (r) => <span className="font-medium text-text">{registrationTypeLabel(r.registration_type)}</span>,
       },
       { id: "registration_number", header: "Number", mobile: "secondary", cell: (r) => <MonoId value={r.registration_number} copy label={`${registrationTypeLabel(r.registration_type)} number`} /> },
-      { id: "jurisdiction", header: "Jurisdiction", hideBelow: "xl", cell: (r) => (r.jurisdiction ? <span className="text-text-muted">{r.jurisdiction}</span> : <span className="text-text-muted">{EMPTY}</span>) },
+      { id: "jurisdiction", header: "Jurisdiction", hideBelow: "2xl", cell: (r) => (r.jurisdiction ? <span className="text-text-muted">{r.jurisdiction}</span> : <span className="text-text-muted">{EMPTY}</span>) },
       { id: "issue_date", header: "Issued", align: "right", hideBelow: "2xl", cell: (r) => <DateText date={r.issue_date} /> },
       {
         id: "expiry_date",

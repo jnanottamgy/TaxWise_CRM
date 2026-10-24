@@ -136,7 +136,8 @@ describe("the audit engagement page", () => {
   it("tracks all seven stages with their Standards", () => {
     const out = html(h(StageTracker, { current: "planning", viewing: "planning", progress: { planning: { done: 0, total: 3 } }, hrefFor: (s: string) => `/audits/${ID}?stage=${s}` }));
     for (const label of ["1. Acceptance", "2. Planning", "3. Risk assessment", "4. Execution", "5. Completion", "6. Reporting", "7. Archive"]) expect(out).toContain(label);
-    expect(out).toContain("SA 300 · SA 320");
+    // Each Standard is its own unbreakable span ("SA 300"), so read the text without the markup.
+    expect(out.replace(/<[^>]+>/g, "")).toContain("SA 300 · SA 320");
     expect(out).toContain('aria-current="step"');
   });
 });
