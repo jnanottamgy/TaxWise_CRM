@@ -30,6 +30,8 @@ export const PEOPLE_FILTERS = {
   role: STAFF_ROLE_VALUES as readonly string[],
   status: ["active", "disabled", "no_login"] as readonly string[],
   department: null,
+  /** "Online now" (the dashboard's Team online now): active within the presence idle window, login not disabled. */
+  presence: ["online"] as readonly string[],
 };
 
 export interface PersonListRow {
@@ -58,7 +60,7 @@ function orSafe(q: string): string {
 
 export async function listPeople(
   supabase: ServerSupabase,
-  t: TableParams<PeopleSort, "role" | "status" | "department">,
+  t: TableParams<PeopleSort, "role" | "status" | "department" | "presence">,
   today: DateString,
   now: Date = new Date(),
 ): Promise<{ rows: PersonListRow[]; total: number }> {
@@ -76,6 +78,11 @@ export async function listPeople(
   if (t.filters.role) q = q.in("role", t.filters.role as StaffRole[]);
   if (t.filters.status) q = q.in("login_status", t.filters.status);
   if (t.filters.department) q = q.in("department", t.filters.department);
+  if (t.filters.presence?.includes("online")) {
+    // presenceStatus(): online while the last activity is under idleAfterMinutes old.
+    const since = new Date(now.getTime() - PRESENCE_DEFAULTS.idleAfterMinutes * 60_000).toISOString();
+    q = q.gt("open_session_active_at", since).neq("login_status", "disabled");
+  }
   const sort = t.sort ?? "full_name";
   q = q.order(sort, { ascending: t.dir === "asc", nullsFirst: false });
   if (sort !== "full_name") q = q.order("full_name", { ascending: true });

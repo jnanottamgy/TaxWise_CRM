@@ -33,6 +33,18 @@ async function subjectOf(ctx: ActionContext, employeeId: string): Promise<{ id: 
   return { id: data.id as string, full_name: data.full_name ?? "", role: (data.role ?? "employee") as StaffRole, profile_id: data.profile_id };
 }
 
+/**
+ * Who is told about a leave request or its cancellation (§9 "Leave requested / decided: Approver"):
+ * the Managers for an Employee, the Partners for a Manager or Partner, and the Partners for an
+ * Employee too when the firm has no active Manager (a Partner can decide anyone's leave, 0106).
+ */
+async function approverRoles(ctx: ActionContext, employeeId: string, subjectRole: string | null): Promise<Array<"partner" | "manager">> {
+  if (subjectRole && subjectRole !== "employee") return ["partner"];
+  const { data, error } = await ctx.supabase.rpc("leave_approver_role", { p_employee_id: employeeId });
+  if (error) throw error;
+  return data === "manager" ? ["manager"] : ["partner"];
+}
+
 function overlapFor(name: string | null, leave: Parameters<typeof overlapMessage>[0]): string {
   const own = overlapMessage(leave);
   return name ? own.replace("your approved leave", `${name}'s approved leave`).replace("your leave request", `${name}'s leave request`) : own;
@@ -72,9 +84,9 @@ export const requestLeave = defineAction(
 
     await ctx.audit({ event: "data_create", resourceType: "employee_leave", resourceId: id, details: { employee_id: forId, type: input.type, start: input.start_date, end: input.end_date, half_day: input.half_day } });
     const range = formatLeaveRange(input.start_date, input.end_date, input.half_day);
-    ctx.after("Tell the approvers", () =>
+    ctx.after("Tell the approvers", async () =>
       notify({
-        to: { roles: subject.role === "employee" ? ["manager"] : ["partner"] },
+        to: { roles: await approverRoles(ctx, forId, subject.role) },
         type: "leave_requested",
         title: `${subject.full_name} asks for ${LEAVE_TYPE_LABELS[input.type].toLowerCase()} leave ${range}`,
         body: input.reason ? `Reason: ${input.reason}` : "No reason given.",
@@ -142,9 +154,9 @@ export const cancelLeave = defineAction(
         "The leave is cancelled, but a cover set up for it is still in force. End it from the person's page.",
       );
       const range = formatLeaveRange(leave.start_date, leave.end_date, leave.half_day);
-      ctx.after("Tell the approvers", () =>
+      ctx.after("Tell the approvers", async () =>
         notify({
-          to: { roles: leave.employee_role === "employee" ? ["manager"] : ["partner"] },
+          to: { roles: await approverRoles(ctx, leave.employee_id, leave.employee_role) },
           type: "leave_decided",
           title: `${leave.employee_name}'s approved leave ${range} is cancelled`,
           body: `Cancelled by ${ctx.user.fullName}. Attendance for the days still ahead is back to normal.`,

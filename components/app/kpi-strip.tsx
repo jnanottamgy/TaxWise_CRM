@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { WithinInteractive } from "@/components/app/full-value-hint"
 
 export interface KpiItem {
   label: string
@@ -75,7 +76,7 @@ export function KpiStrip({
               "block transition-colors duration-150 hover:bg-surface-2/60 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
             )}
           >
-            {inner}
+            <WithinInteractive>{inner}</WithinInteractive>
           </Link>
         ) : (
           <div key={`${item.label}-${i}`} className={cell}>

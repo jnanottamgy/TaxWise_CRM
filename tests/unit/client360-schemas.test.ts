@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 import { CreateContactSchema, UpdateContactSchema, contactSubline } from "@/lib/schemas/contacts";
 import { AddServiceSchema, RepriceServiceSchema, UpdateServiceSchema, billingCycle, perCycleLabel, serviceName } from "@/lib/schemas/client-services";
 import { SaveKycSchema, VerifyKycSchema, defaultNextReview, kycCategoryFor, principalPersonsLabel, readEngagementTypes, readPrincipalPersons, toStoredPersons } from "@/lib/schemas/client-kyc";
-import { MasterDataSchema, changedMasterFields, describeChanges, masterDataDefaults, masterDataToRow, masterDataWarnings } from "@/components/client360/logic/master-data";
+import {
+  CALENDAR_FIELDS,
+  MasterDataSchema,
+  changedMasterFields,
+  describeChanges,
+  incomeNatureChoices,
+  incomeNatureError,
+  incomeNatureLabel,
+  masterDataDefaults,
+  masterDataToRow,
+  masterDataWarnings,
+} from "@/components/client360/logic/master-data";
 import { ClientGroupSchema, ClientTeamSchema, TaxAuditDecisionSchema } from "@/components/client360/logic/profile-schemas";
 
 const CLIENT = "4b0b8f0e-7c51-4a3e-9d64-1d3f0f6b2a11";
@@ -196,6 +207,29 @@ describe("master data", () => {
     expect(errorsOf(MasterDataSchema.safeParse({ ...base, gstin: "29AAXFT1811B1Z4" })).gstin).toBeTruthy();
     expect(errorsOf(MasterDataSchema.safeParse({ ...base, clientCode: "tw c 42" })).clientCode).toMatch(/2–20 letters/);
     expect(errorsOf(MasterDataSchema.safeParse({ ...base, entityType: "other", entityTypeOther: "" })).entityTypeOther).toBe("Specify the entity type.");
+  });
+
+  it("edits how the income is earned (§6.6), keeping presumptive schemes to the entities that may use them", () => {
+    const base = masterDataDefaults({ ...stored, income_nature: "presumptive_44ad" });
+    expect(base.incomeNature).toBe("presumptive_44ad");
+    const r = MasterDataSchema.safeParse(base);
+    expect(r.success && masterDataToRow(r.data).income_nature).toBe("presumptive_44ad");
+    expect(r.success && changedMasterFields({ ...stored, income_nature: "business" }, masterDataToRow(r.data))).toContain("income_nature");
+    expect(CALENDAR_FIELDS).toContain("income_nature");
+    expect(describeChanges(["income_nature"])).toBe("how the income is earned");
+    // Not recorded stays null; an unknown stored value reads as not recorded.
+    const blank = MasterDataSchema.safeParse({ ...masterDataDefaults({ ...stored, income_nature: "farming" }) });
+    expect(blank.success && blank.data.incomeNature).toBeNull();
+    // s.44AD: individuals, HUFs and firms; s.44ADA: individuals and firms; never companies or LLPs.
+    expect(errorsOf(MasterDataSchema.safeParse({ ...base, entityType: "pvt_ltd" })).incomeNature).toMatch(/s\.44AD is for individuals, HUFs and partnership firms/);
+    expect(errorsOf(MasterDataSchema.safeParse({ ...base, entityType: "huf", incomeNature: "presumptive_44ada" })).incomeNature).toMatch(/s\.44ADA/);
+    expect(incomeNatureError("llp", "presumptive_44ad")).toMatch(/not LLPs/);
+    expect(incomeNatureError("pvt_ltd", "business")).toBeNull();
+    expect(incomeNatureChoices("pvt_ltd")).toEqual(["business", "profession"]);
+    expect(incomeNatureChoices("huf")).toEqual(["business", "profession", "presumptive_44ad"]);
+    expect(incomeNatureChoices("individual")).toEqual(["business", "profession", "presumptive_44ad", "presumptive_44ada"]);
+    expect(incomeNatureLabel("presumptive_44ada")).toBe("Presumptive profession (s.44ADA)");
+    expect(incomeNatureLabel(null)).toBeNull();
   });
 
   it("drops the GSTIN of an unregistered client and warns (never blocks) on a PAN holder mismatch", () => {

@@ -116,6 +116,39 @@ describe("generate_retainer_drafts (§7.9.6)", () => {
     });
   });
 
+  it("keeps the anchor day across runs: a run that stops at 28 Feb still bills 31 Mar (0220)", async () => {
+    await db.asSuper(async (s) => {
+      const id = F.service("B");
+      await s.exec("update client_services set next_billing_date = '2026-01-31', frequency = 'monthly', billing_frequency = 'monthly' where id = $1", [id]);
+      expect(await s.value("select billing_anchor_day::int from client_services where id = $1", [id])).toBe(31);
+      const state = () => s.one<{ next: string; anchor: number }>("select next_billing_date::text as next, billing_anchor_day::int as anchor from client_services where id = $1", [id]);
+
+      await runRetainer(s, "2026-01-31");
+      expect(await state()).toEqual({ next: "2026-02-28", anchor: 31 });
+      await runRetainer(s, "2026-02-28");
+      expect(await state()).toEqual({ next: "2026-03-31", anchor: 31 });
+      await runRetainer(s, "2026-04-30");
+      expect(await state()).toEqual({ next: "2026-05-31", anchor: 31 });
+      const dates = await s.rows<{ billing_date: string }>("select billing_date::text from retainer_drafts where client_service_id = $1 order by billing_date", [id]);
+      expect(dates.map((d) => d.billing_date)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
+
+      // Quarterly from 30 Nov: 28 Feb is stored, and 30 May follows.
+      expect(await s.value("select public.retainer_anchored_date('2027-02-28', 3, 30)::text")).toBe("2027-05-30");
+      expect(await s.value("select public.retainer_anchored_date('2024-01-31', 1, 31)::text")).toBe("2024-02-29");
+      expect(await s.value("select public.retainer_anchored_date('2026-02-28', 0, 31)::text")).toBe("2026-02-28");
+
+      // A Partner moving the date moves the anchor with it; a write that leaves the date alone keeps it.
+      await s.as(U.P1);
+      await s.exec("update client_services set next_billing_date = '2026-06-15' where id = $1", [id]);
+      await s.as("super");
+      expect(await state()).toEqual({ next: "2026-06-15", anchor: 15 });
+      await s.as(U.P1);
+      await s.exec("update client_services set billing_anchor_day = 3, sac_code = '998231' where id = $1", [id]);
+      await s.as("super");
+      expect(await state()).toEqual({ next: "2026-06-15", anchor: 15 });
+    });
+  });
+
   it("holds a draft over the invoice approval limit for a Partner, and a Manager can't issue it", async () => {
     await db.asSuper(async (s) => {
       await s.exec("update firm_settings set invoice_approval_limit = 5000, gstin = '29AAXFT1811B1Z3', address = 'MG Road, Bengaluru' where id = 1");

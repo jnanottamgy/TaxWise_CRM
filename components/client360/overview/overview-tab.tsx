@@ -226,12 +226,16 @@ export async function OverviewTab({ data, user, supabase }: { data: Client360; u
           </SectionCard>
 
           <TaxAuditCard
+            // A saved change to how the income is earned starts the check afresh.
+            key={client.income_nature ?? "unrecorded"}
             clientId={client.id}
             updatedAt={client.updated_at}
             canDecide={user.role === "partner"}
             turnoverPaise={turnoverPaise}
             turnoverFy={client.turnover_fy}
             entityType={client.entity_type}
+            incomeNature={client.income_nature}
+            canEditNature={user.role === "partner" || user.role === "manager"}
             params={scaleParams.taxAudit}
             decision={client.tax_audit_applicable}
             note={client.tax_audit_note}

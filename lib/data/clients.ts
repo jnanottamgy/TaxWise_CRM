@@ -10,6 +10,7 @@ import type { StatutoryParameterRow } from "@/lib/domain/gst";
 import { resolveScaleParams, type TaxAuditParams } from "@/lib/domain/scale";
 import { formatSeriesNumber } from "@/lib/domain/numbering";
 import {
+  AT_RISK_OVERDUE_TASKS,
   EXPORT_MAX_ROWS,
   type ClientExportRow,
   type ClientListFilter,
@@ -207,6 +208,7 @@ function applyFilters<Q extends FilterBuilder>(query: Q, t: Pick<TableParams<str
   for (const flag of f.flag ?? []) {
     if (flag === "overdue_tasks") q = q.gt("overdue_tasks", 0) as Q;
     else if (flag === "overdue_invoices" && opts.seesMoney) q = q.eq("has_overdue_invoices", true) as Q;
+    else if (flag === "at_risk" && opts.seesMoney) q = q.or(`overdue_tasks.gte.${AT_RISK_OVERDUE_TASKS},has_aged_receivables.is.true`) as Q;
     else if (flag === "unreachable") q = q.eq("unreachable", true) as Q;
     else if (flag === "covered_now") q = q.eq("covered_now", true) as Q;
   }

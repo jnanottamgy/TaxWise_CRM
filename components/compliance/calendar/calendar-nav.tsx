@@ -21,17 +21,17 @@ export function CalendarNav({ state, sp, today }: { state: CalendarState; sp: Re
         {state.day ? null : (
           <>
             <Button asChild variant="outline" size="icon-sm" aria-label={`Previous ${step}`}>
-              <Link href={calendarHref(sp, { date: dateParam(state.view, prev), day: null, label: null })} scroll={false}>
+              <Link href={calendarHref(sp, { date: dateParam(state.view, prev), day: null, label: null, to: null, pending: null })} scroll={false}>
                 <ChevronLeftIcon aria-hidden="true" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="icon-sm" aria-label={`Next ${step}`}>
-              <Link href={calendarHref(sp, { date: dateParam(state.view, next), day: null, label: null })} scroll={false}>
+              <Link href={calendarHref(sp, { date: dateParam(state.view, next), day: null, label: null, to: null, pending: null })} scroll={false}>
                 <ChevronRightIcon aria-hidden="true" />
               </Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
-              <Link href={calendarHref(sp, { date: dateParam(state.view, today), day: null, label: null })} scroll={false}>
+              <Link href={calendarHref(sp, { date: dateParam(state.view, today), day: null, label: null, to: null, pending: null })} scroll={false}>
                 Today
               </Link>
             </Button>
@@ -40,10 +40,18 @@ export function CalendarNav({ state, sp, today }: { state: CalendarState; sp: Re
         <h2 className="ml-1 truncate text-md font-semibold text-text" aria-live="polite">
           {calendarTitle(state)}
           {state.label ? <span className="font-normal text-text-muted"> · {state.label}</span> : null}
+          {state.pending ? <span className="font-normal text-text-muted"> · Not yet filed</span> : null}
         </h2>
+        {state.pending ? (
+          <Button asChild variant="ghost" size="sm">
+            <Link href={calendarHref(sp, { pending: null })} scroll={false}>
+              Show filed ones too
+            </Link>
+          </Button>
+        ) : null}
         {state.day ? (
           <Button asChild variant="ghost" size="sm">
-            <Link href={calendarHref(sp, { view: "month", date: state.day.slice(0, 7), day: null, label: null })} scroll={false}>
+            <Link href={calendarHref(sp, { view: "month", date: state.day.slice(0, 7), day: null, label: null, to: null, pending: null })} scroll={false}>
               Back to the month
             </Link>
           </Button>
@@ -56,7 +64,7 @@ export function CalendarNav({ state, sp, today }: { state: CalendarState; sp: Re
             return (
               <li key={v}>
                 <Link
-                  href={calendarHref(sp, { view: v, date: dateParam(v, state.day ?? state.anchor), day: null, label: null })}
+                  href={calendarHref(sp, { view: v, date: dateParam(v, state.day ?? state.anchor), day: null, label: null, to: null, pending: null })}
                   scroll={false}
                   aria-current={on ? "page" : undefined}
                   className={cn(

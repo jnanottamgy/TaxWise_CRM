@@ -53,8 +53,9 @@ import {
   titleFromFileName,
   type FileKind,
 } from "@/lib/domain/files"
-import { CATEGORY_OPTIONS, fyChoices, type DuplicateMatch, type FinishedUpload, type StaffUploadSource, type UploadPurpose } from "@/lib/schemas/documents"
+import { categoryOptionsFor, fyChoices, type DuplicateMatch, type FinishedUpload, type StaffUploadSource, type UploadPurpose } from "@/lib/schemas/documents"
 import { confirmUpload, discardUpload, findDuplicates, requestUploadSlots } from "@/server/actions/documents"
+import { useOptionalShell } from "@/components/shell/shell-context"
 import { FileTypeMark } from "@/components/documents/file-type-mark"
 import { hashFile, putFile, readHead, UploadTransportError } from "@/components/documents/upload-transport"
 
@@ -565,6 +566,7 @@ function RowFields({
 }) {
   const id = (f: string) => `${row.key}-${f}`
   const [more, setMore] = React.useState(false)
+  const categoryOptions = categoryOptionsFor(useOptionalShell()?.user.role)
   const err = row.fieldErrors
   const editable = row.status === "ready" || row.status === "failed"
   if (fields === "none" || !editable) return null
@@ -606,7 +608,7 @@ function RowFields({
       <div>
         <FieldLabel htmlFor={id("category")}>Category</FieldLabel>
         <NativeSelect id={id("category")} className="w-full" value={row.meta.category} onChange={(e) => onChange({ category: e.target.value as DocumentCategory })}>
-          {CATEGORY_OPTIONS.map((c) => (
+          {categoryOptions.map((c) => (
             <NativeSelectOption key={c.value} value={c.value}>
               {c.label}
             </NativeSelectOption>
@@ -755,6 +757,7 @@ export function UploadFileList({
 /** "Set for all files": category and FY in one go, for a batch from the same return or year. */
 export function ApplyToAll({ upload, fyOptions }: { upload: DocumentUpload; fyOptions?: string[] }) {
   const fys = fyOptions ?? fyChoices()
+  const categoryOptions = categoryOptionsFor(useOptionalShell()?.user.role)
   const editable = upload.rows.filter((r) => r.status === "ready" || r.status === "failed").length
   if (editable < 2) return null
   return (
@@ -764,7 +767,7 @@ export function ApplyToAll({ upload, fyOptions }: { upload: DocumentUpload; fyOp
         Category
         <NativeSelect size="sm" defaultValue="" onChange={(e) => e.target.value && upload.applyToAll({ category: e.target.value as DocumentCategory })}>
           <NativeSelectOption value="">Choose</NativeSelectOption>
-          {CATEGORY_OPTIONS.map((c) => (
+          {categoryOptions.map((c) => (
             <NativeSelectOption key={c.value} value={c.value}>
               {c.label}
             </NativeSelectOption>

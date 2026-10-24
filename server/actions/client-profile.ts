@@ -6,6 +6,7 @@ import { STAFF_ROLES } from "@/lib/auth/roles";
 import { TEAM_ROLE_LABELS, type TeamRole } from "@/lib/domain/enums";
 import { getEmployeeNames } from "@/lib/data/people";
 import {
+  CALENDAR_FIELDS,
   MasterDataSchema,
   changedMasterFields,
   describeChanges,
@@ -23,12 +24,16 @@ import {
 import { describeTeamChange } from "@/components/client360/logic/team";
 import { addTimelineEvent } from "@/server/timeline";
 import { logActivity, logEmployeeActivity } from "@/server/activity";
+import { generateForClient } from "@/server/compliance/generate";
+import { todayIST } from "@/lib/domain/fy";
 
 /**
  * Client 360 → Profile & contacts (§7.3.3 tab 2) and the Overview's tax-audit decision (§6.6):
  *
- *   updateMasterData     Partner/Manager: the wizard's step 1 fields plus priority, with the same
- *                        validators, optimistic concurrency (§13) and the PAN holder-type warning.
+ *   updateMasterData     Partner/Manager: the wizard's step 1 fields plus priority and how the
+ *                        income is earned (presumptive s.44AD / s.44ADA, §6.6), with the same
+ *                        validators, optimistic concurrency (§13) and the PAN holder-type warning;
+ *                        a change to a calendar fact refreshes the client's deadlines.
  *   updateClientNotes    anyone who can see the client: an Employee's limited edit (§4.1, 0033 guard).
  *   setTaxAuditDecision  Partner only (§6.6; the 0115 guard refuses anyone else): yes / no / review.
  *   setClientGroup       Partner/Manager: join an existing group, a new one, or none (§7.4).
@@ -49,7 +54,7 @@ async function loadClient(ctx: ActionContext, clientId: string) {
   const { data, error } = await ctx.supabase
     .from("clients")
     .select(
-      "id, client_code, display_name, legal_name, entity_type, entity_type_other, is_incorporated, date_of_birth_or_incorporation, pan, gst_registration, gstin, state_code, tan, email, phone, whatsapp, address, city, pincode, fy_end_month, annual_turnover, turnover_fy, gst_scheme, priority, notes, group_id, updated_at, deleted_at",
+      "id, client_code, display_name, legal_name, entity_type, entity_type_other, is_incorporated, date_of_birth_or_incorporation, pan, gst_registration, gstin, state_code, tan, email, phone, whatsapp, address, city, pincode, fy_end_month, annual_turnover, turnover_fy, gst_scheme, income_nature, priority, notes, group_id, updated_at, deleted_at",
     )
     .eq("id", clientId)
     .maybeSingle();
@@ -110,6 +115,18 @@ export const updateMasterData = defineAction(
     ctx.after("Add to your activity", () =>
       logEmployeeActivity({ activityType: "client_updated", description: `Updated ${row.display_name}: ${summary}`, entityType: "client", entityId: input.clientId, entityName: row.display_name }),
     );
+    // The deadline generator reads these facts (presumptive income moves advance tax to one
+    // instalment, the GST scheme picks monthly or quarterly returns): refresh the client's deadlines
+    // the way Generate deadlines does. Filed and locked deadlines are never touched (0125).
+    if (changed.some((f) => CALENDAR_FIELDS.includes(f))) {
+      ctx.after(
+        "Refresh the client's deadlines",
+        async () => {
+          await generateForClient(ctx.supabase, input.clientId, { today: todayIST(), retire: true });
+        },
+        "Details saved, but the deadlines weren't refreshed. Use Generate deadlines on the Compliance tab.",
+      );
+    }
     return ok({ updatedAt: saved.updated_at, changed }, masterDataWarnings(input));
   },
 );

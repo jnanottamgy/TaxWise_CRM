@@ -13,6 +13,7 @@ import {
   isReceivable,
   normalisePeriodLabel,
   planRetainerBilling,
+  anchoredAddMonths,
   reminderEligibility,
   reminderSchedule,
   reminderToSend,
@@ -369,6 +370,26 @@ describe("planRetainerBilling (§7.9.6)", () => {
     // The next run picks up where it stopped.
     const next = planRetainerBilling({ ...monthly, nextBillingDate: "2026-09-01" }, TODAY);
     expect(next).toMatchObject({ hitCap: false, nextBillingDate: "2026-11-01" });
+  });
+
+  it("keeps a 31st on month ends across runs through the anchor day", () => {
+    const jan = { ...monthly, nextBillingDate: "2026-01-31", billingAnchorDay: 31 };
+    // One run in Feb: bills 31 Jan and 28 Feb, stores 31 Mar.
+    const feb = planRetainerBilling(jan, "2026-02-28");
+    expect(feb).toMatchObject({ kind: "bill", nextBillingDate: "2026-03-31" });
+    if (feb.kind === "bill") expect(feb.periods.map((p) => p.billingDate)).toEqual(["2026-01-31", "2026-02-28"]);
+    // A run that stopped at 28 Feb (the stored date) still bills 31 Mar next, not 28 Mar.
+    const after = planRetainerBilling({ ...monthly, nextBillingDate: "2026-02-28", billingAnchorDay: 31 }, "2026-03-01");
+    expect(after).toMatchObject({ kind: "bill", nextBillingDate: "2026-03-31" });
+    const catchUp = planRetainerBilling({ ...monthly, nextBillingDate: "2026-02-28", billingAnchorDay: 31 }, "2026-05-31");
+    if (catchUp.kind === "bill") expect(catchUp.periods.map((p) => p.billingDate)).toEqual(["2026-02-28", "2026-03-31", "2026-04-30"]);
+    // Without an anchor, the stored day carries on (the earlier behaviour).
+    expect(planRetainerBilling({ ...monthly, nextBillingDate: "2026-02-28" }, "2026-03-01")).toMatchObject({ nextBillingDate: "2026-03-28" });
+    // Quarterly, anchored on the 30th: 30 Nov → 28 Feb (2027) → 30 May.
+    expect(anchoredAddMonths("2026-11-30", 3, 30)).toBe("2027-02-28");
+    expect(anchoredAddMonths("2027-02-28", 3, 30)).toBe("2027-05-30");
+    expect(anchoredAddMonths("2024-01-31", 1, 31)).toBe("2024-02-29");
+    expect(anchoredAddMonths("2026-02-28", 0, 31)).toBe("2026-02-28");
   });
 
   it("labels quarterly and annual periods, and uses billing_frequency when set", () => {

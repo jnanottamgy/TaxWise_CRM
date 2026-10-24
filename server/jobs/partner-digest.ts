@@ -10,6 +10,7 @@ import { sendEmail } from "@/server/email/send";
 import { emailFirm } from "@/server/email/templates/layout";
 import { partnerDigestEmail, type DigestDeadline, type DigestReceivable, type DigestTask, type PartnerDigestData } from "@/server/email/templates";
 import { getFirmProfile } from "@/server/firm";
+import { CLOSED_REQUEST_STATUSES } from "@/lib/domain/dpdp";
 
 /**
  * Partner daily digest, 08:00 IST (§8 "Task escalation + digest", §7.17, §10.14): one email to each
@@ -116,7 +117,8 @@ async function loadShared(admin: AdminSupabase, today: string) {
       .limit(50),
     admin.from("invoices").select("id", { count: "exact", head: true }).eq("status", "awaiting_approval").is("deleted_at", null),
     admin.from("quotations").select("id", { count: "exact", head: true }).eq("status", "pending_approval").is("deleted_at", null),
-    admin.from("data_requests").select("id", { count: "exact", head: true }).eq("status", "open"),
+    // Every request still to answer (Open or In progress), not only the untouched ones (§6.10).
+    admin.from("data_requests").select("id", { count: "exact", head: true }).not("status", "in", `(${CLOSED_REQUEST_STATUSES.join(",")})`),
     admin
       .from("invoices_view")
       .select("id, invoice_number, client_id, client_name_snapshot, outstanding_amount, days_overdue", { count: "exact" })

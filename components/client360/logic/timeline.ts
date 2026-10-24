@@ -14,6 +14,12 @@ export const TIMELINE_GROUPS = [
   { id: "work", label: "Tasks", prefixes: ["task_"], money: false },
   { id: "compliance", label: "Compliance and filings", prefixes: ["compliance_", "filing_", "udin_"], money: false },
   { id: "documents", label: "Documents", prefixes: ["document_", "checklist_"], money: false },
+  {
+    id: "practice",
+    label: "Workpapers, registers and audits",
+    prefixes: ["gst_recon_", "itr_computation_", "financial_statements_", "notice_", "audit_", "previous_auditor_", "dsc_", "registration_", "credential_", "filings_imported"],
+    money: false,
+  },
   { id: "messages", label: "Messages, calls and notes", prefixes: ["message_", "note_", "call_", "portal_message"], money: false },
   { id: "team", label: "Team, covers and contacts", prefixes: ["employee_", "team_", "cover_", "contact_", "kyc_", "service_"], money: false },
   { id: "sales", label: "Leads and quotations", prefixes: ["lead_", "quotation_"], money: true },

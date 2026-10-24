@@ -130,7 +130,8 @@ function PaletteBody({ onDone }: { onDone: () => void }) {
   const { user, goTo, newActions, nav, setOpen } = shell;
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
-  const { searches, remember, clear } = useRecentSearches(user.id);
+  const { searches, remember, forget, clear } = useRecentSearches(user.id);
+  const [selected, setSelected] = React.useState("");
 
   const [query, setQuery] = React.useState("");
   const [state, setState] = React.useState<SearchState>({ status: "idle" });
@@ -324,7 +325,21 @@ function PaletteBody({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <Command shouldFilter={false} loop className="flex min-h-0 flex-1 flex-col rounded-none bg-surface">
+    <Command
+      shouldFilter={false}
+      loop
+      value={selected}
+      onValueChange={setSelected}
+      onKeyDown={(e) => {
+        // Delete (or Shift + Backspace) forgets the highlighted recent search.
+        if (trimmed || !selected.startsWith("recent:item:")) return;
+        if (e.key === "Delete" || (e.key === "Backspace" && e.shiftKey)) {
+          e.preventDefault();
+          forget(selected.slice("recent:item:".length));
+        }
+      }}
+      className="flex min-h-0 flex-1 flex-col rounded-none bg-surface"
+    >
       <div className="flex h-12 flex-none items-center gap-2 border-b border-border px-4">
         {pending ? (
           <Loader2Icon aria-hidden="true" className="size-4 flex-none animate-spin text-text-muted" />
@@ -351,9 +366,18 @@ function PaletteBody({ onDone }: { onDone: () => void }) {
         {!trimmed && searches.length > 0 ? (
           <CommandGroup heading="Recent searches">
             {searches.map((s) => (
-              <CommandItem key={`recent-${s}`} value={`recent:${s}`} className={ITEM_CLASS} onSelect={() => setQuery(s)}>
+              <CommandItem
+                key={`recent-${s.id}`}
+                value={`recent:item:${s.id}`}
+                className={cn(ITEM_CLASS, "group")}
+                onSelect={() => setQuery(s.query)}
+                aria-keyshortcuts="Delete"
+              >
                 <HistoryIcon aria-hidden="true" className="text-text-muted" />
-                <span className="min-w-0 flex-1 truncate">{s}</span>
+                <span className="min-w-0 flex-1 truncate">{s.query}</span>
+                <span className="hidden flex-none text-xs text-text-muted group-data-[selected=true]:sm:inline">
+                  <Kbd>Del</Kbd> to forget
+                </span>
               </CommandItem>
             ))}
             <CommandItem value="recent:clear" className={cn(ITEM_CLASS, "text-sm text-text-muted")} onSelect={clear}>

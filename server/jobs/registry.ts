@@ -11,10 +11,13 @@ import { run as escalation } from "@/server/jobs/escalation";
 import { run as invoiceReminders } from "@/server/jobs/invoice-reminders";
 import { run as leadFollowUps } from "@/server/jobs/lead-follow-ups";
 import { run as newFy } from "@/server/jobs/new-fy";
+import { run as noticeReminders } from "@/server/jobs/notice-reminders";
 import { run as partnerDigest } from "@/server/jobs/partner-digest";
+import { run as practiceReminders } from "@/server/jobs/practice-reminders";
 import { run as quotations } from "@/server/jobs/quotations";
 import { run as receivablesSweep } from "@/server/jobs/receivables-sweep";
 import { run as recurringTasks } from "@/server/jobs/recurring-tasks";
+import { run as registerExpiries } from "@/server/jobs/register-expiries";
 import { run as reminders } from "@/server/jobs/reminders";
 import { run as retainerBilling } from "@/server/jobs/retainer-billing";
 import { run as teamHealth } from "@/server/jobs/team-health";
@@ -41,6 +44,9 @@ export const JOBS: Record<ScheduledJobName, JobRun> = {
   digest: partnerDigest,
   "compliance-top-up": complianceTopUp,
   reminders,
+  "register-expiries": registerExpiries,
+  "notice-reminders": noticeReminders,
+  "practice-reminders": practiceReminders,
   "retainer-billing": retainerBilling,
   "invoice-reminders": invoiceReminders,
   "absent-without-cover": absentWithoutCover,

@@ -4,7 +4,8 @@
  *   - deadlines grouped by the filings grid's return types for the "filing status" chart;
  *   - each person's capacity next to their overdue tasks (Team today);
  *   - the filtered lists every tile and section links to (§7.2: "every tile links to the filtered
- *     list behind it"), built with the same params the pages read.
+ *     list behind it"), built with the same params the pages read: the work tracker, the invoice,
+ *     quotation, lead and revenue lists, and the registers behind Practice health.
  */
 
 import { GRID_RETURN_TYPES, matchesReturnType } from "@/lib/schemas/compliance";
@@ -14,6 +15,7 @@ import { formatINRCompact, type Paise } from "@/lib/domain/money";
 import type { DateString } from "@/lib/domain/fy";
 import { tableHref } from "@/components/app/data-table/params";
 import { ME, NONE, OPEN_TASK_STATUSES } from "@/lib/schemas/tasks";
+import { LEAD_STATUSES } from "@/lib/domain/enums";
 
 // -------------------------------------------------------------------------------------------------
 // Words
@@ -145,6 +147,7 @@ export const workHref = {
   dataAwaited: () => tableHref("/work", { filters: { status: ["data_awaited"] }, sort: "due_date", dir: "asc" }),
   overdue: () => tableHref("/work", { filters: { due: ["overdue"] }, sort: "due_date", dir: "asc" }),
   overdueFor: (employeeId: string | null) => tableHref("/work", { filters: { due: ["overdue"], assignee: [employeeId ?? NONE] }, sort: "due_date", dir: "asc" }),
+  overdueForClient: (clientId: string) => tableHref("/work", { filters: { due: ["overdue"], client: [clientId] }, sort: "due_date", dir: "asc" }),
   dueThisWeek: () => tableHref("/work", { filters: { due: ["this_week"], status: OPEN }, sort: "due_date", dir: "asc" }),
 };
 
@@ -153,12 +156,89 @@ export function deadlineHref(e: { id: string; due_date: DateString }): string {
   return `/calendar?view=agenda&date=${e.due_date}&event=${e.id}`;
 }
 
-/** The calendar's agenda from a date (every deadline from then on, soonest first). */
-export function agendaHref(from: DateString): string {
-  return `/calendar?view=agenda&date=${from}`;
+/**
+ * The calendar's agenda from a date (every deadline from then on, soonest first), or up to `to` when
+ * given; `pendingOnly` keeps just the deadlines not yet filed (what "Filings due in 7 days" counts).
+ */
+export function agendaHref(from: DateString, to?: DateString | null, opts: { pendingOnly?: boolean } = {}): string {
+  const base = to ? `/calendar?view=agenda&date=${from}&to=${to}` : `/calendar?view=agenda&date=${from}`;
+  return opts.pendingOnly ? `${base}&pending=1` : base;
 }
 
 /** The calendar's week view of the week holding `date`. */
 export function weekHref(date: DateString): string {
   return `/calendar?view=week&date=${date}`;
 }
+
+// -------------------------------------------------------------------------------------------------
+// Filing status from the database's groups (0216: this month's deadlines by type, form and rule)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * dashboard_firm_today's groups folded into the filings grid's return types, in the grid's order
+ * with "Other" last; types with nothing due are left out. Each type links to the grid filtered to it.
+ */
+export function filingStatusFromGroups(
+  groups: ReadonlyArray<{ type: string; form_code: string | null; rule_code: string | null; filed: number; pending: number; overdue: number }>,
+): ReturnTypeStatus[] {
+  const order = [...GRID_RETURN_TYPES.map((rt) => rt.key), OTHER_RETURNS];
+  const by = new Map<string, { filed: number; pending: number; overdue: number }>();
+  for (const g of groups) {
+    const key = returnTypeKey(g);
+    const cur = by.get(key) ?? { filed: 0, pending: 0, overdue: 0 };
+    cur.filed += g.filed;
+    cur.pending += g.pending;
+    cur.overdue += g.overdue;
+    by.set(key, cur);
+  }
+  return order
+    .map((type) => {
+      const c = by.get(type) ?? { filed: 0, pending: 0, overdue: 0 };
+      return { type, ...c, total: c.filed + c.pending + c.overdue, label: returnTypeLabel(type), href: type === OTHER_RETURNS ? null : `/filings?type=${type}` };
+    })
+    .filter((r) => r.total > 0);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Links behind the money, approvals and practice figures (each opens the filtered list, §7.2)
+// -------------------------------------------------------------------------------------------------
+
+/** Every lead stage except Won and Lost. */
+const OPEN_LEAD_STATUSES = LEAD_STATUSES.filter((s) => s !== "won" && s !== "lost");
+
+/** Invoices, quotations, receipts and leads, filtered to the figure that links to them. */
+export const moneyHref = {
+  overdue: () => tableHref("/invoices", { filters: { status: ["overdue"] }, sort: "due_date", dir: "asc" }),
+  outstanding: () => tableHref("/invoices", { filters: { status: ["sent", "partially_paid", "disputed"] }, sort: "due_date", dir: "asc" }),
+  awaitingApproval: () => tableHref("/invoices", { filters: { status: ["awaiting_approval"] } }),
+  issuedThisMonth: () => tableHref("/invoices", { filters: { period: ["this_month"] } }),
+  /** The revenue ledger's invoices for a date range (issued, by invoice date). */
+  invoiced: (from: DateString, to: DateString) => `/revenue?tab=invoices&from=${from}&to=${to}`,
+  /** The revenue ledger's receipts for a date range (by payment date). */
+  received: (from: DateString, to: DateString) => `/revenue?tab=receipts&from=${from}&to=${to}`,
+  unbilled: () => "/timesheet?view=unbilled",
+  quotationsPending: () => tableHref("/quotations", { filters: { status: ["pending_approval"] } }),
+  quotationsAwaiting: () => tableHref("/quotations", { filters: { status: ["sent", "viewed"] } }),
+  quotationsDecided: () => tableHref("/quotations", { filters: { status: ["accepted", "rejected", "expired"] } }),
+  openLeads: () => tableHref("/leads", { filters: { status: OPEN_LEAD_STATUSES } }),
+  staleLeads: () => tableHref("/leads", { filters: { flag: ["stale"] } }),
+};
+
+/** The registers, letters, audits, quality and WhatsApp pages behind Practice health. */
+export const practiceHref = {
+  udin: () => "/registers?tab=udin",
+  ceiling: () => "/registers?tab=udin",
+  lettersMissing: () => "/engagement-letters?view=missing",
+  lettersExpiring: () => "/engagement-letters?view=expiring",
+  dscExpiring: () => "/registers?tab=dsc&expiring=30",
+  registrationsExpiring: () => "/registers?tab=registrations&expiring=30",
+  peerReview: () => "/quality?tab=peer-reviews",
+  assemblyDue: () => "/audits?attention=assembly_due",
+  assemblyOverdue: () => "/audits?attention=assembly_overdue",
+  noWhatsAppGroup: () => tableHref("/whatsapp-groups", { filters: { status: ["none"] } }),
+  linkedPcs: () => "/settings/whatsapp",
+  noticesOverdue: () => "/workpapers/notices?attention=reply_overdue",
+  noticesDue: () => "/workpapers/notices?attention=reply_week",
+  dataRequests: () => "/quality?tab=data-requests&status=open_all",
+  dataRequestsOverdue: () => "/quality?tab=data-requests&status=overdue",
+};

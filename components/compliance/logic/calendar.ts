@@ -7,6 +7,7 @@
  *   /calendar?view=agenda&date=2026-10-23&page=2  every deadline from 23 Oct, 25 a page
  *   …&day=2026-10-20&label=GSTR-3B                the agenda for one day and one return ("+12 more")
  *   …&client=<id>&owner=<employee id>&type=gstr_3b,tds&kind=statutory|firm
+ *   /calendar?view=agenda&date=2026-10-24&to=2026-10-31&pending=1   only those not yet filed, to a date
  *
  * Pure and client-safe. "Today" is always a parameter.
  */
@@ -39,6 +40,8 @@ export interface CalendarState {
   owner: string | null;
   types: ComplianceType[];
   kind: CalendarKind | null;
+  /** Agenda only: just the deadlines not yet filed (`?pending=1`, the dashboard's "Filings due in 7 days"). */
+  pending: boolean;
 }
 
 /** Monday on or before the date. */
@@ -86,14 +89,18 @@ export function parseCalendarState(sp: SearchParamsInput, today: DateString): Ca
   if (view === "month") {
     const anchor = `${base.slice(0, 7)}-01`;
     const weeks = monthWeeks(anchor);
-    return { view, anchor, from: weeks[0][0], to: weeks[weeks.length - 1][6], day: null, label: null, ...filters };
+    return { view, anchor, from: weeks[0][0], to: weeks[weeks.length - 1][6], day: null, label: null, ...filters, pending: false };
   }
   if (view === "week") {
     const anchor = startOfWeek(base);
-    return { view, anchor, from: anchor, to: addDays(anchor, 6), day: null, label: null, ...filters };
+    return { view, anchor, from: anchor, to: addDays(anchor, 6), day: null, label: null, ...filters, pending: false };
   }
-  if (day) return { view, anchor: day, from: day, to: day, day, label, ...filters };
-  return { view, anchor: base, from: base, to: null, day: null, label, ...filters };
+  if (day) return { view, anchor: day, from: day, to: day, day, label, ...filters, pending: false };
+  // `?to=` ends the agenda on a date (the dashboard's "Filings due in 7 days"); an end before the
+  // start is ignored.
+  const rawTo = (readParam(sp, "to") ?? "").trim();
+  const to = isDateString(rawTo) && rawTo >= base ? rawTo : null;
+  return { view, anchor: base, from: base, to, day: null, label, ...filters, pending: readParam(sp, "pending") === "1" };
 }
 
 /** The anchor one step back (-1) or forward (+1). */
@@ -104,7 +111,7 @@ export function shiftAnchor(view: CalendarView, anchor: DateString, dir: -1 | 1)
 }
 
 /** The heading over the calendar: "October 2026", "19–25 Oct 2026", "From 23 Oct 2026", "20 Oct 2026". */
-export function calendarTitle(state: Pick<CalendarState, "view" | "anchor" | "day">): string {
+export function calendarTitle(state: Pick<CalendarState, "view" | "anchor" | "day"> & { to?: DateString | null }): string {
   const p = parseDateString(state.anchor);
   if (state.view === "month") return `${FULL_MONTHS[p.month - 1]} ${p.year}`;
   if (state.view === "week") {
@@ -114,6 +121,10 @@ export function calendarTitle(state: Pick<CalendarState, "view" | "anchor" | "da
     return `${p.day} ${MONTH_ABBR[p.month - 1]} ${p.year} – ${end.day} ${MONTH_ABBR[end.month - 1]} ${end.year}`;
   }
   const d = `${p.day} ${MONTH_ABBR[p.month - 1]} ${p.year}`;
+  if (!state.day && state.view === "agenda" && state.to) {
+    const e = parseDateString(state.to);
+    return `${d} to ${e.day} ${MONTH_ABBR[e.month - 1]} ${e.year}`;
+  }
   return state.day ? d : `From ${d}`;
 }
 

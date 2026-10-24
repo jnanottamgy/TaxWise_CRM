@@ -21,6 +21,7 @@ import type { Paise } from "@/lib/domain/money"
 import { formatDate } from "@/lib/format"
 import { TAX_AUDIT_DECISIONS, TAX_AUDIT_DECISION_LABELS, TaxAuditDecisionSchema, type TaxAuditDecision } from "@/components/client360/logic/profile-schemas"
 import { setTaxAuditDecision } from "@/server/actions/client-profile"
+import { incomeNatureChoices, incomeNatureLabel } from "@/components/client360/logic/master-data"
 
 const NATURE_LABELS: Record<IncomeNature, string> = {
   business: "Business",
@@ -39,9 +40,11 @@ const DECISION_TONE: Record<TaxAuditDecision, "warning" | "muted" | "violet"> = 
 
 /**
  * Tax-audit indication and the Partner's decision (§6.6, s.44AB / s.63): an indication from the
- * recorded turnover, which the Partner can refine with how the income is earned and the cash share
- * (nothing of that is stored), and the decision itself (yes / no / review, with a note), which only
- * a Partner records (the 0115 guard refuses anyone else).
+ * recorded turnover and how the income is earned (clients.income_nature, set in Profile → Master
+ * data, incl. the presumptive s.44AD / s.44ADA schemes), which the Partner can try other answers
+ * against here with the cash share and declared profit (those answers aren't stored), and the
+ * decision itself (yes / no / review, with a note), which only a Partner records (the 0115 guard
+ * refuses anyone else).
  */
 export function TaxAuditCard({
   clientId,
@@ -50,6 +53,8 @@ export function TaxAuditCard({
   turnoverPaise,
   turnoverFy,
   entityType,
+  incomeNature,
+  canEditNature,
   params,
   decision,
   note,
@@ -62,13 +67,19 @@ export function TaxAuditCard({
   turnoverPaise: Paise | null
   turnoverFy: string | null
   entityType: EntityType | null
+  /** clients.income_nature as stored; null = not recorded (the check starts from Business). */
+  incomeNature: string | null
+  /** Partners and Managers edit how the income is earned in Profile → Master data. */
+  canEditNature: boolean
   params: TaxAuditParams
   decision: TaxAuditDecision | null
   note: string | null
   decidedBy: string | null
   decidedAt: string | null
 }) {
-  const [nature, setNature] = React.useState<IncomeNature>("business")
+  const choices = incomeNatureChoices(entityType)
+  const stored = incomeNatureLabel(incomeNature) ? (incomeNature as IncomeNature) : null
+  const [nature, setNature] = React.useState<IncomeNature>(stored && choices.includes(stored) ? stored : "business")
   const [cashReceipts, setCashReceipts] = React.useState("")
   const [cashPayments, setCashPayments] = React.useState("")
   const [declared, setDeclared] = React.useState("")
@@ -92,7 +103,6 @@ export function TaxAuditCard({
   const presumptive = nature === "presumptive_44ad" || nature === "presumptive_44ada"
   const showCash = result.askCashRatio || nature === "presumptive_44ad"
   const showDeclared = presumptive || nature === "profession"
-  const individualOrHuf = entityType === "individual" || entityType === "proprietorship" || entityType === "huf"
 
   return (
     <SectionCard
@@ -145,8 +155,7 @@ export function TaxAuditCard({
                     Income from
                   </label>
                   <NativeSelect id={ids.nature} size="sm" value={nature} onChange={(e) => setNature(e.target.value as IncomeNature)}>
-                    {(Object.keys(NATURE_LABELS) as IncomeNature[])
-                      .filter((n) => individualOrHuf || n === "business" || n === "profession" || n === "presumptive_44ad")
+                    {choices
                       .map((n) => (
                         <NativeSelectOption key={n} value={n}>
                           {NATURE_LABELS[n]}
@@ -179,7 +188,18 @@ export function TaxAuditCard({
                   ) : null}
                 </div>
               ) : null}
-              <p className="text-sm text-text-muted">{TAX_AUDIT_DISCLAIMER} The answers above are only for this check; they aren&apos;t saved.</p>
+              <p className="text-sm text-text-muted">
+                {stored ? `Recorded on the client: ${NATURE_LABELS[stored].toLowerCase()}. ` : "How the income is earned isn't recorded yet. "}
+                {canEditNature ? (
+                  <>
+                    <Link href={`/clients/${clientId}?tab=profile#master-data`} className="font-medium text-primary hover:underline">
+                      {stored ? "Change it in master data" : "Record it in master data"}
+                    </Link>
+                    .{" "}
+                  </>
+                ) : null}
+                {TAX_AUDIT_DISCLAIMER} The other answers above are only for this check; they aren&apos;t saved.
+              </p>
             </>
           )}
         </div>

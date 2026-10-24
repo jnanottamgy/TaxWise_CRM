@@ -278,6 +278,15 @@ describe("client-owned rows", () => {
     all.message_threads = await db.asSuper((s) =>
       s.value<number>("select count(distinct m.client_id)::int from messages m join clients c on c.id = m.client_id where c.deleted_at is null"),
     );
+    // recycle_bin_items (0211) is security_invoker and lists rows only for is_manager_or_partner(),
+    // which the superuser isn't: compare it with the deleted rows of the tables it lists.
+    all.recycle_bin_items = await db.asSuper((s) =>
+      s.value<number>(
+        `select ((select count(*) from clients where deleted_at is not null) + (select count(*) from tasks where deleted_at is not null)
+          + (select count(*) from documents where deleted_at is not null) + (select count(*) from invoices where deleted_at is not null)
+          + (select count(*) from leads where deleted_at is not null) + (select count(*) from quotations where deleted_at is not null))::int`,
+      ),
+    );
     // inbox_action_items (0172) is the caller's own action list (their approvals, reviews, tasks to
     // accept), not a client-owned table; comms.test.ts checks who gets which item.
     const scoped = rels.filter((r) => r.name !== "inbox_action_items");

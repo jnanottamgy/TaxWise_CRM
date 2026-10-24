@@ -416,6 +416,16 @@ const I = {
     description: "Statutory, tax and other audits run to the Standards on Auditing.",
     keywords: ["statutory audit", "tax audit", "sa"],
   },
+  // An Employee's own annual declaration (§7.15.4 "Independence declarations: annual, per staff
+  // member"); /quality shows an Employee only that.
+  independence: {
+    id: "independence",
+    label: "Independence declaration",
+    href: "/quality",
+    icon: ShieldCheckIcon,
+    description: "Your annual independence declaration for attest work.",
+    keywords: ["independence", "declaration", "conflict"],
+  },
   diagnostics: {
     id: "diagnostics",
     label: "Diagnostics",
@@ -601,7 +611,7 @@ function extraDestinations(role: AppRole): NavItem[] {
     case "manager":
       return [I.messages, I.quotations, I.acceptance, I.tdsCredits, I.retainerDrafts, I.audits, I.search];
     case "employee":
-      return [I.inbox, I.search];
+      return [I.inbox, I.search, I.independence];
     case "client":
       return [];
   }

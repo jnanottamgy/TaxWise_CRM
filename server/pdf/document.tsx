@@ -52,7 +52,7 @@ export function PdfDocument({
       <Page size={PDF.page.size} orientation={landscape ? "landscape" : "portrait"} style={pdfStyles.page} wrap>
         <Letterhead firm={firm} logo={logo} title={title} meta={meta} showPan={Boolean(pan)} pan={pan} />
         {children}
-        <PdfFooter firmName={firm.firmName} note={footerNote} />
+        <PdfFooter firmName={firm.firmName} note={footerNote} orientation={landscape ? "landscape" : "portrait"} />
       </Page>
     </Document>
   );

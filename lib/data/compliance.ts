@@ -172,6 +172,7 @@ export async function getAgenda(
     p_overdue_only: page.overdueOnly ?? false,
     p_limit: page.pageSize,
     p_offset: page.from,
+    p_pending_only: !page.overdueOnly && state.pending,
   });
   if (error) throw error;
   const d = (data ?? {}) as unknown as { today?: string; total?: number; rows?: AgendaRow[] };

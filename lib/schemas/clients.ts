@@ -89,7 +89,9 @@ export type ClientListSort = (typeof CLIENT_LIST_SORTABLE)[number];
 export const GST_FILTER_VALUES = ["registered", "unregistered", "unknown", "missing_gstin"] as const;
 export const ONBOARDED_FILTER_VALUES = ["30", "90", "365"] as const;
 export const WHATSAPP_FILTER_VALUES = ["none", "to_create", "active", "closed"] as const;
-export const FLAG_FILTER_VALUES = ["overdue_tasks", "overdue_invoices", "unreachable", "covered_now"] as const;
+export const FLAG_FILTER_VALUES = ["overdue_tasks", "overdue_invoices", "at_risk", "unreachable", "covered_now"] as const;
+/** Firm today's at-risk rule (dashboard_firm_today, 0216): this many overdue tasks, or receivables over 90 days. */
+export const AT_RISK_OVERDUE_TASKS = 3;
 export type ClientFlag = (typeof FLAG_FILTER_VALUES)[number];
 
 /** Filter params of the client list (parseTableParams `filters`). */
@@ -134,13 +136,14 @@ export const WHATSAPP_GROUP_LABELS: Record<(typeof WHATSAPP_FILTER_VALUES)[numbe
 export const FLAG_LABELS: Record<ClientFlag, string> = {
   overdue_tasks: "Has overdue tasks",
   overdue_invoices: "Has overdue invoices",
+  at_risk: "At risk: 3+ overdue tasks or receivables over 90 days",
   unreachable: "Can't be reached (no email or phone)",
   covered_now: "Covered now",
 };
 
-/** The flags a role may filter by: overdue invoices are money (§4.1). */
+/** The flags a role may filter by: overdue invoices and the at-risk rule (receivables) are money (§4.1). */
 export function flagOptionsFor(seesMoney: boolean): ClientFlag[] {
-  return FLAG_FILTER_VALUES.filter((f) => seesMoney || f !== "overdue_invoices");
+  return FLAG_FILTER_VALUES.filter((f) => seesMoney || (f !== "overdue_invoices" && f !== "at_risk"));
 }
 
 /** The banner's filter link (§7.3.1 "Opens that filter"). */

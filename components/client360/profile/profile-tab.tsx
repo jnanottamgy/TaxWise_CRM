@@ -22,7 +22,7 @@ import { formatDate } from "@/lib/format"
 import { listGroupOptions, listStaffOptions, loadScaleParameterRows, type MessagingContext } from "@/lib/data/clients"
 import { getKycDocumentOptions, getProfileNames, type Client360 } from "@/lib/data/client360"
 import { KYC_CATEGORY_LABELS, PRINCIPAL_ROLES, engagementTypeLabel, readEngagementTypes, kycCategoryFor, readPrincipalPersons, principalPersonsLabel, type SaveKycInput } from "@/lib/schemas/client-kyc"
-import { MONTH_NAMES, masterDataDefaults } from "@/components/client360/logic/master-data"
+import { MONTH_NAMES, incomeNatureLabel, masterDataDefaults } from "@/components/client360/logic/master-data"
 import { teamPickFrom } from "@/components/client360/logic/team"
 import { MasterDataActions } from "@/components/client360/profile/master-data-actions"
 import { ContactsSection } from "@/components/client360/profile/contacts-section"
@@ -165,6 +165,7 @@ export async function ProfileTab({ data, user, supabase, messaging }: { data: Cl
                   { term: "Annual turnover", value: client.annual_turnover !== null ? <Money value={client.annual_turnover} /> : null },
                   { term: "Turnover for FY", value: client.turnover_fy ? `FY ${client.turnover_fy}` : null },
                   { term: "GST filing scheme", value: client.gst_registration === "registered" ? (client.gst_scheme ? GST_SCHEME_LABELS[client.gst_scheme] : "Auto from turnover") : null },
+                  { term: "Income is earned from", value: incomeNatureLabel(client.income_nature) },
                 ]}
               />
             </Group>

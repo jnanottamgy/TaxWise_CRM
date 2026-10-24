@@ -46,7 +46,7 @@ import type { StatutoryParameterRow } from "@/lib/domain/gst";
 // =================================================================================================
 
 const CLIENT_COLUMNS =
-  "id, client_code, display_name, legal_name, entity_type, entity_type_other, is_incorporated, date_of_birth_or_incorporation, pan, tan, gst_registration, gstin, state_code, email, phone, whatsapp, address, city, pincode, notes, status, priority, owner_employee_id, group_id, fy_end_month, annual_turnover, turnover_fy, gst_scheme, tax_audit_applicable, tax_audit_note, tax_audit_decided_by, tax_audit_decided_at, reminder_days, notify_channels, portal_user_id, portal_invited_at, portal_last_seen_at, portal_revoked_at, portal_revoked_by, portal_revoked_user_id, onboarded_at, onboarded_by, source_lead_id, created_at, created_by, updated_at, updated_by, deleted_at";
+  "id, client_code, display_name, legal_name, entity_type, entity_type_other, is_incorporated, date_of_birth_or_incorporation, pan, tan, gst_registration, gstin, state_code, email, phone, whatsapp, address, city, pincode, notes, status, priority, owner_employee_id, group_id, fy_end_month, annual_turnover, turnover_fy, gst_scheme, income_nature, tax_audit_applicable, tax_audit_note, tax_audit_decided_by, tax_audit_decided_at, reminder_days, notify_channels, portal_user_id, portal_invited_at, portal_last_seen_at, portal_revoked_at, portal_revoked_by, portal_revoked_user_id, onboarded_at, onboarded_by, source_lead_id, created_at, created_by, updated_at, updated_by, deleted_at";
 
 export interface ClientRecord {
   id: string;
@@ -77,6 +77,8 @@ export interface ClientRecord {
   annual_turnover: number | null;
   turnover_fy: string | null;
   gst_scheme: GstScheme | null;
+  /** How the income is earned (§6.6, 0141): business · profession · presumptive_44ad · presumptive_44ada; null = not recorded. */
+  income_nature: string | null;
   tax_audit_applicable: "yes" | "no" | "review" | null;
   tax_audit_note: string | null;
   tax_audit_decided_by: string | null;

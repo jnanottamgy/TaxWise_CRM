@@ -85,6 +85,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             options: (["active", "no_login", "disabled"] as const).map((s) => ({ value: s, label: LOGIN_STATUS[s].label, tone: LOGIN_STATUS[s].tone })),
           },
           ...(departments.ok && departments.data.length ? [{ id: "department", label: "Department", options: departments.data.map((d) => ({ value: d, label: d })) }] : []),
+          { id: "presence", label: "Presence", multi: false, options: [{ value: "online", label: "Online now" }] },
         ]}
       />
       {list.ok ? (

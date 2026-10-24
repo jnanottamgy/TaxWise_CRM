@@ -20,11 +20,14 @@ import {
   addDays,
   addMonths,
   compareDates,
+  daysInMonth,
   diffDays,
   financialYearOf,
   monthPeriodLabel,
+  parseDateString,
   parsePeriodLabel,
   quarterLabel,
+  toDateString,
   type DateString,
 } from "@/lib/domain/fy";
 import { formatINR, type Paise } from "@/lib/domain/money";
@@ -361,6 +364,12 @@ export type RetainerEngagement = {
   /** Null = same as `frequency`. */
   billingFrequency?: ServiceFrequency | null;
   nextBillingDate: DateString | null;
+  /**
+   * `client_services.billing_anchor_day`: the day of the month the engagement was first billed on
+   * (1–31). Null = the day of `nextBillingDate`. It keeps a 31st on month ends across runs: a run
+   * that stops at 28 Feb stores 28 Feb, and the next run still bills 31 Mar.
+   */
+  billingAnchorDay?: number | null;
 };
 
 export type RetainerPeriod = {
@@ -398,13 +407,27 @@ export function retainerPeriodLabel(date: DateString, frequency: Exclude<Service
 }
 
 /**
+ * `months` after `start`, on the anchor day (clamped to the month's length): 31 Jan with anchor 31
+ * → 28 Feb (+1) → 31 Mar (+2); 28 Feb with anchor 31 → 31 Mar (+1). With no anchor (or months = 0)
+ * it is `addMonths`, so the stored date itself is always the first billing date. Mirror of
+ * retainer_anchored_date (0220).
+ */
+export function anchoredAddMonths(start: DateString, months: number, anchorDay?: number | null): DateString {
+  if (!months || !anchorDay) return addMonths(start, months);
+  const shifted = parseDateString(addMonths(start, months));
+  const day = Math.min(Math.max(1, Math.trunc(anchorDay)), daysInMonth(shifted.year, shifted.month));
+  return toDateString(shifted.year, shifted.month, day);
+}
+
+/**
  * Plans one engagement for the daily retainer job (§7.9.6). Skips it, with the first reason that
  * applies, when: auto-invoicing isn't enabled · the service is inactive · the client is inactive or
  * on hold · there is no agreed fee (null or not above 0) · it's a one-time service (or billed
  * one-time) · it isn't yet due (`next_billing_date` empty or after today). Otherwise it drafts every
  * billing date from `next_billing_date` up to today, at most `maxPeriodsPerRun` (3), and advances
- * `next_billing_date` one cycle per draft. Cycles are counted from the original date, so a 31st
- * stays on month ends (31 Jan → 28 Feb → 31 Mar).
+ * `next_billing_date` one cycle per draft. Cycles land on the engagement's anchor day (the day it
+ * was first billed on), so a 31st stays on month ends within a run and across runs
+ * (31 Jan → 28 Feb → 31 Mar, even when a run stopped at 28 Feb).
  */
 export function planRetainerBilling(
   engagement: RetainerEngagement,
@@ -425,14 +448,15 @@ export function planRetainerBilling(
   const step = CYCLE_MONTHS[cycle];
   const periods: RetainerPeriod[] = [];
   let k = 0;
+  const anchor = engagement.billingAnchorDay ?? null;
   while (k < max) {
-    const billingDate = addMonths(start, k * step);
+    const billingDate = anchoredAddMonths(start, k * step, anchor);
     if (compareDates(billingDate, today) > 0) break;
-    const labelDate = opts.arrears ? addMonths(start, (k - 1) * step) : billingDate;
+    const labelDate = opts.arrears ? anchoredAddMonths(start, (k - 1) * step, anchor) : billingDate;
     periods.push({ billingDate, periodLabel: retainerPeriodLabel(labelDate, cycle) });
     k += 1;
   }
-  const nextBillingDate = addMonths(start, k * step);
+  const nextBillingDate = anchoredAddMonths(start, k * step, anchor);
   return {
     kind: "bill",
     periods,

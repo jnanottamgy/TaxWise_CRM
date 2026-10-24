@@ -4,18 +4,17 @@ import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/app/empty-state"
 import { StatusChip } from "@/components/app/status-chip"
 import { DateText } from "@/components/app/date-text"
-import { Money } from "@/components/app/money"
 import { AskClientForData, type AskClientMessaging } from "@/components/tasks/ask-client"
 import { CapacityChip, PersonInitials } from "@/components/people/people-bits"
 import { DECLINE_REASON_LABELS, SERVICE_TYPE_LABELS } from "@/lib/domain/enums"
 import { daysSince } from "@/lib/domain/dashboard"
 import { istDateOf } from "@/lib/domain/fy"
-import { fromPaise } from "@/lib/domain/money"
 import { formatDate, formatTimeAgo } from "@/lib/format"
-import type { AttendanceSnapshot, CallListRow, SalesSnapshot } from "@/lib/data/dashboard"
+import { STALE_LEAD_DAYS, type AttendanceSnapshot, type CallListRow, type SalesSnapshot } from "@/lib/data/dashboard"
 import type { TaskListRow } from "@/lib/data/tasks"
 import { Figure, RowLink } from "@/components/home/home-ui"
-import { count, workHref, type TeamLoadRow } from "@/components/home/logic"
+import { MoneyText, figure } from "@/components/home/kpi-grid"
+import { count, moneyHref, workHref, type TeamLoadRow } from "@/components/home/logic"
 
 /**
  * Team today's own blocks (§7.2 Manager): declined tasks to reassign, the Data awaited call list,
@@ -172,7 +171,7 @@ export function AttendanceBlock({ a }: { a: AttendanceSnapshot }) {
   }
   return (
     <div className="flex flex-col gap-3">
-      <dl className="grid grid-cols-3 gap-x-4 gap-y-3 md:grid-cols-6">
+      <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
         <AttendanceFigure label="Present" value={a.present} />
         <AttendanceFigure label="Late login" value={a.late} tone={a.late > 0 ? "warning" : undefined} />
         <AttendanceFigure label="Absent" value={a.absent} tone={a.absent > 0 ? "danger" : undefined} />
@@ -189,33 +188,42 @@ export function AttendanceBlock({ a }: { a: AttendanceSnapshot }) {
 
 function AttendanceFigure({ label, value, tone }: { label: string; value: number; tone?: "warning" | "danger" }) {
   return (
-    <div>
-      <dt className="text-sm text-text-muted">{label}</dt>
+    <div className="min-w-0">
+      <dt className="truncate text-sm text-text-muted">{label}</dt>
       <dd className={`num text-lg leading-7 font-semibold tabular-nums ${tone === "danger" ? "text-danger-text" : tone === "warning" ? "text-warning-text" : "text-text"}`}>{value}</dd>
     </div>
   )
 }
 
-/** Invoices raised this month, quotations awaiting a response, and leads untouched for 14 days (§7.2, §7.4). */
+/**
+ * Invoices raised this month, quotations awaiting a response, and leads untouched for 14 days
+ * (§7.2, §7.4), stacked for the narrow column: each figure opens its list, with the oldest
+ * quotations and leads under it.
+ */
 export function SalesBlock({ sales }: { sales: SalesSnapshot }) {
   const { invoicesThisMonth, quotationsAwaiting, staleLeads } = sales
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-      <div className="flex flex-col gap-2">
-        <Figure label="Invoices raised this month" value={<Money value={fromPaise(invoicesThisMonth.totalPaise)} compact />} sub={`${count(invoicesThisMonth.count, "invoice")}, incl. GST`} href="/invoices" />
+    <div className="flex flex-col divide-y divide-border/70">
+      <div className="pb-3">
+        <Figure
+          label="Invoices raised this month"
+          value={<MoneyText paise={invoicesThisMonth.totalPaise} />}
+          sub={`${count(invoicesThisMonth.count, "invoice")} issued, incl. GST${invoicesThisMonth.awaitingApproval ? ` · ${figure(invoicesThisMonth.awaitingApproval)} awaiting a Partner's approval` : ""}`}
+          href={moneyHref.issuedThisMonth()}
+        />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 py-3">
         <Figure
           label="Quotations awaiting response"
-          value={<Money value={fromPaise(quotationsAwaiting.valuePaise)} compact />}
-          sub={count(quotationsAwaiting.total, "quotation")}
-          href="/quotations?status=sent,viewed"
+          value={<MoneyText paise={quotationsAwaiting.valuePaise} />}
+          sub={quotationsAwaiting.total ? `${count(quotationsAwaiting.total, "quotation")}, longest waiting first` : "Nothing out with a client"}
+          href={moneyHref.quotationsAwaiting()}
         />
         {quotationsAwaiting.rows.length ? (
           <ul className="divide-y divide-border/70 text-sm">
             {quotationsAwaiting.rows.map((q) => (
               <li key={q.id} className="flex min-h-10 items-center justify-between gap-3 py-1.5">
-                <Link href={`/quotations/${q.id}`} className="min-w-0 truncate text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                <Link href={`/quotations/${q.id}`} className="min-w-0 truncate rounded-sm text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
                   {q.client_name}
                 </Link>
                 <span className="num flex-none text-text-muted">{q.sent_at ? `sent ${formatTimeAgo(q.sent_at)}` : <StatusChip kind="quotation_status" value={q.status} />}</span>
@@ -224,13 +232,18 @@ export function SalesBlock({ sales }: { sales: SalesSnapshot }) {
           </ul>
         ) : null}
       </div>
-      <div className="flex flex-col gap-2">
-        <Figure label="Leads untouched for 14 days" value={staleLeads.total} sub={staleLeads.total ? "No call, note or quotation since" : "Every open lead has recent activity"} href="/leads" />
+      <div className="flex flex-col gap-2 pt-3">
+        <Figure
+          label={`Leads untouched for ${STALE_LEAD_DAYS} days`}
+          value={figure(staleLeads.total)}
+          sub={staleLeads.total ? "No call, note or quotation since" : "Every open lead has recent activity"}
+          href={moneyHref.staleLeads()}
+        />
         {staleLeads.rows.length ? (
           <ul className="divide-y divide-border/70 text-sm">
             {staleLeads.rows.map((l) => (
               <li key={l.id} className="flex min-h-10 items-center justify-between gap-3 py-1.5">
-                <Link href={`/leads/${l.id}`} className="min-w-0 truncate text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                <Link href={`/leads/${l.id}`} className="min-w-0 truncate rounded-sm text-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
                   {l.company ? `${l.name} · ${l.company}` : l.name}
                 </Link>
                 <span className="num flex-none text-text-muted">{formatTimeAgo(l.last_activity_at ?? l.created_at)}</span>

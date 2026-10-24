@@ -18,7 +18,8 @@ import { DateText } from "@/components/app/date-text"
 import { DOCUMENT_CATEGORY_LABELS, type DocumentCategory } from "@/lib/domain/enums"
 import { formatFileSize } from "@/lib/domain/files"
 import { formatDate } from "@/lib/format"
-import { CATEGORY_OPTIONS, VAULT_PRESERVE } from "@/lib/schemas/documents"
+import { VAULT_PRESERVE, categoryOptionsFor } from "@/lib/schemas/documents"
+import { useOptionalShell } from "@/components/shell/shell-context"
 import type { VaultRow } from "@/lib/data/documents"
 import { FileTypeMark } from "@/components/documents/file-type-mark"
 import { documentsHref, fileHref } from "@/components/documents/doc-urls"
@@ -74,6 +75,7 @@ export function VaultToolbar({ clientId, layout, fyOptions, category, fy }: { cl
   const router = useRouter()
   const current = useCurrentParams()
   const [pending, start] = React.useTransition()
+  const categoryOptions = categoryOptionsFor(useOptionalShell()?.user.role)
   const go = (patch: Record<string, string | null>) => start(() => router.push(documentsHref(clientId, patch, current), { scroll: false }))
   return (
     <FilterBar
@@ -88,7 +90,7 @@ export function VaultToolbar({ clientId, layout, fyOptions, category, fy }: { cl
             </label>
             <NativeSelect id="vault-cat" size="sm" value={category ?? ""} disabled={pending} onChange={(e) => go({ dcat: e.target.value || null, dbin: null, dexp: null })}>
               <NativeSelectOption value="">All categories</NativeSelectOption>
-              {CATEGORY_OPTIONS.map((c) => (
+              {categoryOptions.map((c) => (
                 <NativeSelectOption key={c.value} value={c.value}>
                   {c.label}
                 </NativeSelectOption>

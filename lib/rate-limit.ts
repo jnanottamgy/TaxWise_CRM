@@ -23,6 +23,13 @@ export const RATE_LIMITS = {
   mfaVerify: { limit: 10, windowSeconds: 15 * 60 },
   /** First-run set-up attempts per IP. */
   setup: { limit: 5, windowSeconds: 15 * 60 },
+  /** §13: general server actions, 300 per minute per user (lib/action.ts). */
+  serverAction: { limit: 300, windowSeconds: 60 },
+  /**
+   * Revealing stored portal passwords (§7.15.1, §12), per person: generous for a day of filings,
+   * tight enough that a stolen session can't empty the vault in one go. Each reveal is logged too.
+   */
+  credentialReveal: { limit: 30, windowSeconds: 15 * 60 },
 } as const;
 
 export type RateLimitScope = string;

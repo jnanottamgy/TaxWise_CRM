@@ -27,6 +27,9 @@ const ANON_FUNCTIONS = [
 /** Views that run with their owner's rights; each carries its own row filter (reviewed). */
 const DEFINER_VIEWS = [
   "client_credentials_list",
+  // The vault register (0191): client_credentials_list's visibility plus can_reveal and the last
+  // view; no ciphertext (the column check below), recycle-bin clients left out.
+  "client_credentials_register",
   "client_services_public",
   "client_whatsapp_groups_public",
   "employee_cost_rates",

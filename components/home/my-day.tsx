@@ -10,11 +10,13 @@ import { formatMinutes, formatTimeAgo } from "@/lib/format"
 import { LEAVE_TYPE_LABELS } from "@/lib/domain/enums"
 import { formatLeaveRange } from "@/lib/domain/leave"
 import type { MyLeave, MyWeek, SentBackRow } from "@/lib/data/dashboard"
+import type { NoticeAlerts } from "@/lib/data/notices"
 import { RowLink } from "@/components/home/home-ui"
 
 /**
  * My day's own blocks (§7.2 Employee): Sent back to me (with the reviewer's reason), this week's
- * hours against the target, and my leave. The task lists themselves are components/tasks/task-list.
+ * hours against the target, my leave, and my notice replies due. The task lists themselves are
+ * components/tasks/task-list.
  */
 
 /** Tasks a reviewer sent back, each with the reason as they wrote it, and the timer to restart. */
@@ -130,6 +132,38 @@ export function LeaveCard({ leave }: { leave: MyLeave }) {
           <RequestLeaveDialog variant="outline" />
         </div>
       ) : null}
+    </SectionCard>
+  )
+}
+
+/**
+ * Notice replies (§7.8.4 "overdue replies are red on the dashboard"): the notices assigned to me
+ * with a reply overdue (red) or due within 7 days, soonest first. Shown only when there are any.
+ */
+export function NoticeRepliesCard({ alerts, today }: { alerts: NoticeAlerts; today: string }) {
+  const rows = [...alerts.overdueReplies, ...alerts.repliesDue].slice(0, 4)
+  const total = alerts.counts.overdueReplies + alerts.counts.repliesDue
+  return (
+    <SectionCard
+      title="Notice replies"
+      description={[alerts.counts.overdueReplies ? `${alerts.counts.overdueReplies} overdue` : null, alerts.counts.repliesDue ? `${alerts.counts.repliesDue} due in 7 days` : null].filter(Boolean).join(" · ")}
+      viewAll={{ href: "/workpapers/notices?assigned=me&attention=reply_overdue,reply_week", label: total > rows.length ? `All ${total} of your notice replies` : "Your notices" }}
+    >
+      <ul className="divide-y divide-border/70">
+        {rows.map((n) => (
+          <li key={n.id} className="flex min-h-11 flex-col justify-center gap-0.5 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <RowLink href={n.href}>{n.clientName}</RowLink>
+              <DateText date={n.date} withRelative today={today} className="flex-none text-sm" />
+            </div>
+            <p className="text-sm text-text-muted">
+              {n.noticeType}
+              {n.referenceNo ? <span className="font-mono text-xs"> · {n.referenceNo}</span> : null}
+              {n.overdue ? <span className="text-danger-text"> · Reply overdue</span> : " · Reply due"}
+            </p>
+          </li>
+        ))}
+      </ul>
     </SectionCard>
   )
 }

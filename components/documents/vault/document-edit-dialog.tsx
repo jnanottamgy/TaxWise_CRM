@@ -10,7 +10,7 @@ import { FormDialog } from "@/components/app/form-dialog"
 import { FormAlert } from "@/components/app/form/form-alert"
 import { DateField, SelectField, SwitchField, TagField, TextField, TextareaField } from "@/components/app/form/fields"
 import { useActionForm } from "@/hooks/use-action-form"
-import { CATEGORY_OPTIONS, UpdateDocumentSchema, type UpdateDocumentInput } from "@/lib/schemas/documents"
+import { categoryOptionsFor, UpdateDocumentSchema, type UpdateDocumentInput } from "@/lib/schemas/documents"
 import { updateDocument } from "@/server/actions/documents"
 import type { VaultRow } from "@/lib/data/documents"
 
@@ -83,7 +83,7 @@ export function DocumentEditDialog({
       <FormAlert state={f} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <TextField control={f.control} name="title" label="Title" required className="md:col-span-2" maxLength={200} />
-        <SelectField control={f.control} name="category" label="Category" options={CATEGORY_OPTIONS} required />
+        <SelectField control={f.control} name="category" label="Category" options={categoryOptionsFor(canManage ? "manager" : "employee")} required />
         <FyField control={f.control} fyOptions={fyOptions} current={doc.financial_year} />
         <TextField control={f.control} name="period" label="Period" placeholder="Sep 2026, Q2" maxLength={40} />
         <TagField control={f.control} name="tags" label="Tags" />

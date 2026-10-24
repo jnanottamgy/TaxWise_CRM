@@ -32,6 +32,18 @@ export const DOCUMENT_SOURCE_LABEL: Record<string, string> = {
 
 export const CATEGORY_OPTIONS: Array<{ value: DocumentCategory; label: string }> = DOCUMENT_CATEGORIES.map((c) => ({ value: c, label: DOCUMENT_CATEGORY_LABELS[c] }));
 
+/**
+ * Engagement papers (letters, acceptance) are Partners' and Managers' only (§4.1 "engagement terms …
+ * never, anywhere" for Employees): the database hides them from an Employee and refuses an Employee
+ * filing a document under this category (0230), so an Employee's pickers leave it out.
+ */
+export const MANAGER_ONLY_CATEGORIES: readonly DocumentCategory[] = ["engagement"];
+
+/** The category choices for a role: an Employee's leave out the Partner/Manager-only ones. */
+export function categoryOptionsFor(role: string | null | undefined): Array<{ value: DocumentCategory; label: string }> {
+  return role === "employee" ? CATEGORY_OPTIONS.filter((c) => !MANAGER_ONLY_CATEGORIES.includes(c.value)) : CATEGORY_OPTIONS;
+}
+
 const uuid = (what: string) => z.uuid({ error: `That ${what} isn't valid.` });
 
 const optionalText = (max: number, tooLong: string) =>

@@ -9,6 +9,7 @@ import { mfaRequiredFor, toAal } from "@/lib/auth/mfa";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { ActionError, fail, ok, unexpectedMessage, type ActionResult, type FieldErrors } from "@/lib/result";
 import { log, logUnexpected } from "@/lib/log";
+import { RATE_LIMITS, checkRateLimit } from "@/lib/rate-limit";
 
 /** audit_event enum (§5.1). */
 export type AuditEvent =
@@ -88,8 +89,8 @@ function zodFieldErrors(error: z.ZodError): FieldErrors {
 
 /**
  * Wraps a server action so it can never let an exception reach the user (§0.1 rule 2):
- * session + role check (profiles.role) → forced-password-change gate → zod parse → handler →
- * after-effects as warnings. Framework redirect / notFound signals are re-thrown.
+ * session + role check (profiles.role) → forced-password-change gate → rate limit (§13) → zod
+ * parse → handler → after-effects as warnings. Framework redirect / notFound signals are re-thrown.
  *
  * Usage (in a "use server" file):
  *   export const createClient = defineAction(
@@ -153,6 +154,18 @@ export function defineAction<S extends z.ZodType, T>(
       if (config.roles && !config.roles.includes(user.role)) {
         await audit({ event: "access_denied", resourceType: "action", action: config.name, success: false });
         return fail("You don't have permission to do that.", { code: "forbidden" });
+      }
+
+      // §13: general server actions, 300 per minute per user. Fail-open, and an exceeded limit is
+      // audited (lib/rate-limit.ts).
+      const limited = await checkRateLimit({
+        scope: "action",
+        identity: [user.id],
+        ...RATE_LIMITS.serverAction,
+        audit: { userId: user.id, email: user.email, ip, userAgent },
+      });
+      if (!limited.allowed) {
+        return fail("You've done a lot in the last minute. Wait a moment, then try again.", { code: "rate_limited" });
       }
 
       const parsed = config.schema.safeParse(rawInput);

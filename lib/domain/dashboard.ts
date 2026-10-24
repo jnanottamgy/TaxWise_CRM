@@ -8,7 +8,11 @@
  *   - "sent back to me": the task's latest status change is a reviewer's send-back;
  *   - overdue tasks by person; the setup checklist; the quotation conversion rate;
  *   - receivable totals, at-risk clients from their rows, days waiting in a status, this week's
- *     hours against the target, the practice-health list windows, and attendance so far today.
+ *     hours against the target, the practice-health list windows, and attendance so far today;
+ *   - from the database's one-call readers (0216–0218): the setup checklist with what is still
+ *     missing and where to finish it, the FY's months (months not yet begun stay empty), the
+ *     ageing buckets, at-risk clients from per-client counts, and how urgent each practice-health
+ *     item is.
  */
 
 import { addMonths, compareDates, diffDays, fyStart, MONTH_ABBR, nowIST, parseDateString, type DateString, type FinancialYear } from "@/lib/domain/fy";
@@ -181,13 +185,13 @@ export type SetupItem = { id: keyof SetupFacts; label: string; href: string; don
 const SETUP_ITEMS: ReadonlyArray<Omit<SetupItem, "done">> = [
   { id: "hasLogo", label: "Upload the firm's logo", href: "/settings/firm" },
   { id: "hasBankAndUpi", label: "Add the bank account and UPI ID", href: "/settings/bank" },
-  { id: "hasFrnAndMembership", label: "Enter the ICAI FRN and each Partner's membership number", href: "/settings/firm" },
+  { id: "hasFrnAndMembership", label: "Enter the ICAI FRN and membership numbers", href: "/settings/firm" },
   { id: "emailDomainVerified", label: "Verify the email domain", href: "/settings/email" },
-  { id: "hasWhatsAppNumbers", label: "Add the firm's WhatsApp numbers", href: "/settings/whatsapp" },
+  { id: "hasWhatsAppNumbers", label: "Enter the firm's WhatsApp numbers", href: "/settings/whatsapp" },
   { id: "teamAdded", label: "Add the team", href: "/people" },
   { id: "firstClientOnboarded", label: "Onboard the first client", href: "/clients/new" },
   { id: "firstInvoiceIssued", label: "Issue the first invoice", href: "/invoices/new" },
-  { id: "lawReviewed", label: "Review Law & rules and confirm every [verify] item", href: "/settings/law" },
+  { id: "lawReviewed", label: "Review Law & rules", href: "/settings/law" },
 ];
 
 /** The checklist in §7.2 order; it is shown until every item is done. */
@@ -408,4 +412,191 @@ export function attendanceSoFar(input: {
     else out.notInYet++;
   }
   return out;
+}
+
+// -------------------------------------------------------------------------------------------------
+// The setup checklist with what is still missing (§7.2, §4.3): the same nine items, in order, with a
+// one-line detail from the data and a link to the exact place to finish each one.
+// -------------------------------------------------------------------------------------------------
+
+export type DomainStatus = "not_started" | "pending" | "verified" | "failed";
+
+/** What dashboard_firm_today reports about the firm's setup (0216). */
+export type SetupDetail = {
+  hasLogo: boolean;
+  hasBank: boolean;
+  hasUpi: boolean;
+  hasFrn: boolean;
+  domainStatus: DomainStatus;
+  lawReviewedAt: string | null;
+  partners: number;
+  /** Active Partners with no ICAI membership number yet (it goes on every UDIN, §6.8). */
+  partnersMissingMembership: ReadonlyArray<{ profileId: string; employeeId: string | null; name: string }>;
+  /** Firm WhatsApp numbers switched on with a number entered, of the slots there are (§7.25.4). */
+  whatsappNumbers: number;
+  whatsappSlots: number;
+  /** Active team members, the first Partner included. */
+  teamMembers: number;
+  clientsOnboarded: number;
+  invoicesIssued: number;
+};
+
+/** The nine yes/no facts of the checklist (the order and links are SETUP_ITEMS'). */
+export function setupFactsOf(d: SetupDetail): SetupFacts {
+  return {
+    hasLogo: d.hasLogo,
+    hasBankAndUpi: d.hasBank && d.hasUpi,
+    hasFrnAndMembership: d.hasFrn && d.partners > 0 && d.partnersMissingMembership.length === 0,
+    emailDomainVerified: d.domainStatus === "verified",
+    hasWhatsAppNumbers: d.whatsappNumbers > 0,
+    // The first Partner is on the team from setup; the checklist wants someone else added.
+    teamAdded: d.teamMembers > 1,
+    firstClientOnboarded: d.clientsOnboarded > 0,
+    firstInvoiceIssued: d.invoicesIssued > 0,
+    lawReviewed: Boolean(d.lawReviewedAt),
+  };
+}
+
+export type SetupStep = SetupItem & { detail: string | null };
+
+function namesList(names: readonly string[], max = 2): string {
+  const shown = names.slice(0, max);
+  const rest = names.length - shown.length;
+  if (rest > 0) return `${shown.join(", ")} and ${rest} more`;
+  return shown.length === 2 ? `${shown[0]} and ${shown[1]}` : shown.join(", ");
+}
+
+/**
+ * The checklist as Firm today shows it: SETUP_ITEMS' order and wording, each with what is still
+ * missing ("UPI ID still to add", "No membership number for Ravi") and the link that finishes it.
+ * The membership number link goes to the Partner's own Profile when it is theirs, otherwise to that
+ * Partner in People (§7.1, §4.5). `percent` is the true share done, for the progress bar.
+ */
+export function setupSteps(d: SetupDetail, viewer: { profileId: string }): { items: SetupStep[]; done: number; complete: boolean; percent: number } {
+  const base = setupChecklist(setupFactsOf(d));
+  const missing = d.partnersMissingMembership;
+  const mine = missing.some((p) => p.profileId === viewer.profileId);
+  const firstOther = missing.find((p) => p.profileId !== viewer.profileId);
+  const items: SetupStep[] = base.items.map((item) => {
+    if (item.done) return { ...item, detail: null };
+    switch (item.id) {
+      case "hasBankAndUpi":
+        return { ...item, detail: d.hasBank && !d.hasUpi ? "UPI ID still to add" : !d.hasBank && d.hasUpi ? "Bank account still to add" : null };
+      case "hasFrnAndMembership": {
+        const parts: string[] = [];
+        if (!d.hasFrn) parts.push("FRN still to add");
+        if (d.partners === 0) parts.push("No active Partner");
+        else if (missing.length) parts.push(`No membership number for ${namesList(missing.map((p) => p.name))}`);
+        const href = !d.hasFrn ? "/settings/firm" : mine ? "/profile" : firstOther?.employeeId ? `/people/${firstOther.employeeId}` : "/people";
+        return { ...item, href, detail: parts.join(" · ") || null };
+      }
+      case "emailDomainVerified":
+        return { ...item, detail: d.domainStatus === "pending" ? "DNS records added, waiting for verification" : d.domainStatus === "failed" ? "Verification failed: check the DNS records" : null };
+      case "hasWhatsAppNumbers":
+        return { ...item, detail: d.whatsappSlots > 0 ? `0 of ${d.whatsappSlots} numbers entered` : null };
+      case "teamAdded":
+        return { ...item, detail: d.teamMembers <= 1 ? "Only you so far" : null };
+      case "lawReviewed":
+        return { ...item, detail: "Confirm every [verify] item before relying on it" };
+      default:
+        return { ...item, detail: null };
+    }
+  });
+  return { items, done: base.done, complete: base.complete, percent: Math.round((base.done / base.items.length) * 100) };
+}
+
+// -------------------------------------------------------------------------------------------------
+// Invoiced and collected by month (Firm today's chart): months not yet begun are missing values,
+// not zeros, so the lines stop at this month instead of dropping to nothing (DESIGN.md: a forecast
+// is not a fact).
+// -------------------------------------------------------------------------------------------------
+
+export type FyMonthRow = { month: string; label: string; invoicedPaise: Paise | null; collectedPaise: Paise | null };
+
+/** "2026-04" → "Apr"; each month's figures as given (null for a month that hasn't begun). */
+export function fyMonthRows(rows: ReadonlyArray<{ month: string; invoicedPaise: Paise | null; collectedPaise: Paise | null }>): FyMonthRow[] {
+  return rows.map((r) => {
+    const { month } = parseDateString(`${r.month}-01`);
+    return { month: r.month, label: MONTH_ABBR[month - 1], invoicedPaise: r.invoicedPaise, collectedPaise: r.collectedPaise };
+  });
+}
+
+/** The FY so far: the sums of the months that have begun, in paise. */
+export function fyToDate(rows: readonly FyMonthRow[]): { invoicedPaise: Paise; collectedPaise: Paise; months: number } {
+  const begun = rows.filter((r) => r.invoicedPaise !== null || r.collectedPaise !== null);
+  return {
+    invoicedPaise: sumPaise(begun.map((r) => r.invoicedPaise ?? 0)),
+    collectedPaise: sumPaise(begun.map((r) => r.collectedPaise ?? 0)),
+    months: begun.length,
+  };
+}
+
+// -------------------------------------------------------------------------------------------------
+// Receivables ageing from the database's buckets (0216, the payments dashboard's keys)
+// -------------------------------------------------------------------------------------------------
+
+const SQL_AGEING: Record<string, AgeingBucketId> = { "0_30": "d0_30", "31_60": "d31_60", "61_90": "d61_90", "90_plus": "d90_plus" };
+
+/** Every bucket in order (zero when the database has none), labelled "0–30 days" … "90+ days". */
+export function ageingFromBuckets(rows: ReadonlyArray<{ bucket: string; count: number; paise: Paise }>): AgeingRow[] {
+  const by = new Map<AgeingBucketId, { count: number; paise: Paise }>();
+  for (const r of rows) {
+    const id = SQL_AGEING[r.bucket];
+    if (id) by.set(id, { count: r.count, paise: r.paise });
+  }
+  return AGEING_BUCKETS.map((b) => ({ id: b.id, label: b.label, count: by.get(b.id)?.count ?? 0, paise: by.get(b.id)?.paise ?? 0 }));
+}
+
+// -------------------------------------------------------------------------------------------------
+// At-risk clients from the database's per-client counts (0216)
+// -------------------------------------------------------------------------------------------------
+
+/** The rows as the list shows them, each with why it is at risk; the database already sorted them. */
+export function atRiskFromCounts(rows: ReadonlyArray<{ clientId: string; clientName: string; overdueTasks: number; receivablesOldPaise: Paise }>): AtRiskClient[] {
+  return rows
+    .map((r) => {
+      const reasons = atRiskReasons({ overdueTasks: r.overdueTasks, receivablesOver90Paise: r.receivablesOldPaise });
+      return { clientId: r.clientId, clientName: r.clientName, overdueTasks: r.overdueTasks, receivablesOver90Paise: r.receivablesOldPaise, reasons };
+    })
+    .filter((r) => r.reasons.length > 0);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Practice health (§7.2 Partner): which items need the Partner, so the block can say so first
+// -------------------------------------------------------------------------------------------------
+
+/** "Act" items are overdue or failing (red mark); "watch" items are coming up; the rest are fine. */
+export type HealthLevel = "act" | "watch" | "fine";
+
+/** Tax audits against the ceiling: over or at it is act; within the warning counts, watch. */
+export function ceilingLevel(warnings: ReadonlyArray<"near" | "at_ceiling" | "over" | null>): HealthLevel {
+  if (warnings.some((w) => w === "over" || w === "at_ceiling")) return "act";
+  return warnings.some((w) => w === "near") ? "watch" : "fine";
+}
+
+/** UDINs: any signed report past the 60 days is act; any still to generate, watch. */
+export function udinLevel(rows: ReadonlyArray<{ daysLate: number | null }>, total: number): HealthLevel {
+  if (rows.some((r) => r.daysLate !== null && r.daysLate > 0)) return "act";
+  return total > 0 ? "watch" : "fine";
+}
+
+/** Peer review: missing or expired is act; expiring (within the warning days) is watch. */
+export function peerReviewLevel(state: "missing" | "valid" | "expiring" | "expired"): HealthLevel {
+  return state === "missing" || state === "expired" ? "act" : state === "expiring" ? "watch" : "fine";
+}
+
+/** A count that is overdue (act) or coming up (watch). */
+export function countLevel(overdue: number, upcoming: number): HealthLevel {
+  return overdue > 0 ? "act" : upcoming > 0 ? "watch" : "fine";
+}
+
+/** PCs on a firm number: over WhatsApp's limit is act; at it, watch (§7.25.7). */
+export function linkedPcLevel(numbers: ReadonlyArray<{ atLimit: boolean; overLimit: boolean }>): HealthLevel {
+  if (numbers.some((n) => n.overLimit)) return "act";
+  return numbers.some((n) => n.atLimit) ? "watch" : "fine";
+}
+
+/** How many health items need acting on, and how many to watch (the block's one-line summary). */
+export function healthTally(levels: ReadonlyArray<HealthLevel | null>): { act: number; watch: number } {
+  return { act: levels.filter((l) => l === "act").length, watch: levels.filter((l) => l === "watch").length };
 }

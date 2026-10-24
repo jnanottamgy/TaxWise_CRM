@@ -29,8 +29,10 @@ import { getFirmProfile } from "@/server/firm";
  *      it by WhatsApp or Gmail instead. Either way the cadence restarts.
  *   3. Documents whose expiry or renewal date is within 30 days (§7.14): one in-app notice to the
  *      client's owner per date.
- * DSC, registration, engagement-letter, peer-review, notice and UDIN reminders join this job with
- * their modules (§7.15).
+ * The rest of §8's 09:00 reminders run as their own jobs right after this one, each with its own
+ * job_runs row: register-expiries (DSC, registration and engagement-letter expiries, UDIN 60-day
+ * warnings), notice-reminders (reply, hearing and appeal dates) and practice-reminders (peer
+ * review, SA 230 assembly, KYC, DPDP requests and breaches, restore drills).
  *
  * Idempotent: every notice carries a dedupe key and every email an idempotency key naming the
  * record and its date or reminder number, and the markers above are written after each record. A

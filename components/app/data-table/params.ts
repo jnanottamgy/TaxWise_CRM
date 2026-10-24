@@ -32,10 +32,12 @@ export const TABLE_PARAM = {
 } as const
 
 /**
- * Params that are never treated as filters: table state, tabs and views on the same page, and the
- * financial year (page context from the FY switcher, if it is carried in the URL).
+ * Params that are never treated as filters: table state, and tabs and views on the same page.
+ * `fy` is not one of them: the FY switcher keeps its choice in a cookie (lib/fy-context.ts), and
+ * pages that let a table pick another year (Invoices, ITR computations, Financial statements) use
+ * `fy` as an ordinary FilterBar filter, which a reserved name would silently drop.
  */
-export const RESERVED_PARAMS: readonly string[] = ["page", "size", "sort", "dir", "q", "tab", "view", "fy"]
+export const RESERVED_PARAMS: readonly string[] = ["page", "size", "sort", "dir", "q", "tab", "view"]
 
 const MAX_QUERY_LENGTH = 100
 const MAX_FILTER_VALUES = 50

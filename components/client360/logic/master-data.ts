@@ -12,6 +12,8 @@ import { isDateString, isFinancialYear, todayIST } from "@/lib/domain/fy";
 import { deriveFromGstin, gstinPanMismatch, isValidStateCode, normaliseIdentifier, validateGstin, validatePan, validatePincode, validateTan } from "@/lib/domain/india-validators";
 import { paiseToDecimalString, parseAmount } from "@/lib/domain/money";
 import { CLIENT_CODE_PATTERN, isWhatsAppNumber, validateIndianPhone } from "@/lib/schemas/clients";
+import { INCOME_NATURES, INCOME_NATURE_LABELS } from "@/lib/schemas/onboarding";
+import type { IncomeNature } from "@/lib/domain/scale";
 
 /**
  * Client 360 → Profile & contacts → Master data (§7.3.3 "edit form = step 1 fields", §7.3.2 step 1):
@@ -32,6 +34,35 @@ export const MONTH_NAMES = ["January", "February", "March", "April", "May", "Jun
 /** "Auto from turnover" is stored as null (§5.3 gst_scheme: null = derive from turnover, §6.6). */
 export const GST_SCHEME_CHOICES = ["auto", "monthly", "qrmp"] as const;
 export type GstSchemeChoice = (typeof GST_SCHEME_CHOICES)[number];
+
+/**
+ * Who may use a presumptive scheme (§6.6): s.44AD is for a resident individual, HUF or partnership
+ * firm (not an LLP); s.44ADA for a resident individual or partnership firm (not an LLP). A
+ * proprietorship is its proprietor, an individual. Everyone may be "business" or "profession".
+ */
+const PRESUMPTIVE_ENTITIES: Record<"presumptive_44ad" | "presumptive_44ada", readonly EntityType[]> = {
+  presumptive_44ad: ["individual", "proprietorship", "huf", "partnership"],
+  presumptive_44ada: ["individual", "proprietorship", "partnership"],
+};
+
+/** The "Income is earned from" choices open to an entity type (all four while it isn't chosen). */
+export function incomeNatureChoices(entityType: EntityType | null | undefined): IncomeNature[] {
+  return INCOME_NATURES.filter((n) => n === "business" || n === "profession" || !entityType || PRESUMPTIVE_ENTITIES[n].includes(entityType));
+}
+
+/** Why a presumptive choice doesn't fit the entity type, or null when it does. */
+export function incomeNatureError(entityType: EntityType | null | undefined, nature: IncomeNature | null | undefined): string | null {
+  if (!nature || !entityType || nature === "business" || nature === "profession") return null;
+  if (PRESUMPTIVE_ENTITIES[nature].includes(entityType)) return null;
+  return nature === "presumptive_44ad"
+    ? "s.44AD is for individuals, HUFs and partnership firms (not LLPs). Choose business or profession."
+    : "s.44ADA is for individuals and partnership firms (not LLPs). Choose business or profession.";
+}
+
+/** "Presumptive business (s.44AD)" for a stored clients.income_nature; null when not recorded. */
+export function incomeNatureLabel(nature: string | null | undefined): string | null {
+  return nature && (INCOME_NATURES as readonly string[]).includes(nature) ? INCOME_NATURE_LABELS[nature as IncomeNature] : null;
+}
 
 const optionalText = (max: number, what: string) =>
   z
@@ -157,6 +188,11 @@ export const MasterDataSchema = z
       .transform((v) => (v ? v : null))
       .refine((v) => v === null || isFinancialYear(v), { error: "Choose the financial year, like 2025-26." }),
     gstScheme: z.enum(GST_SCHEME_CHOICES).default("auto"),
+    /** clients.income_nature (§6.6): how the income is earned, incl. the presumptive schemes. "" = not recorded. */
+    incomeNature: z
+      .union([z.literal(""), z.enum(INCOME_NATURES), z.null()])
+      .optional()
+      .transform((v): IncomeNature | null => (v ? v : null)),
 
     // Work
     priority: z.enum(CLIENT_PRIORITIES, { error: "Choose the priority." }),
@@ -172,6 +208,8 @@ export const MasterDataSchema = z
     }
     const mismatch = gstinPanMismatch(v.gstin, v.pan);
     if (mismatch) ctx.addIssue({ code: "custom", path: ["gstin"], message: mismatch });
+    const natureError = incomeNatureError(v.entityType, v.incomeNature);
+    if (natureError) ctx.addIssue({ code: "custom", path: ["incomeNature"], message: natureError });
     if (v.annualTurnover !== null && !v.turnoverFy) {
       ctx.addIssue({ code: "custom", path: ["turnoverFy"], message: "Choose the financial year the turnover is for." });
     }
@@ -223,6 +261,7 @@ export function masterDataToRow(v: MasterDataValues) {
     annual_turnover: asNumeric(v.annualTurnover),
     turnover_fy: v.turnoverFy,
     gst_scheme: v.gstScheme === "auto" ? null : (v.gstScheme as GstScheme),
+    income_nature: v.incomeNature,
     priority: v.priority,
     notes: v.notes,
   };
@@ -256,6 +295,7 @@ export function masterDataDefaults(c: {
   annual_turnover: number | string | null;
   turnover_fy: string | null;
   gst_scheme: GstScheme | null;
+  income_nature?: string | null;
   priority: ClientPriority;
   notes: string | null;
 }): MasterDataInput {
@@ -285,6 +325,7 @@ export function masterDataDefaults(c: {
     annualTurnover: c.annual_turnover === null ? "" : String(c.annual_turnover),
     turnoverFy: c.turnover_fy ?? "",
     gstScheme: c.gst_scheme ?? "auto",
+    incomeNature: (INCOME_NATURES as readonly string[]).includes(c.income_nature ?? "") ? (c.income_nature as IncomeNature) : "",
     priority: c.priority,
     notes: c.notes ?? "",
   };
@@ -324,6 +365,7 @@ export const MASTER_FIELD_LABELS: Record<keyof MasterDataRow, string> = {
   annual_turnover: "turnover",
   turnover_fy: "turnover FY",
   gst_scheme: "GST scheme",
+  income_nature: "how the income is earned",
   priority: "priority",
   notes: "notes",
 };
@@ -341,6 +383,9 @@ export function changedMasterFields(before: Partial<Record<keyof MasterDataRow, 
   };
   return (Object.keys(after) as Array<keyof MasterDataRow>).filter((k) => norm(k, before[k]) !== norm(k, after[k]));
 }
+
+/** The fields the deadline generator reads (server/compliance/generate.ts): a change refreshes the client's deadlines. */
+export const CALENDAR_FIELDS: ReadonlyArray<keyof MasterDataRow> = ["entity_type", "gst_registration", "gstin", "state_code", "gst_scheme", "annual_turnover", "income_nature"];
 
 /** "display name, GSTIN and phone" for a timeline line. */
 export function describeChanges(fields: ReadonlyArray<keyof MasterDataRow>): string {

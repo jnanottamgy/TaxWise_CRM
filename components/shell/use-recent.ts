@@ -2,12 +2,16 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { readLocal, useLocalStorageJSON } from "@/hooks/use-local-storage";
+import { readLocal, useLocalStorageJSON, writeLocal } from "@/hooks/use-local-storage";
+import { SEARCH_MAX_LENGTH, SEARCH_MIN_LENGTH, normaliseQuery } from "@/lib/schemas/search";
+import { clearRecentSearches, rememberSearch, removeRecentSearch } from "@/server/actions/search-history";
+import { parseRecentSearches, type RecentSearchItem } from "./search-contract";
 
 /**
- * Per-user, per-browser memory for the shell: the last places visited (sidebar "Recent", §3.3) and
- * the last searches (command palette, §7.18). localStorage only, every access guarded (it can be
- * blocked); nothing sensitive is stored beyond page titles the user has already seen.
+ * Per-user memory for the shell: the last places visited (sidebar "Recent", §3.3), kept in this
+ * browser's localStorage (every access guarded, it can be blocked; nothing beyond page titles the
+ * user has already seen), and the last searches (command palette, §7.18), kept per person on the
+ * server.
  */
 
 export interface RecentPlace {
@@ -104,25 +108,76 @@ export function useRecentPlaces(userId: string, labelFor: (pathname: string) => 
   return React.useMemo(() => places.filter((p) => p.href !== pathname).slice(0, 5), [places, pathname]);
 }
 
-/** Recent searches for the command palette, newest first. */
+/**
+ * Recent searches for the command palette, newest first (§7.18 "per user": the recent_searches
+ * table, not this browser). Loaded from `GET /api/search?recent=1` when the palette opens; a search
+ * is remembered with rememberSearch, one is forgotten with removeRecentSearch and the list is
+ * emptied with clearRecentSearches (server/actions/search-history.ts). The list updates at once and
+ * is reloaded from the server after each change, so a failed save shows the stored list again.
+ * Searches kept in this browser by earlier versions are removed.
+ */
 export function useRecentSearches(userId: string): {
-  searches: string[];
+  searches: RecentSearchItem[];
   remember: (q: string) => void;
+  forget: (id: string) => void;
   clear: () => void;
 } {
-  const [stored, setStored] = useLocalStorageJSON<unknown>(`tw:recent-searches:${userId}`, []);
-  const searches = React.useMemo(
-    () => (Array.isArray(stored) ? stored.filter((s): s is string => typeof s === "string" && s.trim().length > 0).slice(0, MAX_SEARCHES) : []),
-    [stored],
-  );
+  const [searches, setSearches] = React.useState<RecentSearchItem[]>([]);
+  const [version, setVersion] = React.useState(0);
+
+  React.useEffect(() => {
+    if (readLocal(`tw:recent-searches:${userId}`) !== null) writeLocal(`tw:recent-searches:${userId}`, null);
+  }, [userId]);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/search?recent=1", { signal: controller.signal, headers: { accept: "application/json" }, cache: "no-store" });
+        let body: unknown = null;
+        try {
+          body = await res.json();
+        } catch {
+          body = null;
+        }
+        if (!controller.signal.aborted) setSearches(parseRecentSearches(body).slice(0, MAX_SEARCHES));
+      } catch {
+        // No recent searches is a fine empty state; the palette still searches.
+      }
+    })();
+    return () => controller.abort();
+  }, [userId, version]);
+
+  const reload = React.useCallback(() => setVersion((v) => v + 1), []);
+
   const remember = React.useCallback(
     (q: string) => {
-      const query = q.trim().slice(0, 120);
-      if (!query) return;
-      setStored([query, ...searches.filter((s) => s.toLowerCase() !== query.toLowerCase())].slice(0, MAX_SEARCHES));
+      const query = normaliseQuery(q).slice(0, SEARCH_MAX_LENGTH);
+      if (query.length < SEARCH_MIN_LENGTH) return;
+      setSearches((list) => [{ id: `pending:${query}`, query, searchedAt: new Date().toISOString() }, ...list.filter((s) => s.query.toLowerCase() !== query.toLowerCase())].slice(0, MAX_SEARCHES));
+      void rememberSearch({ query }).catch(() => undefined);
     },
-    [searches, setStored],
+    [],
   );
-  const clear = React.useCallback(() => setStored(null), [setStored]);
-  return { searches, remember, clear };
+  const forget = React.useCallback(
+    (id: string) => {
+      setSearches((list) => list.filter((s) => s.id !== id));
+      if (id.startsWith("pending:")) return;
+      void removeRecentSearch({ id })
+        .then((r) => {
+          if (!r.ok) reload();
+        })
+        .catch(reload);
+    },
+    [reload],
+  );
+  const clear = React.useCallback(() => {
+    setSearches([]);
+    void clearRecentSearches({})
+      .then((r) => {
+        if (!r.ok) reload();
+      })
+      .catch(reload);
+  }, [reload]);
+  return { searches, remember, forget, clear };
 }

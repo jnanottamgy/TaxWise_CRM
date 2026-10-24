@@ -122,21 +122,151 @@ export type Database = {
           },
         ]
       }
+      audit_engagement_documents: {
+        Row: {
+          added_at: string
+          added_by: string
+          amendment_note: string | null
+          created_at: string
+          document_id: string
+          engagement_id: string
+          id: string
+          is_amendment: boolean
+          step_key: string
+          updated_at: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          amendment_note?: string | null
+          created_at?: string
+          document_id: string
+          engagement_id: string
+          id?: string
+          is_amendment?: boolean
+          step_key: string
+          updated_at?: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          amendment_note?: string | null
+          created_at?: string
+          document_id?: string
+          engagement_id?: string
+          id?: string
+          is_amendment?: boolean
+          step_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_engagement_documents_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_engagement_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_engagement_documents_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_engagement_documents_step_key_fkey"
+            columns: ["step_key"]
+            isOneToOne: false
+            referencedRelation: "audit_step_definitions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      audit_engagement_stage_log: {
+        Row: {
+          approved_by: string
+          at: string
+          created_at: string
+          engagement_id: string
+          from_stage: string
+          id: string
+          note: string | null
+          to_stage: string
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          approved_by: string
+          at?: string
+          created_at?: string
+          engagement_id: string
+          from_stage: string
+          id?: string
+          note?: string | null
+          to_stage: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          approved_by?: string
+          at?: string
+          created_at?: string
+          engagement_id?: string
+          from_stage?: string
+          id?: string
+          note?: string | null
+          to_stage?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_engagement_stage_log_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_engagement_stage_log_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "audit_engagements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_engagements: {
         Row: {
+          accepted_on: string | null
           archived_at: string | null
+          archived_by: string | null
           audit_type: string
           caro_applicable: boolean | null
           checklist: Json | null
           client_id: string
+          company_profile: Json | null
           counts_towards_company_audit_limit: boolean | null
           created_at: string
           created_by: string | null
           engagement_partner_id: string
           file_assembly_due: string | null
           financial_year: string
+          had_previous_auditor: boolean | null
           id: string
+          limit_override_at: string | null
+          limit_override_by: string | null
+          limit_override_note: string | null
           materiality: Json | null
+          notes: string | null
           report_date: string | null
           report_type: string | null
           requires_peer_reviewed_auditor: boolean
@@ -145,21 +275,30 @@ export type Database = {
           stage: string
           udin_record_id: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          accepted_on?: string | null
           archived_at?: string | null
+          archived_by?: string | null
           audit_type: string
           caro_applicable?: boolean | null
           checklist?: Json | null
           client_id: string
+          company_profile?: Json | null
           counts_towards_company_audit_limit?: boolean | null
           created_at?: string
           created_by?: string | null
           engagement_partner_id: string
           file_assembly_due?: never
           financial_year: string
+          had_previous_auditor?: boolean | null
           id?: string
+          limit_override_at?: string | null
+          limit_override_by?: string | null
+          limit_override_note?: string | null
           materiality?: Json | null
+          notes?: string | null
           report_date?: string | null
           report_type?: string | null
           requires_peer_reviewed_auditor?: boolean
@@ -168,21 +307,30 @@ export type Database = {
           stage?: string
           udin_record_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          accepted_on?: string | null
           archived_at?: string | null
+          archived_by?: string | null
           audit_type?: string
           caro_applicable?: boolean | null
           checklist?: Json | null
           client_id?: string
+          company_profile?: Json | null
           counts_towards_company_audit_limit?: boolean | null
           created_at?: string
           created_by?: string | null
           engagement_partner_id?: string
           file_assembly_due?: never
           financial_year?: string
+          had_previous_auditor?: boolean | null
           id?: string
+          limit_override_at?: string | null
+          limit_override_by?: string | null
+          limit_override_note?: string | null
           materiality?: Json | null
+          notes?: string | null
           report_date?: string | null
           report_type?: string | null
           requires_peer_reviewed_auditor?: boolean
@@ -191,8 +339,16 @@ export type Database = {
           stage?: string
           udin_record_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_engagements_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "audit_engagements_client_id_fkey"
             columns: ["client_id"]
@@ -201,10 +357,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "audit_engagements_limit_override_by_fkey"
+            columns: ["limit_override_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "audit_engagements_udin_record_id_fkey"
             columns: ["udin_record_id"]
             isOneToOne: false
             referencedRelation: "udin_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_engagements_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -257,6 +427,51 @@ export type Database = {
           user_email?: string | null
           user_id?: string | null
           user_role?: string | null
+        }
+        Relationships: []
+      }
+      audit_step_definitions: {
+        Row: {
+          allow_na: boolean
+          audit_types: string[] | null
+          created_at: string
+          evidence_required: boolean
+          guidance: string
+          key: string
+          sa_refs: string[]
+          sort_order: number
+          stage: string
+          system_check: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_na?: boolean
+          audit_types?: string[] | null
+          created_at?: string
+          evidence_required?: boolean
+          guidance: string
+          key: string
+          sa_refs?: string[]
+          sort_order: number
+          stage: string
+          system_check?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_na?: boolean
+          audit_types?: string[] | null
+          created_at?: string
+          evidence_required?: boolean
+          guidance?: string
+          key?: string
+          sa_refs?: string[]
+          sort_order?: number
+          stage?: string
+          system_check?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -751,6 +966,7 @@ export type Database = {
         Row: {
           agreed_fee: number | null
           auto_invoice: boolean
+          billing_anchor_day: number | null
           billing_frequency: Database["public"]["Enums"]["service_frequency"] | null
           client_id: string
           created_at: string
@@ -770,6 +986,7 @@ export type Database = {
         Insert: {
           agreed_fee?: number | null
           auto_invoice?: boolean
+          billing_anchor_day?: number | null
           billing_frequency?: Database["public"]["Enums"]["service_frequency"] | null
           client_id: string
           created_at?: string
@@ -789,6 +1006,7 @@ export type Database = {
         Update: {
           agreed_fee?: number | null
           auto_invoice?: boolean
+          billing_anchor_day?: number | null
           billing_frequency?: Database["public"]["Enums"]["service_frequency"] | null
           client_id?: string
           created_at?: string
@@ -1588,7 +1806,12 @@ export type Database = {
       data_incidents: {
         Row: {
           actions: Json
+          assessed_at: string | null
+          assessment: string | null
           board_notified_at: string | null
+          board_reference: string | null
+          closed_at: string | null
+          closed_by: string | null
           contained_at: string | null
           created_at: string
           created_by: string | null
@@ -1599,11 +1822,19 @@ export type Database = {
           people_affected_estimate: number | null
           principals_notified_at: string | null
           root_cause: string | null
+          severity: string
+          title: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           actions?: Json
+          assessed_at?: string | null
+          assessment?: string | null
           board_notified_at?: string | null
+          board_reference?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           contained_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1614,11 +1845,19 @@ export type Database = {
           people_affected_estimate?: number | null
           principals_notified_at?: string | null
           root_cause?: string | null
+          severity?: string
+          title?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           actions?: Json
+          assessed_at?: string | null
+          assessment?: string | null
           board_notified_at?: string | null
+          board_reference?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           contained_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1629,48 +1868,115 @@ export type Database = {
           people_affected_estimate?: number | null
           principals_notified_at?: string | null
           root_cause?: string | null
+          severity?: string
+          title?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "data_incidents_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_incidents_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       data_requests: {
         Row: {
+          channel: string | null
+          client_id: string | null
+          closed_at: string | null
+          contact: string | null
           created_at: string
+          created_by: string | null
+          details: string | null
           due_by: string | null
           handled_by: string | null
           id: string
           received_at: string
           response: string | null
+          retained_explanation: string | null
           status: string
           subject: string
+          subject_type: string | null
           type: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          channel?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          contact?: string | null
           created_at?: string
+          created_by?: string | null
+          details?: string | null
           due_by?: string | null
           handled_by?: string | null
           id?: string
           received_at?: string
           response?: string | null
+          retained_explanation?: string | null
           status?: string
           subject: string
+          subject_type?: string | null
           type: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          channel?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          contact?: string | null
           created_at?: string
+          created_by?: string | null
+          details?: string | null
           due_by?: string | null
           handled_by?: string | null
           id?: string
           received_at?: string
           response?: string | null
+          retained_explanation?: string | null
           status?: string
           subject?: string
+          subject_type?: string | null
           type?: string
           updated_at?: string
+          updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "data_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_requests_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       desktop_device_numbers: {
         Row: {
@@ -2800,57 +3106,100 @@ export type Database = {
       }
       engagement_letters: {
         Row: {
+          audit_engagement_id: string | null
+          audit_type: string | null
           client_id: string
           created_at: string
           created_by: string | null
+          declined_reason: string | null
           document_id: string | null
+          exclusions: string | null
           expires_at: string | null
           fee_agreed: number | null
           financial_year: string
           id: string
           issued_at: string | null
           notes: string | null
+          renewed_from_id: string | null
+          report_form: string | null
+          reporting_framework: string | null
           scope: string | null
+          sent_at: string | null
+          sent_to: string | null
           service_types: Database["public"]["Enums"]["service_type"][]
+          services_schedule: Json
+          signatory_id: string | null
           signed_at: string | null
           status: Database["public"]["Enums"]["engagement_status"]
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          audit_engagement_id?: string | null
+          audit_type?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
+          declined_reason?: string | null
           document_id?: string | null
+          exclusions?: string | null
           expires_at?: string | null
           fee_agreed?: number | null
           financial_year: string
           id?: string
           issued_at?: string | null
           notes?: string | null
+          renewed_from_id?: string | null
+          report_form?: string | null
+          reporting_framework?: string | null
           scope?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
           service_types: Database["public"]["Enums"]["service_type"][]
+          services_schedule?: Json
+          signatory_id?: string | null
           signed_at?: string | null
           status?: Database["public"]["Enums"]["engagement_status"]
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          audit_engagement_id?: string | null
+          audit_type?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
+          declined_reason?: string | null
           document_id?: string | null
+          exclusions?: string | null
           expires_at?: string | null
           fee_agreed?: number | null
           financial_year?: string
           id?: string
           issued_at?: string | null
           notes?: string | null
+          renewed_from_id?: string | null
+          report_form?: string | null
+          reporting_framework?: string | null
           scope?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
           service_types?: Database["public"]["Enums"]["service_type"][]
+          services_schedule?: Json
+          signatory_id?: string | null
           signed_at?: string | null
           status?: Database["public"]["Enums"]["engagement_status"]
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "engagement_letters_audit_engagement_id_fkey"
+            columns: ["audit_engagement_id"]
+            isOneToOne: false
+            referencedRelation: "audit_engagements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "engagement_letters_client_id_fkey"
             columns: ["client_id"]
@@ -2863,6 +3212,20 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_letters_renewed_from_id_fkey"
+            columns: ["renewed_from_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_letters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_letters_signatory_id_fkey"
+            columns: ["signatory_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2961,34 +3324,64 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string
+          finalised_at: string | null
+          finalised_by: string | null
           financial_year: string
           id: string
+          inputs: Json
           ledgers: Json
+          prepared_by: string | null
+          previous_statement_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_document_id: string | null
           statements: Json
           status: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           client_id: string
           created_at?: string
           created_by: string
+          finalised_at?: string | null
+          finalised_by?: string | null
           financial_year: string
           id?: string
+          inputs?: Json
           ledgers: Json
+          prepared_by?: string | null
+          previous_statement_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_document_id?: string | null
           statements: Json
           status?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           client_id?: string
           created_at?: string
           created_by?: string
+          finalised_at?: string | null
+          finalised_by?: string | null
           financial_year?: string
           id?: string
+          inputs?: Json
           ledgers?: Json
+          prepared_by?: string | null
+          previous_statement_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_document_id?: string | null
           statements?: Json
           status?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -2996,6 +3389,20 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_statements_previous_statement_id_fkey"
+            columns: ["previous_statement_id"]
+            isOneToOne: false
+            referencedRelation: "financial_statements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_statements_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -3339,44 +3746,84 @@ export type Database = {
       gst_recon_entries: {
         Row: {
           bucket: string
+          cleared_by_run_id: string | null
           created_at: string
           data: Json
+          entry_key: string | null
+          first_seen_period: string | null
           id: string
+          ims_action: string | null
+          ims_decided_at: string | null
+          ims_decided_by: string | null
+          ims_reason: string | null
           match_tier: string | null
+          origin: string
           resolution: string | null
           resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           run_id: string
           supplier_gstin: string
           supplier_name: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           bucket: string
+          cleared_by_run_id?: string | null
           created_at?: string
           data: Json
+          entry_key?: string | null
+          first_seen_period?: string | null
           id?: string
+          ims_action?: string | null
+          ims_decided_at?: string | null
+          ims_decided_by?: string | null
+          ims_reason?: string | null
           match_tier?: string | null
+          origin?: string
           resolution?: string | null
           resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           run_id: string
           supplier_gstin: string
           supplier_name?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           bucket?: string
+          cleared_by_run_id?: string | null
           created_at?: string
           data?: Json
+          entry_key?: string | null
+          first_seen_period?: string | null
           id?: string
+          ims_action?: string | null
+          ims_decided_at?: string | null
+          ims_decided_by?: string | null
+          ims_reason?: string | null
           match_tier?: string | null
+          origin?: string
           resolution?: string | null
           resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           run_id?: string
           supplier_gstin?: string
           supplier_name?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "gst_recon_entries_cleared_by_run_id_fkey"
+            columns: ["cleared_by_run_id"]
+            isOneToOne: false
+            referencedRelation: "gst_recon_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gst_recon_entries_run_id_fkey"
             columns: ["run_id"]
@@ -3395,6 +3842,8 @@ export type Database = {
           id: string
           period: string
           portal_gstin: string | null
+          previous_run_id: string | null
+          register_document_id: string | null
           source_files: Json | null
           summary: Json
           updated_at: string
@@ -3407,6 +3856,8 @@ export type Database = {
           id?: string
           period: string
           portal_gstin?: string | null
+          previous_run_id?: string | null
+          register_document_id?: string | null
           source_files?: Json | null
           summary: Json
           updated_at?: string
@@ -3419,6 +3870,8 @@ export type Database = {
           id?: string
           period?: string
           portal_gstin?: string | null
+          previous_run_id?: string | null
+          register_document_id?: string | null
           source_files?: Json | null
           summary?: Json
           updated_at?: string
@@ -3429,6 +3882,20 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_recon_runs_previous_run_id_fkey"
+            columns: ["previous_run_id"]
+            isOneToOne: false
+            referencedRelation: "gst_recon_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_recon_runs_register_document_id_fkey"
+            columns: ["register_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -3459,6 +3926,7 @@ export type Database = {
           answers: Json
           created_at: string
           declared_at: string
+          declared_by: string | null
           details: string | null
           employee_id: string
           financial_year: string
@@ -3469,6 +3937,7 @@ export type Database = {
           answers?: Json
           created_at?: string
           declared_at?: string
+          declared_by?: string | null
           details?: string | null
           employee_id: string
           financial_year: string
@@ -3479,6 +3948,7 @@ export type Database = {
           answers?: Json
           created_at?: string
           declared_at?: string
+          declared_by?: string | null
           details?: string | null
           employee_id?: string
           financial_year?: string
@@ -3486,6 +3956,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "independence_declarations_declared_by_fkey"
+            columns: ["declared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "independence_declarations_employee_id_fkey"
             columns: ["employee_id"]
@@ -3970,39 +4447,81 @@ export type Database = {
       itr_computations: {
         Row: {
           client_id: string
+          computed_at: string | null
           created_at: string
           created_by: string
+          finalised_at: string | null
+          finalised_by: string | null
           financial_year: string
           id: string
           inputs: Json
+          label: string | null
+          prepared_by: string | null
           regime_chosen: string | null
+          regime_chosen_at: string | null
+          regime_chosen_by: string | null
           results: Json
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rule_set: Json | null
+          rule_set_param_id: string | null
+          rule_set_verified: boolean | null
           status: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           client_id: string
+          computed_at?: string | null
           created_at?: string
           created_by: string
+          finalised_at?: string | null
+          finalised_by?: string | null
           financial_year: string
           id?: string
           inputs: Json
+          label?: string | null
+          prepared_by?: string | null
           regime_chosen?: string | null
+          regime_chosen_at?: string | null
+          regime_chosen_by?: string | null
           results: Json
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_set?: Json | null
+          rule_set_param_id?: string | null
+          rule_set_verified?: boolean | null
           status?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           client_id?: string
+          computed_at?: string | null
           created_at?: string
           created_by?: string
+          finalised_at?: string | null
+          finalised_by?: string | null
           financial_year?: string
           id?: string
           inputs?: Json
+          label?: string | null
+          prepared_by?: string | null
           regime_chosen?: string | null
+          regime_chosen_at?: string | null
+          regime_chosen_by?: string | null
           results?: Json
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_set?: Json | null
+          rule_set_param_id?: string | null
+          rule_set_verified?: boolean | null
           status?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -4010,6 +4529,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itr_computations_rule_set_param_id_fkey"
+            columns: ["rule_set_param_id"]
+            isOneToOne: false
+            referencedRelation: "statutory_parameters"
             referencedColumns: ["id"]
           },
         ]
@@ -4829,53 +5355,79 @@ export type Database = {
       }
       previous_auditor_communications: {
         Row: {
+          audit_engagement_id: string | null
           client_id: string
           created_at: string
+          created_by: string | null
           delivery_proof_document_id: string | null
           engagement_type: string
           id: string
           letter_sent_on: string
+          notes: string | null
           objections: string | null
           outcome: string | null
           previous_auditor_frn: string | null
           previous_auditor_name: string
           reply_received_on: string | null
+          sent_via: string | null
           updated_at: string
         }
         Insert: {
+          audit_engagement_id?: string | null
           client_id: string
           created_at?: string
+          created_by?: string | null
           delivery_proof_document_id?: string | null
           engagement_type: string
           id?: string
           letter_sent_on: string
+          notes?: string | null
           objections?: string | null
           outcome?: string | null
           previous_auditor_frn?: string | null
           previous_auditor_name: string
           reply_received_on?: string | null
+          sent_via?: string | null
           updated_at?: string
         }
         Update: {
+          audit_engagement_id?: string | null
           client_id?: string
           created_at?: string
+          created_by?: string | null
           delivery_proof_document_id?: string | null
           engagement_type?: string
           id?: string
           letter_sent_on?: string
+          notes?: string | null
           objections?: string | null
           outcome?: string | null
           previous_auditor_frn?: string | null
           previous_auditor_name?: string
           reply_received_on?: string | null
+          sent_via?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "previous_auditor_communications_audit_engagement_id_fkey"
+            columns: ["audit_engagement_id"]
+            isOneToOne: false
+            referencedRelation: "audit_engagements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "previous_auditor_communications_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "previous_auditor_communications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -4890,32 +5442,56 @@ export type Database = {
       privacy_notices: {
         Row: {
           body: string
+          change_summary: string | null
           created_at: string
+          created_by: string | null
           id: string
           is_current: boolean
           published_at: string | null
+          published_by: string | null
           updated_at: string
           version: string
         }
         Insert: {
           body: string
+          change_summary?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           is_current?: boolean
           published_at?: string | null
+          published_by?: string | null
           updated_at?: string
           version: string
         }
         Update: {
           body?: string
+          change_summary?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           is_current?: boolean
           published_at?: string | null
+          published_by?: string | null
           updated_at?: string
           version?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "privacy_notices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_notices_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -4979,10 +5555,16 @@ export type Database = {
           created_at: string
           element: string
           id: string
+          last_reviewed_by: string | null
           last_reviewed_on: string | null
           notes: string | null
           owner_employee_id: string | null
+          quality_objective: string | null
+          quality_risk: string | null
+          review_every_months: number
+          risk_response: string | null
           sort_order: number
+          sqm1_component: string | null
           title: string
           updated_at: string
         }
@@ -4990,10 +5572,16 @@ export type Database = {
           created_at?: string
           element: string
           id?: string
+          last_reviewed_by?: string | null
           last_reviewed_on?: string | null
           notes?: string | null
           owner_employee_id?: string | null
+          quality_objective?: string | null
+          quality_risk?: string | null
+          review_every_months?: number
+          risk_response?: string | null
           sort_order?: number
+          sqm1_component?: string | null
           title: string
           updated_at?: string
         }
@@ -5001,14 +5589,27 @@ export type Database = {
           created_at?: string
           element?: string
           id?: string
+          last_reviewed_by?: string | null
           last_reviewed_on?: string | null
           notes?: string | null
           owner_employee_id?: string | null
+          quality_objective?: string | null
+          quality_risk?: string | null
+          review_every_months?: number
+          risk_response?: string | null
           sort_order?: number
+          sqm1_component?: string | null
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "quality_manual_items_last_reviewed_by_fkey"
+            columns: ["last_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quality_manual_items_owner_employee_id_fkey"
             columns: ["owner_employee_id"]
@@ -5483,30 +6084,45 @@ export type Database = {
       }
       restore_drills: {
         Row: {
+          backup_reference: string | null
+          checks: string | null
           created_at: string
+          duration_minutes: number | null
           id: string
+          issues: string | null
           notes: string | null
           outcome: string
           performed_by: string | null
           performed_on: string
+          restored_to: string | null
           updated_at: string
         }
         Insert: {
+          backup_reference?: string | null
+          checks?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
+          issues?: string | null
           notes?: string | null
           outcome: string
           performed_by?: string | null
           performed_on: string
+          restored_to?: string | null
           updated_at?: string
         }
         Update: {
+          backup_reference?: string | null
+          checks?: string | null
           created_at?: string
+          duration_minutes?: number | null
           id?: string
+          issues?: string | null
           notes?: string | null
           outcome?: string
           performed_by?: string | null
           performed_on?: string
+          restored_to?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -6323,78 +6939,156 @@ export type Database = {
           },
         ]
       }
+      tax_notice_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          client_id: string
+          created_at: string
+          id: string
+          kind: string
+          noted_on: string
+          notice_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          client_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          noted_on?: string
+          notice_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          noted_on?: string
+          notice_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_notice_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_notice_notes_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_notices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_notices: {
         Row: {
+          appeal_decision: string | null
           appeal_forum: string | null
+          appeal_note: string | null
           appeal_task_id: string | null
           assigned_employee_id: string | null
           authority: string | null
           client_id: string
+          closed_at: string | null
+          closed_by: string | null
           created_at: string
           created_by: string
           demand_amount: number | null
           description: string | null
+          financial_year: string | null
           hearing_date: string | null
           id: string
           limitation_date: string | null
+          limitation_manual: boolean
           notes: string | null
           notice_date: string | null
           notice_type: string
           order_date: string | null
           received_date: string | null
           reference_no: string | null
+          replied_on: string | null
           reply_due_date: string | null
           section: string | null
           status: Database["public"]["Enums"]["notice_status"]
+          tax_area: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          appeal_decision?: string | null
           appeal_forum?: string | null
+          appeal_note?: string | null
           appeal_task_id?: string | null
           assigned_employee_id?: string | null
           authority?: string | null
           client_id: string
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by: string
           demand_amount?: number | null
           description?: string | null
+          financial_year?: string | null
           hearing_date?: string | null
           id?: string
           limitation_date?: string | null
+          limitation_manual?: boolean
           notes?: string | null
           notice_date?: string | null
           notice_type: string
           order_date?: string | null
           received_date?: string | null
           reference_no?: string | null
+          replied_on?: string | null
           reply_due_date?: string | null
           section?: string | null
           status?: Database["public"]["Enums"]["notice_status"]
+          tax_area?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          appeal_decision?: string | null
           appeal_forum?: string | null
+          appeal_note?: string | null
           appeal_task_id?: string | null
           assigned_employee_id?: string | null
           authority?: string | null
           client_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by?: string
           demand_amount?: number | null
           description?: string | null
+          financial_year?: string | null
           hearing_date?: string | null
           id?: string
           limitation_date?: string | null
+          limitation_manual?: boolean
           notes?: string | null
           notice_date?: string | null
           notice_type?: string
           order_date?: string | null
           received_date?: string | null
           reference_no?: string | null
+          replied_on?: string | null
           reply_due_date?: string | null
           section?: string | null
           status?: Database["public"]["Enums"]["notice_status"]
+          tax_area?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -6783,13 +7477,17 @@ export type Database = {
       udin_records: {
         Row: {
           audit_engagement_id: string | null
+          ceiling_confirmed_at: string | null
+          ceiling_confirmed_by: string | null
           client_id: string | null
           counts_towards_tax_audit_ceiling: boolean | null
           created_at: string
+          created_by: string | null
           document_date: string
           document_type: string
           filing_record_id: string | null
           financial_year: string | null
+          form26_category: string | null
           generated_on: string
           id: string
           is_revised: boolean
@@ -6799,16 +7497,21 @@ export type Database = {
           signing_partner_id: string | null
           udin: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           audit_engagement_id?: string | null
+          ceiling_confirmed_at?: string | null
+          ceiling_confirmed_by?: string | null
           client_id?: string | null
           counts_towards_tax_audit_ceiling?: boolean | null
           created_at?: string
+          created_by?: string | null
           document_date: string
           document_type: string
           filing_record_id?: string | null
           financial_year?: string | null
+          form26_category?: string | null
           generated_on: string
           id?: string
           is_revised?: boolean
@@ -6818,16 +7521,21 @@ export type Database = {
           signing_partner_id?: string | null
           udin: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           audit_engagement_id?: string | null
+          ceiling_confirmed_at?: string | null
+          ceiling_confirmed_by?: string | null
           client_id?: string | null
           counts_towards_tax_audit_ceiling?: boolean | null
           created_at?: string
+          created_by?: string | null
           document_date?: string
           document_type?: string
           filing_record_id?: string | null
           financial_year?: string | null
+          form26_category?: string | null
           generated_on?: string
           id?: string
           is_revised?: boolean
@@ -6837,6 +7545,7 @@ export type Database = {
           signing_partner_id?: string | null
           udin?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -6844,6 +7553,13 @@ export type Database = {
             columns: ["audit_engagement_id"]
             isOneToOne: false
             referencedRelation: "audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "udin_records_ceiling_confirmed_by_fkey"
+            columns: ["ceiling_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -6871,6 +7587,41 @@ export type Database = {
       }
     }
     Views: {
+      audit_engagements_list: {
+        Row: {
+          accepted_on: string | null
+          archived_at: string | null
+          assembly_days_left: number | null
+          assembly_overdue: boolean | null
+          audit_type: string | null
+          caro_applicable: boolean | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          engagement_partner_id: string | null
+          engagement_partner_name: string | null
+          entity_type: string | null
+          evidence_count: number | null
+          file_assembly_due: string | null
+          financial_year: string | null
+          had_previous_auditor: boolean | null
+          id: string | null
+          report_date: string | null
+          report_type: string | null
+          requires_peer_reviewed_auditor: boolean | null
+          retain_until: string | null
+          review_manager_id: string | null
+          review_manager_name: string | null
+          stage: string | null
+          stage_steps: number | null
+          stage_steps_done: number | null
+          udin: string | null
+          udin_record_id: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       client_acceptances_list: {
         Row: {
           client_code: string | null
@@ -6912,6 +7663,29 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
           username: string | null
+        }
+        Relationships: []
+      }
+      client_credentials_register: {
+        Row: {
+          can_reveal: boolean | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          client_status: Database["public"]["Enums"]["client_status"] | null
+          created_at: string | null
+          id: string | null
+          last_viewed_at: string | null
+          login_url: string | null
+          notes: string | null
+          owner_employee_id: string | null
+          portal: string | null
+          portal_label: string | null
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_name: string | null
+          username: string | null
+          view_count: number | null
         }
         Relationships: []
       }
@@ -6985,6 +7759,7 @@ export type Database = {
           gst_registration: Database["public"]["Enums"]["gst_registration"] | null
           gst_scheme: Database["public"]["Enums"]["gst_scheme"] | null
           gstin: string | null
+          has_aged_receivables: boolean | null
           has_overdue_invoices: boolean | null
           has_portal: boolean | null
           id: string | null
@@ -7101,6 +7876,78 @@ export type Database = {
         }
         Relationships: []
       }
+      credential_access_trail: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          credential_id: string | null
+          id: string | null
+          ip: string | null
+          user_id: string | null
+          user_name: string | null
+          user_role: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
+      data_incidents_view: {
+        Row: {
+          actions: Json | null
+          assessed_at: string | null
+          assessment: string | null
+          board_notified_at: string | null
+          board_overdue: boolean | null
+          board_reference: string | null
+          board_report_due_at: string | null
+          closed_at: string | null
+          closed_by: string | null
+          contained_at: string | null
+          created_at: string | null
+          created_by: string | null
+          data_categories: string[] | null
+          description: string | null
+          detected_at: string | null
+          id: string | null
+          is_open: boolean | null
+          people_affected_estimate: number | null
+          principals_notified_at: string | null
+          root_cause: string | null
+          severity: string | null
+          steps_done: number | null
+          title: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Relationships: []
+      }
+      data_requests_view: {
+        Row: {
+          channel: string | null
+          client_id: string | null
+          client_name: string | null
+          closed_at: string | null
+          contact: string | null
+          created_at: string | null
+          created_by: string | null
+          days_left: number | null
+          details: string | null
+          due_by: string | null
+          handled_by: string | null
+          handled_by_name: string | null
+          id: string | null
+          is_open: boolean | null
+          is_overdue: boolean | null
+          received_at: string | null
+          response: string | null
+          retained_explanation: string | null
+          status: string | null
+          subject: string | null
+          subject_type: string | null
+          type: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Relationships: []
+      }
       desktop_devices_overview: {
         Row: {
           app_version: string | null
@@ -7123,6 +7970,47 @@ export type Database = {
         }
         Relationships: []
       }
+      documents_for_disposal: {
+        Row: {
+          category: string | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          days_past: number | null
+          file_name: string | null
+          financial_year: string | null
+          id: string | null
+          in_audit_file: boolean | null
+          retention_until: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
+      dsc_register: {
+        Row: {
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          custody: string | null
+          days_to_expiry: number | null
+          display_status: string | null
+          dsc_class: string | null
+          expiry_date: string | null
+          holder_name: string | null
+          holder_pan: string | null
+          id: string | null
+          issue_date: string | null
+          issued_by: string | null
+          notes: string | null
+          owner_employee_id: string | null
+          serial_number: string | null
+          status: Database["public"]["Enums"]["dsc_status"] | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       employee_cost_rates: {
         Row: {
           billing_rate_per_hour: number | null
@@ -7140,6 +8028,221 @@ export type Database = {
           id: string | null
           is_active: boolean | null
           profile_id: string | null
+        }
+        Relationships: []
+      }
+      engagement_letters_register: {
+        Row: {
+          audit_engagement_id: string | null
+          audit_type: string | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          client_status: Database["public"]["Enums"]["client_status"] | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          days_to_expiry: number | null
+          declined_reason: string | null
+          display_status: string | null
+          document_id: string | null
+          exclusions: string | null
+          expires_at: string | null
+          fee_agreed: number | null
+          financial_year: string | null
+          id: string | null
+          is_audit: boolean | null
+          issued_at: string | null
+          notes: string | null
+          owner_employee_id: string | null
+          owner_name: string | null
+          renewal_fy: string | null
+          renewal_id: string | null
+          renewal_status: Database["public"]["Enums"]["engagement_status"] | null
+          renewed_from_fy: string | null
+          renewed_from_id: string | null
+          report_form: string | null
+          reporting_framework: string | null
+          scope: string | null
+          sent_at: string | null
+          sent_to: string | null
+          service_types: Database["public"]["Enums"]["service_type"][] | null
+          services_schedule: Json | null
+          signatory_id: string | null
+          signatory_name: string | null
+          signed_at: string | null
+          signed_copy_title: string | null
+          status: Database["public"]["Enums"]["engagement_status"] | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Relationships: []
+      }
+      filing_history: {
+        Row: {
+          acknowledgement_no: string | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          compliance_event_id: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          document_id: string | null
+          event_due_date: string | null
+          event_title: string | null
+          filed_by_external: string | null
+          filed_on: string | null
+          filing_type: string | null
+          financial_year: string | null
+          form_key: string | null
+          id: string | null
+          notes: string | null
+          on_time: boolean | null
+          origin: string | null
+          owner_employee_id: string | null
+          period: string | null
+          service_type: Database["public"]["Enums"]["service_type"] | null
+          shareable_with_client: boolean | null
+          task_id: string | null
+          task_number: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      financial_statements_list: {
+        Row: {
+          all_checks_passed: boolean | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          entity_type: string | null
+          failed_checks: number | null
+          finalised_at: string | null
+          finalised_by: string | null
+          finalised_by_name: string | null
+          financial_year: string | null
+          id: string | null
+          ledger_count: number | null
+          prepared_by: string | null
+          prepared_by_name: string | null
+          previous_statement_id: string | null
+          profit_paise: number | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          source_document_id: string | null
+          status: string | null
+          total_assets_paise: number | null
+          total_income_paise: number | null
+          unmapped_count: number | null
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_name: string | null
+        }
+        Relationships: []
+      }
+      gst_recon_entry_list: {
+        Row: {
+          books_doc_date: string | null
+          books_doc_number: string | null
+          books_taxable_paise: number | null
+          bucket: string | null
+          cleared_by_run_id: string | null
+          client_id: string | null
+          created_at: string | null
+          data: Json | null
+          doc_date: string | null
+          doc_number: string | null
+          doc_type: string | null
+          entry_key: string | null
+          first_seen_period: string | null
+          id: string | null
+          ims_action: string | null
+          ims_decided_at: string | null
+          ims_decided_by: string | null
+          ims_decided_by_name: string | null
+          ims_reason: string | null
+          is_open: boolean | null
+          itc_books_paise: number | null
+          itc_difference_paise: number | null
+          itc_paise: number | null
+          itc_portal_paise: number | null
+          match_tier: string | null
+          origin: string | null
+          period: string | null
+          portal_doc_date: string | null
+          portal_doc_number: string | null
+          portal_section: string | null
+          portal_taxable_paise: number | null
+          resolution: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolved_by_name: string | null
+          run_id: string | null
+          supplier_gstin: string | null
+          supplier_name: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      gst_recon_runs_list: {
+        Row: {
+          carried_count: number | null
+          client_code: string | null
+          client_gstin: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          follow_up_count: number | null
+          gstin_mismatch: boolean | null
+          id: string | null
+          ims_pending_count: number | null
+          is_latest: boolean | null
+          itc_at_risk_paise: number | null
+          itc_per_2b_paise: number | null
+          itc_per_books_paise: number | null
+          matched_count: number | null
+          mismatch_count: number | null
+          missing_in_2b_count: number | null
+          missing_in_books_count: number | null
+          open_count: number | null
+          period: string | null
+          period_start: string | null
+          portal_gstin: string | null
+          previous_run_id: string | null
+          register_document_id: string | null
+          resolved_count: number | null
+          unclaimed_itc_paise: number | null
+        }
+        Relationships: []
+      }
+      gst_recon_supplier_rollup: {
+        Row: {
+          carried_count: number | null
+          chase_count: number | null
+          client_id: string | null
+          following_up_count: number | null
+          itc_at_risk_paise: number | null
+          last_follow_up_at: string | null
+          line_count: number | null
+          matched_count: number | null
+          mismatch_count: number | null
+          mismatch_difference_paise: number | null
+          missing_in_2b_count: number | null
+          missing_in_books_count: number | null
+          open_count: number | null
+          run_id: string | null
+          supplier_gstin: string | null
+          supplier_name: string | null
+          unclaimed_itc_paise: number | null
         }
         Relationships: []
       }
@@ -7239,6 +8342,74 @@ export type Database = {
           total_amount: number | null
           updated_at: string | null
           waived_reason: string | null
+        }
+        Relationships: []
+      }
+      itr_computations_list: {
+        Row: {
+          balance_paise: number | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          client_pan: string | null
+          computed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          due_date: string | null
+          effective_regime: string | null
+          entity_type: string | null
+          filing_date: string | null
+          finalised_at: string | null
+          finalised_by: string | null
+          finalised_by_name: string | null
+          financial_year: string | null
+          id: string | null
+          interest_paise: number | null
+          label: string | null
+          new_regime_total_paise: number | null
+          old_regime_total_paise: number | null
+          prepared_by: string | null
+          prepared_by_name: string | null
+          recommended_regime: string | null
+          regime_chosen: string | null
+          regime_chosen_by: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          rule_set_verified: boolean | null
+          saving_paise: number | null
+          status: string | null
+          statute: string | null
+          total_income_paise: number | null
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_name: string | null
+          year_label: string | null
+        }
+        Relationships: []
+      }
+      kyc_register: {
+        Row: {
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          client_status: string | null
+          complete: boolean | null
+          entity_category: string | null
+          entity_type: string | null
+          has_audit_service: boolean | null
+          kyc_id: string | null
+          kyc_state: string | null
+          kyc_updated_at: string | null
+          missing: string[] | null
+          next_review_on: string | null
+          open_audits: number | null
+          owner_employee_id: string | null
+          review_due: boolean | null
+          verified_by: string | null
+          verified_on: string | null
         }
         Relationships: []
       }
@@ -7579,6 +8750,28 @@ export type Database = {
         }
         Relationships: []
       }
+      recycle_bin_items: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deleted_by_name: string | null
+          documents_with: number | null
+          entity: string | null
+          id: string | null
+          invoices_with: number | null
+          lead_id: string | null
+          parent_in_bin: boolean | null
+          reference: string | null
+          retention_until: string | null
+          tasks_with: number | null
+          title: string | null
+          updated_at: string | null
+          with_client: boolean | null
+        }
+        Relationships: []
+      }
       retainer_draft_queue: {
         Row: {
           approved_at: string | null
@@ -7612,6 +8805,32 @@ export type Database = {
           submitted_at: string | null
           taxable_amount: number | null
           total_amount: number | null
+        }
+        Relationships: []
+      }
+      statutory_registrations_register: {
+        Row: {
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          days_to_expiry: number | null
+          display_status: string | null
+          expiry_date: string | null
+          id: string | null
+          in_reminder_window: boolean | null
+          issue_date: string | null
+          jurisdiction: string | null
+          last_dir3_kyc_fy: string | null
+          next_dir3_kyc_due: string | null
+          next_dir3_kyc_fy: string | null
+          notes: string | null
+          owner_employee_id: string | null
+          registration_number: string | null
+          registration_type: string | null
+          reminder_days: number | null
+          status: Database["public"]["Enums"]["registration_status"] | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -7724,6 +8943,79 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_notice_notes_list: {
+        Row: {
+          author_id: string | null
+          author_name: string | null
+          body: string | null
+          client_id: string | null
+          created_at: string | null
+          id: string | null
+          kind: string | null
+          noted_on: string | null
+          notice_id: string | null
+        }
+        Relationships: []
+      }
+      tax_notices_list: {
+        Row: {
+          appeal_decision: string | null
+          appeal_forum: string | null
+          appeal_note: string | null
+          appeal_open: boolean | null
+          appeal_task_id: string | null
+          appeal_task_number: string | null
+          appeal_task_status: Database["public"]["Enums"]["task_status"] | null
+          assigned_employee_id: string | null
+          assigned_name: string | null
+          assigned_profile_id: string | null
+          authority: string | null
+          client_code: string | null
+          client_gstin: string | null
+          client_id: string | null
+          client_name: string | null
+          client_owner_employee_id: string | null
+          client_pan: string | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_by_name: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          days_to_limitation: number | null
+          days_to_reply: number | null
+          demand_amount: number | null
+          description: string | null
+          documents_count: number | null
+          financial_year: string | null
+          hearing_date: string | null
+          hearing_on: string | null
+          hearing_upcoming: boolean | null
+          id: string | null
+          is_closed: boolean | null
+          last_noted_on: string | null
+          limitation_date: string | null
+          limitation_manual: boolean | null
+          next_action_date: string | null
+          notes_count: number | null
+          notice_date: string | null
+          notice_type: string | null
+          order_date: string | null
+          received_date: string | null
+          reference_no: string | null
+          replied_on: string | null
+          reply_due_date: string | null
+          reply_overdue: boolean | null
+          reply_pending: boolean | null
+          section: string | null
+          status: Database["public"]["Enums"]["notice_status"] | null
+          tax_area: string | null
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_name: string | null
+        }
+        Relationships: []
+      }
       tds_credit_register: {
         Row: {
           amount_received: number | null
@@ -7752,6 +9044,48 @@ export type Database = {
           tds_status_changed_by: string | null
           tds_status_note: string | null
           updated_at: string | null
+        }
+        Relationships: []
+      }
+      udin_register: {
+        Row: {
+          audit_engagement_id: string | null
+          ceiling_confirmed_at: string | null
+          ceiling_confirmed_by: string | null
+          client_code: string | null
+          client_id: string | null
+          client_name: string | null
+          counts_towards_tax_audit_ceiling: boolean | null
+          created_at: string | null
+          created_by: string | null
+          days_to_generate: number | null
+          document_date: string | null
+          document_type: string | null
+          engagement_audit_type: string | null
+          engagement_financial_year: string | null
+          filing_acknowledgement_no: string | null
+          filing_financial_year: string | null
+          filing_form: string | null
+          filing_period: string | null
+          filing_record_id: string | null
+          financial_year: string | null
+          form26_category: string | null
+          generated_late: boolean | null
+          generated_on: string | null
+          generation_days: number | null
+          id: string | null
+          is_revised: boolean | null
+          membership_mismatch: boolean | null
+          remarks: string | null
+          report_form: string | null
+          signed_fy: string | null
+          signed_on: string | null
+          signing_membership_no: string | null
+          signing_partner_id: string | null
+          signing_partner_name: string | null
+          udin: string | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Relationships: []
       }
@@ -7837,12 +9171,24 @@ export type Database = {
       }
     }
     Functions: {
+      advance_audit_stage: { Args: { p_id: string | null; p_to: string | null; p_note?: string | null; p_expected_updated_at?: string | null }; Returns: Json }
       app_role: { Args: never; Returns: Database["public"]["Enums"]["app_role"] }
       apply_due_date_override: { Args: { p_override_id: string | null }; Returns: number }
       apply_job_template: { Args: { p_task_id: string | null; p_template_id: string | null }; Returns: Json }
       approve_invoice: { Args: { p_invoice_id: string | null; p_updated_at: string | null }; Returns: Json }
       approve_timesheet_week: { Args: { p_employee_id: string | null; p_week_start: string | null; p_note?: string | null }; Returns: Json }
       assert_changed_only: { Args: { p_old: Json | null; p_new: Json | null; p_allowed: string[] | null; p_what: string | null }; Returns: undefined }
+      audit_attach_evidence: { Args: { p_id: string | null; p_step: string | null; p_document_ids: string[] | null; p_note?: string | null }; Returns: Json }
+      audit_change_conflict: { Args: { p_id: string | null }; Returns: string }
+      audit_detach_evidence: { Args: { p_link_id: string | null }; Returns: Json }
+      audit_file_lock_reason: { Args: { p_document_id: string | null }; Returns: string }
+      audit_gate_sentence: { Args: { p_to: string | null; p_missing: Json | null }; Returns: string }
+      audit_limit_check: { Args: { p_id: string | null }; Returns: Json }
+      audit_log_facets: { Args: never; Returns: Json }
+      audit_log_page: { Args: { p_params: Json | null }; Returns: Json }
+      audit_stage_gate: { Args: { p_id: string | null; p_to: string | null }; Returns: Json }
+      audit_step_done: { Args: { p_checklist: Json | null; p_key: string | null }; Returns: boolean }
+      audit_step_signoff: { Args: { p_id: string | null; p_step: string | null; p_action: string | null; p_note?: string | null }; Returns: Json }
       bulk_update_tasks: { Args: { p_task_ids: string[] | null; p_changes: Json | null; p_reason?: string | null }; Returns: Json }
       can_open_whatsapp: { Args: { cid: string | null }; Returns: boolean }
       can_see_client: { Args: { cid: string | null }; Returns: boolean }
@@ -7863,22 +9209,33 @@ export type Database = {
       client_status_label: { Args: { p: Database["public"]["Enums"]["client_status"] | null }; Returns: string }
       client_team_signature: { Args: { p_client_id: string | null }; Returns: string }
       close_whatsapp_group: { Args: { p_group_id: string | null; p_expected_updated_at: string | null; p_closed_on: string | null; p_reason: string | null }; Returns: Json }
-      compliance_agenda: { Args: { p_from: string | null; p_to?: string | null; p_client?: string | null; p_owner?: string | null; p_types?: Database["public"]["Enums"]["compliance_type"][] | null; p_statutory?: boolean | null; p_label?: string | null; p_overdue_only?: boolean | null; p_limit?: number | null; p_offset?: number | null }; Returns: Json }
+      company_counts_towards_audit_limit: { Args: { p_profile: Json | null; p_on: string | null }; Returns: boolean }
+      compliance_agenda: { Args: { p_from: string | null; p_to?: string | null; p_client?: string | null; p_owner?: string | null; p_types?: Database["public"]["Enums"]["compliance_type"][] | null; p_statutory?: boolean | null; p_label?: string | null; p_overdue_only?: boolean | null; p_limit?: number | null; p_offset?: number | null; p_pending_only?: boolean | null }; Returns: Json }
       compliance_calendar_days: { Args: { p_from: string | null; p_to: string | null; p_client?: string | null; p_owner?: string | null; p_types?: Database["public"]["Enums"]["compliance_type"][] | null; p_statutory?: boolean | null }; Returns: Json }
       compliance_coverage: { Args: { p_client_ids?: string[] | null }; Returns: Json }
+      compliance_type_service: { Args: { p_type: Database["public"]["Enums"]["compliance_type"] | null }; Returns: Database["public"]["Enums"]["service_type"] }
       compliance_workflow_label: { Args: { p: Database["public"]["Enums"]["compliance_workflow"] | null }; Returns: string }
+      confirm_audit_limit_override: { Args: { p_id: string | null; p_note: string | null }; Returns: Json }
       confirm_document_upload: { Args: { p_upload_id: string | null; p_file_size: number | null; p_mime_type: string | null; p_sha256: string | null; p_retention_until?: string | null }; Returns: Json }
       conflict_candidates: { Args: { p_name: string | null; p_pan?: string | null; p_gstin?: string | null; p_related?: string[] | null; p_exclude_client?: string | null; p_exclude_lead?: string | null }; Returns: { kind: string | null; record_id: string | null; client_id: string | null; lead_id: string | null; label: string | null; code: string | null; pan: string | null; gstin: string | null; din: string | null; candidate_name: string | null; target: string | null; score: number | null; in_recycle_bin: boolean | null }[] }
       contains_full_aadhaar: { Args: { p: string | null }; Returns: boolean }
       create_debit_note: { Args: { p_original_id: string | null; p_reason: string | null }; Returns: Json }
       create_document_request: { Args: { p_client_id: string | null; p_title: string | null; p_due_date: string | null; p_notes: string | null; p_reminder_every_days: number | null; p_contact_id: string | null; p_items: Json | null }; Returns: string }
       create_task: { Args: { p: Json | null }; Returns: Json }
+      credential_reveal_check: { Args: { p_credential_id: string | null }; Returns: Json }
       credit_note_deadline: { Args: { p_invoice_date: string | null; p_annual_return_filed_on?: string | null; p_on?: string | null }; Returns: string }
+      dashboard_deadlines: { Args: { p_from: string | null; p_to: string | null; p_limit?: number | null; p_owner_employee_id?: string | null; p_pending_only?: boolean | null; p_clients_only?: boolean | null }; Returns: Json }
+      dashboard_firm_today: { Args: { p_fy?: string | null; p_today?: string | null; p_online_minutes?: number | null; p_rows?: number | null; p_at_risk_tasks?: number | null; p_at_risk_days?: number | null }; Returns: Json }
+      dashboard_my_day: { Args: { p_today?: string | null; p_rows?: number | null; p_deadline_days?: number | null }; Returns: Json }
+      dashboard_review_queue: { Args: { p_limit?: number | null }; Returns: Json }
+      dashboard_task_rows: { Args: { p_ids: string[] | null }; Returns: Json }
+      dashboard_team_today: { Args: { p_today?: string | null; p_rows?: number | null; p_stale_days?: number | null; p_sales_rows?: number | null }; Returns: Json }
       decide_leave: { Args: { p_leave_id: string | null; p_decision: string | null; p_note: string | null; p_updated_at: string | null }; Returns: Json }
       decide_quotation_approval: { Args: { p_id: string | null; p_expected_updated_at: string | null; p_decision: string | null; p_note?: string | null }; Returns: { id: string | null; status: Database["public"]["Enums"]["quotation_status"] | null; updated_at: string | null }[] }
       delete_client: { Args: { p_client_id: string | null; p_updated_at?: string | null }; Returns: Json }
       delete_client_credential: { Args: { p_id: string | null }; Returns: boolean }
       delete_invoice_draft: { Args: { p_invoice_id: string | null; p_updated_at: string | null }; Returns: Json }
+      delete_itr_computation: { Args: { p_id: string | null; p_updated_at: string | null }; Returns: Json }
       delete_staff: { Args: { p_employee: string | null; p_updated_at: string | null }; Returns: Json }
       desktop_checkin: { Args: { p_device_key: string | null; p_device_name: string | null; p_os?: string | null; p_app_version?: string | null }; Returns: Json }
       desktop_link_number: { Args: { p_device_key: string | null; p_number_id: string | null; p_linked: boolean | null }; Returns: Json }
@@ -7886,26 +9243,37 @@ export type Database = {
       desktop_may_use_number: { Args: { p_number: Database["public"]["Tables"]["firm_whatsapp_numbers"]["Row"] | null }; Returns: boolean }
       desktop_report_health: { Args: { p_device_key: string | null; p_failing: string[] | null }; Returns: Json }
       desktop_touch_device: { Args: { p_device_key: string | null }; Returns: Json }
+      dir3_kyc_next_due: { Args: { p_last_fy: string | null }; Returns: Json }
       discard_document_upload: { Args: { p_upload_id: string | null; p_reason: string | null }; Returns: string }
       document_request_is_complete: { Args: { p_request_id: string | null }; Returns: boolean }
       effective_gst_scheme: { Args: { p_registration: Database["public"]["Enums"]["gst_registration"] | null; p_scheme: Database["public"]["Enums"]["gst_scheme"] | null; p_turnover: number | null; p_limit: number | null }; Returns: string }
       employee_can_take_work: { Args: { p_employee_id: string | null }; Returns: boolean }
       employee_open_work: { Args: { p_employee: string | null }; Returns: Json }
       employee_role: { Args: { p_employee: string | null }; Returns: Database["public"]["Enums"]["app_role"] }
+      engagement_letter_gaps: { Args: { p_fy: string | null }; Returns: { client_id: string | null; client_name: string | null; client_code: string | null; owner_employee_id: string | null; owner_name: string | null; service_types: Database["public"]["Enums"]["service_type"][] | null; drafts: number | null; last_letter_fy: string | null; last_letter_status: string | null }[] }
       expire_lapsed_quotations: { Args: { p_today?: string | null }; Returns: { id: string | null; quotation_number: string | null; created_by: string | null; lead_id: string | null; client_id: string | null; client_name: string | null; previous_status: Database["public"]["Enums"]["quotation_status"] | null; valid_until: string | null }[] }
       file_task: { Args: { p_task_id: string | null; p_filing?: Json | null; p_skip_reason?: string | null; p_expected_updated_at?: string | null }; Returns: Json }
+      filing_history_facets: { Args: { p_client_id?: string | null }; Returns: Json }
       filings_grid: { Args: { p_financial_year: string | null; p_types: Database["public"]["Enums"]["compliance_type"][] | null; p_form_pattern?: string | null; p_rule_pattern?: string | null; p_owner?: string | null; p_unassigned?: boolean | null; p_q?: string | null; p_status?: string | null; p_limit?: number | null; p_offset?: number | null }; Returns: Json }
+      financial_statement_conflict: { Args: { p_id: string | null }; Returns: string }
       financial_year_label: { Args: { p_date: string | null }; Returns: string }
       find_client_duplicates: { Args: { p_pan?: string | null; p_gstin?: string | null; p_name?: string | null; p_exclude_client?: string | null }; Returns: { client_id: string | null; client_code: string | null; display_name: string | null; status: Database["public"]["Enums"]["client_status"] | null; in_recycle_bin: boolean | null; matched_on: string | null; score: number | null }[] }
       find_document_duplicates: { Args: { p_client_id: string | null; p_hashes: string[] | null }; Returns: { document_id: string | null; sha256: string | null; title: string | null; file_name: string | null; version: number | null; is_current: boolean | null; category: Database["public"]["Enums"]["document_category"] | null; financial_year: string | null; uploaded_at: string | null; in_recycle_bin: boolean | null }[] }
       format_day: { Args: { p_date: string | null }; Returns: string }
       format_inr: { Args: { p_amount: number | null }; Returns: string }
+      full_export_catalog: { Args: never; Returns: Json }
       fy_end_date: { Args: { p_fy: string | null }; Returns: string }
       fy_start_date: { Args: { p_fy: string | null }; Returns: string }
       generate_retainer_drafts: { Args: { p_today?: string | null; p_max?: number | null }; Returns: Json }
+      gst_recon_entry_conflict: { Args: { p_entry_id: string | null }; Returns: string }
+      gst_recon_period_fy: { Args: { p_period: string | null }; Returns: string }
+      gst_records_kept_until: { Args: { p_fy: string | null }; Returns: string }
       gst_state_name: { Args: { p_code: string | null }; Returns: string }
       import_clients: { Args: { p_rows: Json | null; p_meta?: Json | null }; Returns: Json }
+      import_filing_records: { Args: { p_client_id: string | null; p_rows: Json | null }; Returns: Json }
       import_tds_statement: { Args: { p_payload: Json | null }; Returns: Json }
+      income_tax_records_kept_until: { Args: { p_fy: string | null }; Returns: string }
+      independence_register: { Args: { p_financial_year: string | null }; Returns: { employee_id: string | null; full_name: string | null; designation: string | null; role: string | null; declaration_id: string | null; declared_at: string | null; answers: Json | null; details: string | null; has_exceptions: boolean | null; updated_at: string | null }[] }
       insert_notifications: { Args: { p_type: Database["public"]["Enums"]["notification_type"] | null; p_title: string | null; p_body: string | null; p_link_url: string | null; p_user_ids?: string[] | null; p_roles?: Database["public"]["Enums"]["app_role"][] | null; p_employee_ids?: string[] | null; p_entity_type?: string | null; p_entity_id?: string | null; p_client_id?: string | null; p_dedupe_key?: string | null; p_exclude_user_id?: string | null }; Returns: { notification_id: string | null; recipient_id: string | null; forwarded: boolean | null }[] }
       invoice_change_conflict: { Args: { p_invoice_id: string | null }; Returns: string }
       invoice_list: { Args: { p_params: Json | null }; Returns: Json }
@@ -7916,19 +9284,29 @@ export type Database = {
       is_active_staff_profile: { Args: { uid: string | null }; Returns: boolean }
       is_api_caller: { Args: never; Returns: boolean }
       is_client: { Args: never; Returns: boolean }
+      is_engagement_document: { Args: { p_id: string | null; p_category: Database["public"]["Enums"]["document_category"] | null }; Returns: boolean }
       is_fy_label: { Args: { p: string | null }; Returns: boolean }
       is_manager_or_partner: { Args: never; Returns: boolean }
       is_money_message: { Args: { p_related_entity_type: string | null; p_template_id: string | null }; Returns: boolean }
       is_money_notification: { Args: { p_type: Database["public"]["Enums"]["notification_type"] | null; p_entity_type: string | null; p_link_url: string | null }; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
       is_payment_proof_object: { Args: { p_name: string | null }; Returns: boolean }
+      is_signing_member: { Args: never; Returns: boolean }
+      is_small_company: { Args: { p_profile: Json | null; p_on: string | null }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_whatsapp_invite_link: { Args: { p: string | null }; Returns: boolean }
       issue_credit_note: { Args: { p_payload: Json | null }; Returns: Json }
       issue_invoice: { Args: { p_invoice_id: string | null; p_updated_at: string | null; p_channel?: string | null }; Returns: Json }
       ist_week_start: { Args: { p_at: string | null }; Returns: string }
+      itr_client_eligible: { Args: { p_entity: Database["public"]["Enums"]["entity_type"] | null; p_pan: string | null }; Returns: boolean }
+      itr_computation_conflict: { Args: { p_id: string | null }; Returns: string }
+      itr_ruleset_row: { Args: { p_fy: string | null }; Returns: { id: string | null; value: Json | null; verified: boolean | null; updated_at: string | null }[] }
       jsonb_to_numeric: { Args: { p: Json | null }; Returns: number }
+      kyc_missing: { Args: { p_client_id: string | null }; Returns: string[] }
+      kyc_review_due: { Args: { p_client_id: string | null; p_on?: string | null }; Returns: boolean }
+      kyc_status: { Args: { p_client_id: string | null }; Returns: Json }
       lead_analytics: { Args: { p_from: string | null; p_to: string | null }; Returns: Json }
+      leave_approver_role: { Args: { p_employee_id: string | null }; Returns: string }
       leave_working_dates: { Args: { p_start: string | null; p_end: string | null }; Returns: string[] }
       log_audit_event: { Args: { p_event: Database["public"]["Enums"]["audit_event"] | null; p_resource_type?: string | null; p_resource_id?: string | null; p_action?: string | null; p_details?: Json | null; p_success?: boolean | null; p_error?: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: string }
       mark_all_notifications_read: { Args: never; Returns: number }
@@ -7947,6 +9325,9 @@ export type Database = {
       next_document_number: { Args: { p_key: string | null; p_date?: string | null }; Returns: string }
       normalise_party_name: { Args: { p: string | null }; Returns: string }
       normalise_period_label: { Args: { p_label: string | null }; Returns: string }
+      notice_appeal_limitation: { Args: { p_forum: string | null; p_order_date: string | null }; Returns: string }
+      notice_appeal_task_number: { Args: never; Returns: string }
+      notice_status_label: { Args: { p: Database["public"]["Enums"]["notice_status"] | null }; Returns: string }
       onboard_client: { Args: { p_payload: Json | null }; Returns: Json }
       payment_proof_document_ids: { Args: never; Returns: string[] }
       payments_dashboard: { Args: { p_today?: string | null }; Returns: Json }
@@ -7956,9 +9337,12 @@ export type Database = {
       portal_linked_document_ids: { Args: never; Returns: string[] }
       profile_image_kind: { Args: { p_name: string | null }; Returns: string }
       public_firm_profile: { Args: never; Returns: { firm_name: string | null; legal_name: string | null; tagline: string | null; address: string | null; city: string | null; state_code: string | null; pincode: string | null; phone: string | null; email: string | null; website: string | null; gstin: string | null; logo_path: string | null; logo_updated_at: string | null; bank_name: string | null; bank_account_name: string | null; bank_account_number: string | null; bank_ifsc: string | null; bank_branch: string | null; upi_id: string | null; upi_payee_name: string | null }[] }
+      publish_privacy_notice: { Args: { p_id: string | null; p_expected_updated_at?: string | null }; Returns: Json }
+      purge_deleted: { Args: { p_entity: string | null; p_id: string | null; p_updated_at: string | null }; Returns: Json }
       quotation_conflict_message: { Args: { p_updated_at: string | null }; Returns: string }
       reassign_all_work: { Args: { p_from_employee: string | null; p_to_employee: string | null }; Returns: Json }
       record_compliance_filing: { Args: { p_event_id: string | null; p_filing: Json | null; p_expected_updated_at?: string | null }; Returns: Json }
+      record_credential_reveal: { Args: { p_credential_id: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: Json }
       record_invoice_send: { Args: { p_invoice_id: string | null; p_channel: string | null }; Returns: Json }
       record_quotation_follow_up: { Args: { p_id: string | null; p_day: number | null; p_channel: Database["public"]["Enums"]["message_channel"] | null; p_to: string | null; p_subject?: string | null; p_status?: string | null; p_provider_message_id?: string | null; p_error?: string | null }; Returns: { follow_up_id: string | null; status: string | null }[] }
       record_quotation_view: { Args: { p_token: string | null }; Returns: Json }
@@ -7966,15 +9350,31 @@ export type Database = {
       record_whatsapp_devices_review: { Args: { p_number_id: string | null }; Returns: Json }
       record_whatsapp_group_opened: { Args: { p_client_id: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: Json }
       record_whatsapp_open: { Args: { p_client_id: string | null; p_group_id?: string | null; p_via?: string | null; p_ip?: string | null; p_user_agent?: string | null }; Returns: Json }
+      recycle_bin_blockers: { Args: { p_entity: string | null; p_id: string | null }; Returns: Json }
+      recycle_bin_conflict: { Args: { p_updated_at: string | null; p_by: string | null }; Returns: string }
+      remember_search: { Args: { p_query: string | null }; Returns: undefined }
       remove_firm_number_from_groups: { Args: { p_number_id: string | null; p_group_ids: string[] | null; p_removed_on?: string | null }; Returns: number }
       rename_desktop_device: { Args: { p_device_id: string | null; p_name: string | null }; Returns: Json }
       reopen_timesheet_week: { Args: { p_employee_id: string | null; p_week_start: string | null; p_reason: string | null }; Returns: Json }
+      report_clients: { Args: { p: Json | null }; Returns: Json }
+      report_collections: { Args: { p: Json | null }; Returns: Json }
+      report_compliance: { Args: { p: Json | null }; Returns: Json }
+      report_people: { Args: { p: Json | null }; Returns: Json }
+      report_period: { Args: { p: Json | null }; Returns: { v_from: string | null; v_to: string | null } }
+      report_pipeline: { Args: { p: Json | null }; Returns: Json }
+      report_practice: { Args: { p: Json | null }; Returns: Json }
+      report_require_manager: { Args: never; Returns: undefined }
       report_role_claim: { Args: never; Returns: boolean }
+      report_work: { Args: { p: Json | null }; Returns: Json }
       resolve_invoice_dispute: { Args: { p_invoice_id: string | null; p_updated_at: string | null }; Returns: Json }
       respond_to_quotation: { Args: { p_token: string | null; p_response: string | null; p_name?: string | null; p_note?: string | null; p_reason?: string | null; p_ip?: string | null }; Returns: Json }
       respond_to_task: { Args: { p_task_id: string | null; p_accept: boolean | null; p_decline_reason?: Database["public"]["Enums"]["decline_reason"] | null; p_decline_note?: string | null }; Returns: Json }
+      restore_deleted: { Args: { p_entity: string | null; p_id: string | null; p_updated_at: string | null }; Returns: Json }
+      retainer_anchored_date: { Args: { p_date: string | null; p_months: number | null; p_anchor: number | null }; Returns: string }
       retainer_period_label: { Args: { p_date: string | null; p_cycle: Database["public"]["Enums"]["service_frequency"] | null }; Returns: string }
       retainer_service_label: { Args: { p_type: Database["public"]["Enums"]["service_type"] | null; p_custom: string | null }; Returns: string }
+      retention_param_number: { Args: { p_key: string | null; p_on: string | null; p_default: number | null }; Returns: number }
+      retention_summary: { Args: never; Returns: { year: number | null; documents: number | null; past_retention: number | null }[] }
       return_invoice: { Args: { p_invoice_id: string | null; p_note: string | null; p_updated_at: string | null }; Returns: Json }
       revenue_ledger: { Args: { p_params: Json | null }; Returns: Json }
       reverse_receipt: { Args: { p_receipt_id: string | null; p_reason: string | null }; Returns: Json }
@@ -7983,15 +9383,26 @@ export type Database = {
       revoke_auth_sessions: { Args: { p_user: string | null }; Returns: number }
       revoke_desktop_device: { Args: { p_device_id: string | null }; Returns: boolean }
       save_client_credential: { Args: { p_id: string | null; p_client_id: string | null; p_portal: string | null; p_portal_label: string | null; p_username: string | null; p_password_ciphertext: string | null; p_login_url?: string | null; p_notes?: string | null; p_expected_updated_at?: string | null }; Returns: string }
+      save_financial_statement: { Args: { p_payload: Json | null }; Returns: Json }
+      save_gst_recon_run: { Args: { p_payload: Json | null }; Returns: Json }
+      save_import_mapping: { Args: { p_client_id: string | null; p_kind: string | null; p_mapping: Json | null; p_merge?: boolean | null }; Returns: Json }
       save_invoice_draft: { Args: { p_payload: Json | null }; Returns: Json }
+      save_itr_computation: { Args: { p_payload: Json | null }; Returns: Json }
       save_job_template: { Args: { p: Json | null; p_expected_updated_at?: string | null }; Returns: Json }
       save_quotation: { Args: { p_id: string | null; p_expected_updated_at: string | null; p_header: Json | null; p_items: Json | null }; Returns: { id: string | null; quotation_number: string | null; status: Database["public"]["Enums"]["quotation_status"] | null; updated_at: string | null; subtotal: number | null; tax_amount: number | null; total: number | null; conflict: boolean | null }[] }
+      save_tax_notice: { Args: { p_payload: Json | null }; Returns: Json }
+      search_everything: { Args: { p_q: string | null; p_limit_per_type?: number | null; p_types?: string[] | null; p_offset?: number | null }; Returns: Json }
       set_client_team: { Args: { p_client_id: string | null; p_owner: string | null; p_engagement_partner: string | null; p_review_manager: string | null; p_preparers: string[] | null; p_expected_signature?: string | null }; Returns: Json }
+      set_financial_statement_status: { Args: { p_id: string | null; p_updated_at: string | null; p_status: string | null; p_note: string | null }; Returns: Json }
+      set_gst_recon_ims_action: { Args: { p_entry_id: string | null; p_updated_at: string | null; p_action: string | null; p_reason: string | null }; Returns: Json }
+      set_gst_recon_resolution: { Args: { p_run_id: string | null; p_entries: Json | null; p_resolution: string | null; p_note: string | null }; Returns: Json }
       set_invoice_e_invoice: { Args: { p_invoice_id: string | null; p_irn: string | null; p_ack_no: string | null; p_ack_date: string | null; p_signed_qr: string | null; p_updated_at: string | null }; Returns: Json }
+      set_itr_computation_status: { Args: { p_id: string | null; p_updated_at: string | null; p_status: string | null; p_regime: string | null; p_note: string | null }; Returns: Json }
       set_primary_contact: { Args: { p_contact_id: string | null; p_updated_at?: string | null }; Returns: Json }
       set_primary_whatsapp_group: { Args: { p_group_id: string | null }; Returns: Json }
       set_receipt_deductor_tan: { Args: { p_receipt_id: string | null; p_tan: string | null; p_updated_at: string | null }; Returns: Json }
       set_staff_active: { Args: { p_employee: string | null; p_active: boolean | null; p_updated_at: string | null }; Returns: Json }
+      set_tax_notice_status: { Args: { p_id: string | null; p_updated_at: string | null; p_status: Database["public"]["Enums"]["notice_status"] | null; p_payload?: Json | null }; Returns: Json }
       set_tds_credit_status: { Args: { p_items: Json | null; p_status: string | null; p_on?: string | null; p_note?: string | null; p_claimed_in?: string | null }; Returns: Json }
       set_tds_entry_status: { Args: { p_entry_id: string | null; p_status: string | null; p_note?: string | null }; Returns: Json }
       staff_client_ids: { Args: never; Returns: string[] }
@@ -8006,6 +9417,7 @@ export type Database = {
       statutory_param_value: { Args: { p_key: string | null; p_on: string | null }; Returns: Json }
       stop_timer: { Args: { p_description?: string | null }; Returns: Json }
       storage_first_folder_uuid: { Args: { p_name: string | null }; Returns: string }
+      storage_object_is_engagement_document: { Args: { p_name: string | null }; Returns: boolean }
       storage_path_in_client_folder: { Args: { p_path: string | null; p_client_id: string | null }; Returns: boolean }
       submit_portal_payment_claim: { Args: { p_invoice_id: string | null; p_reference: string | null; p_paid_on: string | null; p_note?: string | null; p_upload_id?: string | null; p_file_size?: number | null; p_mime_type?: string | null; p_sha256?: string | null }; Returns: Json }
       submit_quotation_for_approval: { Args: { p_id: string | null; p_expected_updated_at: string | null }; Returns: { id: string | null; status: Database["public"]["Enums"]["quotation_status"] | null; updated_at: string | null }[] }
@@ -8016,13 +9428,18 @@ export type Database = {
       task_open_blocker_count: { Args: { p_task_id: string | null }; Returns: number }
       task_status_label: { Args: { p: Database["public"]["Enums"]["task_status"] | null }; Returns: string }
       tasks_guard_employee: { Args: { p_old: Database["public"]["Tables"]["tasks"]["Row"] | null; p_new: Database["public"]["Tables"]["tasks"]["Row"] | null }; Returns: undefined }
+      tax_audit_position: { Args: { p_member: string | null; p_fy: string | null; p_record_id?: string | null; p_key?: string | null }; Returns: Json }
+      tax_notice_conflict: { Args: { p_id: string | null }; Returns: string }
       timesheet_week_scope_check: { Args: { p_employee_id: string | null; p_week_start: string | null }; Returns: undefined }
       today_ist: { Args: never; Returns: string }
       try_uuid: { Args: { p: string | null }; Returns: string }
+      udin_report_key: { Args: { p_client_id: string | null; p_financial_year: string | null; p_filing_record_id: string | null; p_audit_engagement_id: string | null; p_id: string | null }; Returns: string }
       update_my_contact: { Args: { p_full_name: string | null; p_phone: string | null; p_was_full_name: string | null; p_was_phone: string | null }; Returns: string }
       upsert_compliance_events: { Args: { p_rows: Json | null }; Returns: Json }
+      vault_client_ids: { Args: never; Returns: string[] }
       waive_invoice: { Args: { p_invoice_id: string | null; p_reason: string | null; p_updated_at: string | null }; Returns: Json }
       whatsapp_checklist_steps: { Args: never; Returns: string[] }
+      working_papers_kept_until: { Args: { p_report_date: string | null }; Returns: string }
     }
     Enums: {
       acceptance_outcome: "pending" | "accepted" | "declined"

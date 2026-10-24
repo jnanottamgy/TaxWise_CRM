@@ -84,6 +84,27 @@ export function parseSearchResponse(body: unknown): SearchResponse {
   };
 }
 
+/** One of the caller's recent searches (`GET /api/search?recent=1`, recent_searches, newest first). */
+export interface RecentSearchItem {
+  id: string;
+  query: string;
+  searchedAt: string;
+}
+
+/**
+ * Narrows `GET /api/search?recent=1` ({ ok: true, data: { groups: [], recent: [...] } }) to the
+ * caller's recent searches; anything else reads as none.
+ */
+export function parseRecentSearches(body: unknown): RecentSearchItem[] {
+  if (!body || typeof body !== "object") return [];
+  const b = body as { ok?: unknown; data?: { recent?: unknown } };
+  if (b.ok !== true || !b.data || !Array.isArray(b.data.recent)) return [];
+  return b.data.recent.filter(
+    (r): r is RecentSearchItem =>
+      !!r && typeof r === "object" && typeof (r as RecentSearchItem).id === "string" && typeof (r as RecentSearchItem).query === "string" && (r as RecentSearchItem).query.trim().length > 0,
+  ).map((r) => ({ id: r.id, query: r.query, searchedAt: typeof r.searchedAt === "string" ? r.searchedAt : "" }));
+}
+
 /** The ⌘K command for a client result: "Open XYZ Traders' WhatsApp", "Open Ravi Kumar's WhatsApp" (§7.25.5). */
 export function whatsAppCommandLabel(clientName: string): string {
   const name = clientName.trim() || "the client";

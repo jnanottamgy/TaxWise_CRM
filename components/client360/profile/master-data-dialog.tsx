@@ -13,14 +13,15 @@ import { gstSchemeDecision } from "@/lib/domain/scale"
 import { parseAmount, type Paise } from "@/lib/domain/money"
 import { recentFinancialYears, todayIST } from "@/lib/domain/fy"
 import { getStatus } from "@/lib/status"
-import { MONTH_NAMES, MasterDataSchema, type MasterDataInput } from "@/components/client360/logic/master-data"
+import { MONTH_NAMES, MasterDataSchema, incomeNatureChoices, type MasterDataInput } from "@/components/client360/logic/master-data"
+import { INCOME_NATURE_LABELS } from "@/lib/schemas/onboarding"
 import { updateMasterData } from "@/server/actions/client-profile"
 
 const STATES = stateOptions().map((s) => ({ value: s.code, label: `${s.name} (${s.code})` }))
 
 /**
  * Edit the master data (§7.3.3 Profile & contacts: "edit form = step 1 fields"): identity, tax
- * registrations, contact, scale, priority and notes, validated like the wizard (§6.2). A valid
+ * registrations, contact, scale (with how the income is earned, §6.6), priority and notes, validated like the wizard (§6.2). A valid
  * GSTIN shows its state and PAN at once and fills them when empty; the PAN's holder type is checked
  * against the entity type (a warning, never a block); the GST scheme line explains the decision
  * live (§6.6). Saves with optimistic concurrency (§13).
@@ -144,6 +145,14 @@ export function MasterDataDialog({
           <SelectField control={f.control} name="fyEndMonth" label="Financial year ends in" options={MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m }))} />
           <MoneyField control={f.control} name="annualTurnover" label="Annual turnover (₹)" />
           <SelectField control={f.control} name="turnoverFy" label="Turnover for FY" options={fyOptions.map((fy) => ({ value: fy, label: `FY ${fy}` }))} required={!!turnover} />
+          <SelectField
+            control={f.control}
+            name="incomeNature"
+            label="Income is earned from"
+            placeholder="Not recorded"
+            options={incomeNatureChoices((v.entityType as EntityType) ?? null).map((n) => ({ value: n, label: INCOME_NATURE_LABELS[n] }))}
+            helper="Presumptive income (s.44AD / s.44ADA) pays advance tax in one instalment and changes the tax-audit indication."
+          />
           {v.gstRegistration === "registered" ? (
             <SelectField
               control={f.control}
