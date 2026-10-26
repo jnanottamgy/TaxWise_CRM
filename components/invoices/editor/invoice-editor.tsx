@@ -461,7 +461,7 @@ export function InvoiceEditor({ mode, initial, invoice, client: initialClient, s
               {totals.roundOffPaise ? <TotalRow label="Round-off" paise={totals.roundOffPaise} /> : null}
               <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border pt-2">
                 <dt className="text-base font-semibold text-text">Total</dt>
-                <dd className="num text-xl font-semibold text-text tabular-nums">
+                <dd className="num font-serif text-[26px] leading-8 font-[450] text-text tabular-nums">
                   <Money value={fromPaise(totals.totalPaise)} />
                 </dd>
               </div>

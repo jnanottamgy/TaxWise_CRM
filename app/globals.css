@@ -1,44 +1,50 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/newsreader/opsz.css";
+/* The italic is fetched only where it is used (the sign-in tagline). */
+@import "@fontsource-variable/newsreader/opsz-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * TaxWise design tokens (§3.1). Spec tokens first, then the shadcn aliases the
- * component library expects. Status colours (--success, --warning, …) are for
- * dots, fills and borders; text labels use the --*-text variants, which meet
- * WCAG AA (4.5:1) on --surface, --surface-2 and --bg in both themes.
+ * TaxWise design tokens (§3.1, DESIGN.md §2): "the navy binder". The app frame (sidebar and top bar)
+ * is deep navy; every page is a sheet of warm paper inside it; ink is navy; gold marks only the brand
+ * and where you are. Titles and money are set in Newsreader, everything else in Inter. Status
+ * colours (--success, --warning, …) are for dots, fills and borders; text labels use the --*-text
+ * variants, which meet WCAG AA (4.5:1) on --surface, --surface-2 and --bg in both themes.
  */
 :root {
-  --brand-navy: #14284b;
-  --primary: #1f4fd8;
-  --primary-soft: #eaf0ff;
+  --brand-navy: #0c1830;
+  /* The frame around every page; `.on-frame` re-themes what sits on it. */
+  --frame: #0c1830;
+  --primary: #13254a;
+  --primary-soft: #e9edf5;
   --accent-gold: #b8892e;
   --accent-gold-text: #8a6420;
-  --bg: #f6f7fb;
+  --bg: #f6f5f3;
   --surface: #ffffff;
-  --surface-2: #f1f3f8;
-  --border: #e4e7ee;
-  --text: #0f172a;
-  --text-muted: #5b6476;
+  --surface-2: #f1f0ed;
+  --border: #e4e2dc;
+  --text: #0e1a2f;
+  --text-muted: #5b6375;
   --success: #0e9f6e;
   --success-text: #047857;
-  --success-soft: #e7f6ef;
+  --success-soft: #e7f5ee;
   --warning: #c27803;
   --warning-text: #8f5a02;
-  --warning-soft: #fdf3e1;
-  --danger: #d92d20;
+  --warning-soft: #fbf1df;
+  --danger: #c8372d;
   --danger-text: #b42318;
-  --danger-soft: #fdecea;
-  --info: #2563eb;
-  --info-text: #2563eb;
-  --info-soft: #e9f0fe;
+  --danger-soft: #fbeceb;
+  --info: #3563d6;
+  --info-text: #2452c4;
+  --info-soft: #ebf0fc;
   --violet: #7c3aed;
   --violet-text: #6d28d9;
   --violet-soft: #f1ebfe;
 
-  --elevation-1: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --elevation-2: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --elevation-1: 0 1px 2px rgba(12, 24, 48, 0.05);
+  --elevation-2: 0 16px 40px -8px rgba(12, 24, 48, 0.18), 0 2px 6px rgba(12, 24, 48, 0.06);
 
   /* shadcn aliases */
   --background: var(--bg);
@@ -59,14 +65,15 @@
   --input: var(--border);
   --ring: var(--primary);
   --radius: 0.75rem;
-  --sidebar: var(--surface);
-  --sidebar-foreground: var(--text);
+  --sidebar: var(--frame);
+  --sidebar-foreground: #e9edf5;
 
-  --chart-1: #1f4fd8;
+  /* One hue on the data (navy), its tints for the rest; gold only where the brand speaks. */
+  --chart-1: #1d3a6e;
   --chart-2: #0e9f6e;
   --chart-3: #c27803;
   --chart-4: #7c3aed;
-  --chart-5: #d92d20;
+  --chart-5: #c8372d;
 
   --row-height: 44px;
 }
@@ -76,17 +83,18 @@
 }
 
 .dark {
-  --brand-navy: #0b1630;
-  --primary: #5b8cff;
-  --primary-soft: #17254a;
+  --brand-navy: #060b16;
+  --frame: #060b16;
+  --primary: #dfe6f4;
+  --primary-soft: #1a2741;
   --accent-gold: #d9ad55;
   --accent-gold-text: #d9ad55;
-  --bg: #0b0f17;
-  --surface: #121826;
-  --surface-2: #182033;
-  --border: #253049;
-  --text: #e6eaf2;
-  --text-muted: #9aa4b8;
+  --bg: #0d1524;
+  --surface: #121c2f;
+  --surface-2: #18243a;
+  --border: #24324b;
+  --text: #e8ecf4;
+  --text-muted: #9aa5ba;
   --success: #34d399;
   --success-text: #34d399;
   --success-soft: #0f2a22;
@@ -96,28 +104,52 @@
   --danger: #f87171;
   --danger-text: #f87171;
   --danger-soft: #331a1d;
-  --info: #60a5fa;
-  --info-text: #60a5fa;
+  --info: #7aa2ff;
+  --info-text: #8fb0ff;
   --info-soft: #14233f;
   --violet: #a78bfa;
   --violet-text: #a78bfa;
   --violet-soft: #241c3d;
 
   --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --elevation-2: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --elevation-2: 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
 
-  --primary-foreground: #0b0f17;
+  --primary-foreground: #0c1830;
   --destructive-foreground: #0b0f17;
 
-  --chart-1: #5b8cff;
+  --chart-1: #8fb0ee;
   --chart-2: #34d399;
   --chart-3: #fbbf24;
   --chart-4: #a78bfa;
   --chart-5: #f87171;
 }
 
+/*
+ * What sits on the navy frame (sidebar, top bar, the phone drawer and top bar, the portal band): the
+ * same components, re-themed by their tokens. Menus, popovers and dialogs open in the light (portaled).
+ */
+.on-frame {
+  /* The brand's ink on navy is the light ink (role badges, marks that say "navy"). */
+  --brand-navy: #e9edf5;
+  --text: #e9edf5;
+  --text-muted: #94a0b8;
+  --surface: transparent;
+  --surface-2: rgb(255 255 255 / 0.07);
+  --border: rgb(255 255 255 / 0.12);
+  --primary: #e9edf5;
+  --primary-foreground: #0c1830;
+  --primary-soft: rgb(255 255 255 / 0.09);
+  --accent-gold-text: #e2bd6d;
+  --ring: #d9ad55;
+  --background: transparent;
+  --foreground: #e9edf5;
+  color: var(--text);
+}
+
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Titles and money: Newsreader (optical sizes, ₹, tabular figures). */
+  --font-serif: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* §3.2 type scale: 12 / 13 / 14 (body) / 16 / 20 / 24 / 30 */
@@ -137,6 +169,7 @@
   --text-2xl--line-height: 36px;
 
   --color-brand-navy: var(--brand-navy);
+  --color-frame: var(--frame);
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
   --color-primary-foreground: var(--primary-foreground);
@@ -193,6 +226,7 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 18px;
 
   --shadow-1: var(--elevation-1);
   --shadow-2: var(--elevation-2);
@@ -213,6 +247,9 @@
   h3,
   h4 {
     @apply font-semibold tracking-[-0.01em];
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--accent-gold) 28%, transparent);
   }
   /* §3.2: tabular figures on every number, amount and date. */
   .num,

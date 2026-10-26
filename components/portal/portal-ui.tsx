@@ -45,7 +45,7 @@ export function moreLink(href: string, total: number, shown: number, label = "Vi
 export function NotLinked() {
   return (
     <section className="rounded-lg border border-border bg-surface px-5 py-6">
-      <h2 className="text-md font-semibold text-text">Your portal isn&apos;t set up yet</h2>
+      <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">Your portal isn&apos;t set up yet</h2>
       <p className="mt-1 text-base text-text-muted">
         Your login isn&apos;t linked to a client file. Ask your accountant to check your portal access; once it&apos;s linked, your deadlines, documents and invoices show here.
       </p>

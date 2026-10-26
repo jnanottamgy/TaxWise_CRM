@@ -37,7 +37,7 @@ export function ActionItems({ groups, unread, today, now: serverNow }: { groups:
   return (
     <section aria-labelledby="needs-action-heading" className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-4 pb-3 md:px-5">
-        <h2 id="needs-action-heading" className="text-md leading-6 font-semibold text-text">
+        <h2 id="needs-action-heading" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Needs your action
         </h2>
         <p className="num text-sm text-text-muted tabular-nums">{total ? `${formatNumber(total)} waiting` : "All clear"}</p>

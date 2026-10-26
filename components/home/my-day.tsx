@@ -71,7 +71,7 @@ export function WeekCard({ week }: { week: MyWeek }) {
       }
     >
       <p className="flex flex-wrap items-baseline gap-x-2">
-        <span className="num text-xl leading-8 font-semibold text-text tabular-nums">{formatMinutes(loggedMinutes)}</span>
+        <span className="num font-serif text-[30px] leading-9 font-[450] tracking-[-0.01em] text-text tabular-nums">{formatMinutes(loggedMinutes)}</span>
         <span className="text-sm text-text-muted">{targetMinutes > 0 ? `of ${formatMinutes(targetMinutes)} target` : "No target this week"}</span>
       </p>
       {percent !== null ? <ThinBar percent={percent} tone={tone === "muted" ? "muted" : tone === "warning" ? "warning" : "success"} label="Logged against this week's target" className="mt-2" /> : null}

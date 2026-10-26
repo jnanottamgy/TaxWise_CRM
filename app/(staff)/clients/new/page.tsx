@@ -34,7 +34,7 @@ function Unavailable({ title, message, actions }: { title: string; message: stri
       <section className="flex max-w-2xl gap-3 rounded-lg border border-border bg-surface px-5 py-4">
         <CircleSlashIcon aria-hidden="true" className="mt-0.5 size-4 flex-none text-text-muted" />
         <div className="min-w-0">
-          <h2 className="text-md font-semibold text-text">{title}</h2>
+          <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">{title}</h2>
           <p className="mt-1 text-base text-text-muted">{message}</p>
           <div className="mt-3 flex flex-wrap gap-2">{actions}</div>
         </div>

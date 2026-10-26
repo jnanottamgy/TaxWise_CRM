@@ -44,7 +44,7 @@ export function HolidaysCard({ holidays, today, workingWeekdays }: { holidays: H
     <section aria-labelledby="holidays-title" className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3.5 md:px-5">
         <div className="min-w-0">
-          <h2 id="holidays-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="holidays-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Holidays
           </h2>
           <p className="mt-0.5 text-sm text-text-muted">

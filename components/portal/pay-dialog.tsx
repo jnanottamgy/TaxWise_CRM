@@ -62,7 +62,7 @@ function PayOptions({ invoice, details, upi }: { invoice: PayInvoice; details: P
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-text-muted">Amount due</p>
-        <p className="mt-0.5 text-2xl font-semibold tracking-[-0.01em] text-text">
+        <p className="mt-0.5 font-serif text-[30px] leading-9 font-[450] tracking-[-0.015em] text-text">
           <Money value={invoice.outstanding} />
         </p>
         <p className="mt-0.5 text-sm text-text-muted">

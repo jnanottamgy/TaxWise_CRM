@@ -111,7 +111,7 @@ export function TimerPanelControls({ running, shortcuts, compact = false }: { ru
             {!running.task && !running.client ? "Not billable" : null}
           </p>
         </div>
-        <p className="num flex-none text-2xl leading-9 font-semibold tabular-nums text-text" suppressHydrationWarning>
+        <p className="num flex-none font-serif text-[34px] leading-10 font-[450] tracking-[-0.01em] tabular-nums text-text" suppressHydrationWarning>
           <span className="sr-only">Running for </span>
           {formatElapsed(elapsed)}
         </p>

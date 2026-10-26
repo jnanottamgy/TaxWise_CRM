@@ -93,7 +93,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
       <section aria-labelledby="updates-heading" className="mt-6 flex flex-col">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 id="updates-heading" className="text-md leading-6 font-semibold text-text">
+          <h2 id="updates-heading" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Updates
           </h2>
           <UpdatesTabs

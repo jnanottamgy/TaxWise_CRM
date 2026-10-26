@@ -59,9 +59,9 @@ export function Sidebar({ rail = false, fixedRail = false, inDrawer = false, onN
   const favouriteItems = favourites.map((href) => navItemByHref(user.role, href)).filter((i): i is NavItem => i !== null);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
-      {/* Brand band: the one navy moment in the app shell. */}
-      <div className={cn("flex h-14 flex-none items-center gap-2.5 bg-brand-navy text-white", rail ? "justify-center px-0" : "px-4")}>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* The firm's mark and name at the top of the navy frame (DESIGN.md §2). */}
+      <div className={cn("flex h-16 flex-none items-center gap-2.5 text-text", rail ? "justify-center px-0" : "px-4")}>
         <Link
           href="/"
           onClick={onNavigate}
@@ -69,21 +69,21 @@ export function Sidebar({ rail = false, fixedRail = false, inDrawer = false, onN
           className="flex min-w-0 items-center gap-2.5 rounded-md outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         >
           <FirmMark logoUrl={firm.logoUrl} firmName={firm.name} />
-          {rail ? null : <span className="truncate text-base font-semibold tracking-[-0.01em]">{firm.name}</span>}
+          {rail ? null : <span className="truncate font-serif text-[17px] leading-6 font-medium tracking-[-0.01em]">{firm.name}</span>}
         </Link>
         {inDrawer && onClose ? (
           <button
             type="button"
             onClick={onClose}
             aria-label="Close navigation"
-            className="ml-auto inline-flex size-11 flex-none cursor-pointer items-center justify-center rounded-md text-white/80 outline-none hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-gold"
+            className="ml-auto inline-flex size-11 flex-none cursor-pointer items-center justify-center rounded-md text-text-muted outline-none hover:bg-surface-2 hover:text-text focus-visible:outline-2 focus-visible:outline-gold"
           >
             <XIcon aria-hidden="true" className="size-4" />
           </button>
         ) : null}
       </div>
 
-      <div className={cn("flex-none pt-3 pb-1", rail ? "px-2" : "px-3")}>
+      <div className={cn("flex-none pb-1", rail ? "px-2" : "px-3")}>
         <NewSplitButton
           rail={rail}
           placement={inDrawer ? "drawer" : fixedRail ? "tablet-rail" : "sidebar"}
@@ -119,7 +119,7 @@ export function Sidebar({ rail = false, fixedRail = false, inDrawer = false, onN
                     href={place.href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex h-8 items-center gap-2.5 rounded-md px-2 text-base text-text outline-none transition-colors duration-150 ease-out hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+                      "flex h-8 items-center gap-2.5 rounded-md px-2 text-base text-text/80 outline-none transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-text focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
                       inDrawer && "h-11",
                     )}
                   >
@@ -258,17 +258,23 @@ function NavRow({
         rail
           ? "mx-auto size-10 justify-center"
           : cn("h-8 gap-2.5 px-2 text-base", inDrawer && "h-11", (showStar || starred) && "pr-8 pointer-coarse:pr-12"),
-        active ? "bg-primary-soft font-medium text-primary" : "text-text hover:bg-surface-2",
+        // Where you are: a lighter step of the frame and a short gold rule at the frame's edge.
+        active
+          ? cn(
+              "bg-primary-soft font-medium text-text before:absolute before:w-[3px] before:rounded-full before:bg-gold",
+              rail ? "before:top-2.5 before:bottom-2.5 before:-left-2" : "before:top-1.5 before:bottom-1.5 before:-left-3",
+            )
+          : "text-text/80 hover:bg-surface-2 hover:text-text",
       )}
     >
-      <Icon aria-hidden="true" className={cn("size-4 flex-none", active ? "text-primary" : "text-text-muted")} />
+      <Icon aria-hidden="true" className={cn("size-4 flex-none", active ? "text-text" : "text-text-muted")} />
       {rail ? (
-        hasCount ? <span aria-hidden="true" className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" /> : null
+        hasCount ? <span aria-hidden="true" className="absolute top-1.5 right-1.5 size-2 rounded-full bg-gold" /> : null
       ) : (
         <>
           <span className="min-w-0 flex-1 truncate">{item.label}</span>
           {hasCount ? (
-            <span aria-hidden="true" className="num flex-none rounded-full bg-primary-soft px-1.5 text-xs leading-5 font-medium text-primary">
+            <span aria-hidden="true" className="num flex-none rounded-full bg-gold/20 px-1.5 text-xs leading-5 font-medium text-gold-text">
               {formatCount(count)}
             </span>
           ) : null}

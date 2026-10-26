@@ -22,7 +22,7 @@ export function ClientPreviousAuditors({ client, rows, today }: { client: { id: 
     <section aria-labelledby="client-pac-title" className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 id="client-pac-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="client-pac-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Previous auditor
           </h2>
           <p className="text-sm text-text-muted">Clause 8: the letter to the outgoing auditor, with proof of delivery, before accepting an audit.</p>

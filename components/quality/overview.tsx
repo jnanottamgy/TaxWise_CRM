@@ -138,7 +138,7 @@ export function QualityOverviewView({ o, fy }: { o: QualityOverview; fy: string 
     <div className="flex flex-col gap-4">
       <section aria-labelledby="areas-title" className="rounded-lg border border-border bg-surface">
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-3 md:px-5">
-          <h2 id="areas-title" className="text-md font-semibold text-text">
+          <h2 id="areas-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             {attention ? `${plural(attention, "area needs", "areas need")} attention` : "Nothing needs attention"}
           </h2>
           <span className="text-sm text-text-muted">{QUALITY_FRAMEWORK_LABELS[o.framework]}</span>

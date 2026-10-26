@@ -6,7 +6,7 @@ function CardFrame({ title, children }: { title: string; children: React.ReactNo
   return (
     <section className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="border-b border-border px-4 py-3.5 md:px-5">
-        <h2 className="text-md leading-6 font-semibold text-text">{title}</h2>
+        <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">{title}</h2>
         <Skeleton className="mt-1.5 h-3.5 w-80 max-w-full" />
       </div>
       <div className="px-4 py-4 md:px-5 md:py-5">{children}</div>

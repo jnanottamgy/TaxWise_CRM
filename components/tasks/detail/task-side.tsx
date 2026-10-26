@@ -93,7 +93,7 @@ export function TaskTimeCard({
   const b = budgetState(estimate, logged)
   return (
     <SectionCard title="Time" action={<LogTimeButton task={task} client={client} size="sm" />}>
-      <p className="num text-xl font-semibold tracking-[-0.01em] text-text tabular-nums">
+      <p className="num font-serif text-[30px] leading-9 font-[450] tracking-[-0.01em] text-text tabular-nums">
         {formatMinutes(logged)}
         {estimate ? <span className="text-base font-normal text-text-muted"> of {formatMinutes(estimate)} estimated</span> : null}
       </p>

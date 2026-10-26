@@ -113,7 +113,7 @@ export default async function ClientGroupPage({ params }: { params: Promise<{ id
       />
 
       <section aria-labelledby="group-members" className="flex min-w-0 flex-col gap-2">
-        <h2 id="group-members" className="text-md font-semibold text-text">
+        <h2 id="group-members" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Clients
         </h2>
         <GroupMembersTable groupId={group.id} groupName={group.name} rows={members} today={today} seesMoney={seesMoney} />

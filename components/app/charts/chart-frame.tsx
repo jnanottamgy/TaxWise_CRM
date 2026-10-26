@@ -49,7 +49,7 @@ export function ChartFrame({
     <section aria-labelledby={headingId} className={cn("flex min-w-0 flex-col rounded-lg border border-border bg-surface", className)}>
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-4 pt-4 pb-2 md:px-5">
         <div className="min-w-0">
-          <h2 id={headingId} className="text-md leading-6 font-semibold text-text">
+          <h2 id={headingId} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             {title}
           </h2>
           {description ? <p className="mt-0.5 text-sm text-text-muted">{description}</p> : null}

@@ -37,7 +37,7 @@ export function CalendarNav({ state, sp, today }: { state: CalendarState; sp: Re
             </Button>
           </>
         )}
-        <h2 className="ml-1 truncate text-md font-semibold text-text" aria-live="polite">
+        <h2 className="ml-1 truncate font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text" aria-live="polite">
           {calendarTitle(state)}
           {state.label ? <span className="font-normal text-text-muted"> · {state.label}</span> : null}
           {state.pending ? <span className="font-normal text-text-muted"> · Not yet filed</span> : null}

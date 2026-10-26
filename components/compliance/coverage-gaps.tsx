@@ -72,7 +72,7 @@ export function FirmGapsReport({ rows, canFix }: { rows: ClientGapsRow[]; canFix
     <section aria-labelledby="gaps-title" className="rounded-lg border border-border bg-surface">
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-5">
         <div className="min-w-0">
-          <h2 id="gaps-title" className="text-md font-semibold text-text">
+          <h2 id="gaps-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             {rows.length} {rows.length === 1 ? "client has" : "clients have"} active services with nothing planned ahead
           </h2>
           <p className="text-sm text-text-muted">

@@ -103,7 +103,7 @@ export function Figure({ label, value, sub, href, className }: { label: React.Re
   const body = (
     <>
       <div className="text-sm text-text-muted">{label}</div>
-      <div className="num mt-0.5 text-lg leading-7 font-semibold text-text tabular-nums">{value}</div>
+      <div className="num mt-0.5 font-serif text-[24px] leading-8 font-[450] tracking-[-0.01em] text-text tabular-nums">{value}</div>
       {sub ? <div className="mt-0.5 text-sm text-text-muted">{sub}</div> : null}
     </>
   )

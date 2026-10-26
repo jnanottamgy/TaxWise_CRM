@@ -8,7 +8,7 @@ export interface Crumb {
 
 /**
  * The header row of every page (§3.3, DESIGN.md §4): breadcrumbs above on detail pages, the title
- * (h1, 24/600), a one-line description about the data, and the primary action at right. On phones
+ * (h1 in the serif, 34px), a one-line description about the data, and the primary action at right. On phones
  * the actions wrap under the title. Server-safe.
  *
  *   <PageHeader
@@ -50,7 +50,9 @@ export function PageHeader({
           {leading}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 className="min-w-0 text-xl leading-8 font-semibold tracking-[-0.01em] text-balance text-text">{title}</h1>
+              <h1 className="min-w-0 font-serif text-[26px] leading-8 font-[450] tracking-[-0.015em] text-balance text-text md:text-[34px] md:leading-[42px]">
+                {title}
+              </h1>
               {meta ? <div className="flex flex-wrap items-center gap-2">{meta}</div> : null}
             </div>
             {description ? <p className="mt-1 max-w-[104ch] text-base text-text-muted">{description}</p> : null}

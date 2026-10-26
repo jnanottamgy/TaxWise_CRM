@@ -34,7 +34,7 @@ export function PrivacyNotice({ body, className }: { body: string; className?: s
           case "h1":
           case "h2":
             return (
-              <h2 key={i} className="mt-6 mb-2 text-md font-semibold text-text first:mt-0">
+              <h2 key={i} className="mt-6 mb-2 font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text first:mt-0">
                 <Text value={b.text} />
               </h2>
             )

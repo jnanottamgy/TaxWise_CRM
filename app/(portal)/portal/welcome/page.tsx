@@ -91,7 +91,7 @@ export default async function PortalWelcomePage(props: { searchParams: Promise<R
         {acknowledgedAt ? null : (
           <aside aria-label="Acknowledge the privacy notice" className="lg:sticky lg:top-32 lg:self-start">
             <div className="rounded-lg border border-border bg-surface px-4 py-5 md:px-5">
-              <h2 className="text-md font-semibold text-text">Your acknowledgement</h2>
+              <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">Your acknowledgement</h2>
               <p className="mt-1 mb-4 text-sm text-text-muted">We record the version, the date and time, and where you acknowledged it from.</p>
               <WelcomeForm version={notice.version} firmName={firmName} next={next} />
             </div>

@@ -44,7 +44,7 @@ export function ChecksPanel({ checks, warnings, preview }: { checks: StatementCh
   return (
     <section aria-labelledby="fs-checks-title" className={cn("rounded-lg border bg-surface", failing.length ? "border-danger/40" : "border-border")}>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-3 md:px-5">
-        <h2 id="fs-checks-title" className="text-md leading-6 font-semibold text-text">
+        <h2 id="fs-checks-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Checks
         </h2>
         <p className={cn("text-sm", failing.length ? "text-danger-text" : "text-success-text")}>

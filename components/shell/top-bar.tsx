@@ -48,7 +48,8 @@ export function TopBar() {
   const current = crumbs.length > 0 ? crumbs[crumbs.length - 1] : null;
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 flex-none items-center gap-1 border-b border-border bg-surface px-2 sm:gap-2 md:px-6">
+    // On the navy frame, above the paper sheet (DESIGN.md §2).
+    <header className="on-frame sticky top-0 z-30 flex h-14 flex-none items-center gap-1 bg-frame px-2 sm:gap-2 md:pr-0 md:pl-8 xl:pl-10">
       <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation" onClick={() => setOpen("drawer", true)}>
         <MenuIcon aria-hidden="true" />
       </Button>
@@ -157,7 +158,7 @@ function InboxBell({ count }: { count: number | null }) {
             {unread ? (
               <span
                 aria-hidden="true"
-                className="num absolute top-1 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[11px] leading-none font-semibold text-primary-foreground pointer-coarse:top-2 pointer-coarse:right-1.5"
+                className="num absolute top-1 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[11px] leading-none font-semibold text-[#0c1830] pointer-coarse:top-2 pointer-coarse:right-1.5"
               >
                 {count > 99 ? "99+" : count}
               </span>

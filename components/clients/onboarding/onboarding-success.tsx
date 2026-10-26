@@ -95,7 +95,7 @@ export function OnboardingSuccess({
       <section aria-labelledby="success-whatsapp" className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
         <MessageCircleIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
         <div className="min-w-0 flex-1">
-          <h2 id="success-whatsapp" className="text-md font-semibold text-text">
+          <h2 id="success-whatsapp" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Set up the WhatsApp group
           </h2>
           <p className="text-sm text-text-muted">
@@ -113,7 +113,7 @@ export function OnboardingSuccess({
         <section aria-labelledby="success-portal" className="rounded-lg border border-border bg-surface">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <KeyRoundIcon aria-hidden="true" className="size-4 text-text-muted" />
-            <h2 id="success-portal" className="text-md font-semibold text-text">
+            <h2 id="success-portal" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
               Client portal login
             </h2>
           </div>
@@ -208,7 +208,7 @@ export function OnboardingSuccess({
 
       {uploads.length ? (
         <section aria-labelledby="success-files" className="rounded-lg border border-border bg-surface">
-          <h2 id="success-files" className="border-b border-border px-4 py-3 text-md font-semibold text-text">
+          <h2 id="success-files" className="border-b border-border px-4 py-3 font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Checklist files
           </h2>
           <ul className="divide-y divide-border">

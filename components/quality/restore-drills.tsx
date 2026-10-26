@@ -79,7 +79,7 @@ export function RestoreDrills({ rows, today, canEdit }: { rows: RestoreDrillRow[
       )}
       <section aria-labelledby="drills-title" className="rounded-lg border border-border bg-surface">
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 md:px-5">
-          <h2 id="drills-title" className="text-md font-semibold text-text">
+          <h2 id="drills-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Drills
           </h2>
           {canEdit ? (

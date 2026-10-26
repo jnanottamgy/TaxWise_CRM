@@ -72,14 +72,14 @@ export function PromisesThisMonth({ p }: { p: PaymentsDashboard["promises"] }) {
       <dl className="grid grid-cols-2 border-y border-border">
         <div className="px-4 py-3 md:px-5">
           <dt className="text-sm text-text-muted">Promised</dt>
-          <dd className="num mt-0.5 text-xl font-semibold text-text tabular-nums">{formatINR(p.promisedPaise)}</dd>
+          <dd className="num mt-0.5 font-serif text-[26px] leading-8 font-[450] text-text tabular-nums">{formatINR(p.promisedPaise)}</dd>
           <dd className="text-sm text-text-muted">
             {p.count} {p.count === 1 ? "promise" : "promises"}
           </dd>
         </div>
         <div className="border-l border-border px-4 py-3 md:px-5">
           <dt className="text-sm text-text-muted">Received against them</dt>
-          <dd className="num mt-0.5 text-xl font-semibold text-text tabular-nums">{formatINR(p.receivedPaise)}</dd>
+          <dd className="num mt-0.5 font-serif text-[26px] leading-8 font-[450] text-text tabular-nums">{formatINR(p.receivedPaise)}</dd>
           <dd className="text-sm text-text-muted">
             {p.kept} kept · {p.missed ? <span className="text-danger-text">{p.missed} missed</span> : "0 missed"} · {p.open} open
           </dd>

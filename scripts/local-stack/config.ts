@@ -6,6 +6,7 @@
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 export const ROOT = resolve(__dirname, "..", "..");
@@ -13,7 +14,12 @@ export const ROOT = resolve(__dirname, "..", "..");
 /** Runtime state: secrets, pid files, logs, PostgREST config. Ignores itself in git (see ensureStateDir). */
 export const STATE_DIR = process.env.QA_STACK_DIR ? resolve(process.env.QA_STACK_DIR) : join(ROOT, ".local-stack");
 export const PID_DIR = join(STATE_DIR, "pids");
-export const LOG_DIR = join(STATE_DIR, "logs");
+/**
+ * Logs live outside the project tree: `next dev` (Turbopack + Tailwind's source scan) treats a file
+ * changing anywhere in the project as a change to the CSS, and the app log changes on every request,
+ * so a log inside the project put every open page into a reload loop. $QA_LOG_DIR overrides.
+ */
+export const LOG_DIR = process.env.QA_LOG_DIR ? resolve(process.env.QA_LOG_DIR) : join(tmpdir(), "taxwise-qa-stack", "logs");
 export const BIN_DIR = join(STATE_DIR, "bin");
 
 export const QA_DB = process.env.QA_DB ?? "taxwise_qa";

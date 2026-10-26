@@ -28,7 +28,7 @@ function Heading({ id, title, description, action }: { id: string; title: string
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
       <div className="min-w-0">
-        <h2 id={id} className="text-md leading-6 font-semibold text-text">
+        <h2 id={id} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           {title}
         </h2>
         <p className="text-sm text-text-muted">{description}</p>

@@ -78,7 +78,7 @@ export function OwnDeclaration({ fy, existing }: { fy: string; existing: { answe
   return (
     <section aria-labelledby="own-title" className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-1 md:px-5">
-        <h2 id="own-title" className="text-md font-semibold text-text">
+        <h2 id="own-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Your declaration for FY {fy}
         </h2>
         {existing ? <span className="text-sm text-text-muted">Declared {formatDateTime(existing.declared_at)}</span> : <StatusChip label="Not declared yet" tone="warning" />}
@@ -115,7 +115,7 @@ export function IndependenceRegister({ fy, rows, years, canRemind }: { fy: strin
     <section aria-labelledby="reg-title" className="rounded-lg border border-border bg-surface">
       <div className="flex flex-col gap-3 px-4 pt-4 pb-3 md:flex-row md:items-center md:justify-between md:px-5">
         <div>
-          <h2 id="reg-title" className="text-md font-semibold text-text">
+          <h2 id="reg-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Declarations for FY {fy}
           </h2>
           <p className="mt-0.5 text-sm text-text-muted">

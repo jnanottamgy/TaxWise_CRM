@@ -26,7 +26,7 @@ export function ProfileCard({
     <section id={id} aria-labelledby={headingId} className={cn("min-w-0 scroll-mt-20 rounded-lg border border-border bg-surface", className)}>
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3.5 md:px-5">
         <div className="min-w-0">
-          <h2 id={headingId} className="text-md leading-6 font-semibold text-text">
+          <h2 id={headingId} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             {title}
           </h2>
           {description ? <p className="mt-0.5 max-w-[72ch] text-sm text-text-muted">{description}</p> : null}

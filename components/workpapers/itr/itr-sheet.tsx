@@ -38,7 +38,7 @@ export function ItrComparison({ result, chosen, className }: { result: ItrResult
         <h2 id="itr-comparison-title" className="text-sm text-text-muted">
           Recommended regime
         </h2>
-        <p className="mt-1 text-2xl leading-9 font-semibold tracking-[-0.01em] text-text">
+        <p className="mt-1 font-serif text-[30px] leading-9 font-[450] tracking-[-0.015em] text-text">
           {REGIME_LABEL[rec]}
           {result.saving > 0 ? (
             <span className="ml-2 text-md font-normal text-text-muted">
@@ -122,7 +122,7 @@ export function ItrSheet({ result, recommended, className, title = "Computation,
     <section aria-labelledby="itr-sheet-title" className={cn("min-w-0 rounded-lg border border-border bg-surface", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 pb-3 md:px-5">
         <div className="min-w-0">
-          <h2 id="itr-sheet-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="itr-sheet-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             {title}
           </h2>
           <p className="mt-0.5 text-sm text-text-muted">

@@ -196,7 +196,7 @@ export function QualityManual({
           return (
             <section key={g} aria-labelledby={`qm-${g}`} className="rounded-lg border border-border bg-surface">
               <div className="flex items-baseline justify-between gap-3 px-4 pt-4 pb-2 md:px-5">
-                <h2 id={`qm-${g}`} className="text-md font-semibold text-text">
+                <h2 id={`qm-${g}`} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
                   {qualityGroupLabel(g)}
                 </h2>
                 <span className="num text-sm text-text-muted">{rows.length}</span>

@@ -93,7 +93,7 @@ function hideClass(h: DataTableColumn<unknown>["hideBelow"]) {
 /**
  * The server-driven list table (§3.4, DESIGN.md §4). Rows, total, page and sort come from the server
  * (parseTableParams + a lib/data range query); every control writes the URL, and the page re-renders
- * on the server. Sticky header on surface-2, 12px grey sentence-case headers, no zebra, 1px rules,
+ * on the server. Sticky header on the surface over a 1px rule, 12px grey sentence-case headers, no zebra, 1px rules,
  * numbers right-aligned, row height var(--row-height) (44px, or 36px in compact density). Below
  * 768px rows become stacked cards built from the columns' `mobile` slots.
  *
@@ -289,7 +289,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   {selectable ? (
                     <th
                       scope="col"
-                      className="sticky top-0 left-0 z-20 h-9 w-11 bg-surface-2 p-0 shadow-[inset_0_-1px_0_var(--border)]"
+                      className="sticky top-0 left-0 z-20 h-10 w-11 bg-surface p-0 shadow-[inset_0_-1px_0_var(--border)]"
                     >
                       <div className="flex w-11 items-center justify-center pl-1">
                       <Checkbox
@@ -313,7 +313,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                         aria-sort={ariaSort}
                         style={c.width ? { width: c.width } : undefined}
                         className={cn(
-                          "sticky top-0 z-10 h-9 bg-surface-2 px-3 text-xs leading-4 font-medium whitespace-nowrap text-text-muted shadow-[inset_0_-1px_0_var(--border)]",
+                          "sticky top-0 z-10 h-10 bg-surface px-3 text-xs leading-4 font-normal whitespace-nowrap text-text-muted shadow-[inset_0_-1px_0_var(--border)]",
                           alignClass(c.align),
                           hideClass(c.hideBelow),
                           stickyLeft && (selectable ? "md:left-11 md:z-20" : "md:left-0 md:z-20"),

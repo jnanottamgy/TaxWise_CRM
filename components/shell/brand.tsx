@@ -65,7 +65,7 @@ export function JTacsMark({ className }: { className?: string }) {
     <span className={cn("flex justify-center", className)} title="Powered by J-TACS">
       <span
         aria-hidden="true"
-        className="inline-flex size-5 flex-none select-none items-center justify-center rounded-sm bg-gold text-xs font-bold text-brand-navy"
+        className="inline-flex size-5 flex-none select-none items-center justify-center rounded-sm bg-gold text-xs font-bold text-[#0c1830]"
       >
         J
       </span>

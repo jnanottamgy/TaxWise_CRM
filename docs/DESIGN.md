@@ -29,7 +29,7 @@ well-run CA office.
   - Invoices: "What's outstanding, and what's overdue?"
 - **Signature elements** (only this product has them; build them properly):
   - the **filings grid**: clients × periods, each cell a status mark (§7.7);
-  - the **TW monogram** in `--accent-gold` on a `--brand-navy` band at the top of the sidebar, and
+  - the **TW monogram** in `--accent-gold` beside the firm's name in the serif at the top of the navy frame, and
     "Powered by **J-TACS**" small in gold-text at the foot (§0, §3.3);
   - the **FY switcher** (`2026-27`) in the top bar;
   - **Indian money**: `₹1,23,456.00`, lakh/crore words on invoices, `₹12.3L` only on dashboard figures
@@ -38,25 +38,39 @@ well-run CA office.
 - **Words of the trade** everywhere: "Data awaited", "Filed", "Under review", "Sent back", "ARN",
   "UDIN", "Place of supply", "AY 2026-27" / "Tax year 2026-27". Never "Items", "Records", "Completed".
 
-## 2. Tokens (already in `app/globals.css`; never hard-code hex in components)
+## 2. The look: "the navy binder" (tokens in `app/globals.css`; never hard-code hex in components)
 
-Use Tailwind classes mapped to the tokens: `bg-bg`, `bg-surface`, `bg-surface-2`, `text-text`,
-`text-text-muted`, `border-border`, `bg-primary`, `text-primary`, `bg-primary-soft`, `bg-brand-navy`,
-`text-gold-text`, `bg-gold`, and status: `text-success-text`, `bg-success-soft`, `bg-success` (dot), and
-the same for `warning`, `danger`, `info`, `violet`.
+The app is a navy binder: the **frame** (sidebar and top bar, the phone top bar and drawer, the portal
+band, the sign-in panel) is deep navy `--frame` #0c1830; every page is a **sheet of paper** (`--bg`
+#f6f5f3) inset in it with a 16px radius; cards on the sheet are white with a warm hairline. Ink is navy
+(`--text` #0e1a2f), the one filled button is navy (`--primary` #13254a), and **gold** marks only the
+brand and where you are (the monogram, the short gold rule on the active nav item, counts on the
+frame, the portal's active tab, "Powered by J-TACS"). Status colours stay on dots and pale pills.
 
-**Contrast rule we added:** the spec's light-theme `--success`, `--warning` and `--accent-gold` fail
-WCAG AA as text (3.2–3.5:1). Use them for dots, bars and fills only. **Text always uses the `*-text`
-variant** (all ≥ 4.5:1 on surface, surface-2 and bg, both themes).
+Things that sit on the frame wrap in **`.on-frame`**: it re-themes the tokens (`--text`, `--surface`,
+`--surface-2`, `--border`, `--primary`, `--ring` gold …) so the same components render light-on-navy.
+Menus, popovers and dialogs portal out and stay on paper.
 
-Type scale (§3.2), as Tailwind sizes: `text-xs` 12 · `text-sm` 13 · `text-base` 14 (body) · `text-md` 16
-· `text-lg` 20 · `text-xl` 24 · `text-2xl` 30. Never more than three sizes on one screen. Page titles
-`text-xl font-semibold` (24/600). Card titles `text-md font-semibold` (16). Labels/meta `text-xs` or
-`text-sm` in `text-text-muted`. Every number, amount and date: class `num` (tabular figures) and
-right-aligned in tables.
+**Type.** Inter for everything you read and type; **Newsreader** (variable, optical sizes, has ₹ and
+tabular figures) for page titles (h1 34px, 26px on phones), card and dialog titles (19–20px, 500), and
+money and counts in KPI strips (30px, the lead 40px), set like an engraved statement. Inter's
+`text-xs`–`text-md` scale (12 · 13 · 14 body · 16) for everything else. Monospace only for IDs.
+
+Use Tailwind classes mapped to the tokens: `bg-bg`, `bg-surface`, `bg-surface-2`, `bg-frame`,
+`text-text`, `text-text-muted`, `border-border`, `bg-primary`, `text-primary`, `bg-primary-soft`,
+`text-gold-text`, `bg-gold`, `font-serif`, and status: `text-success-text`, `bg-success-soft`,
+`bg-success` (dot), and the same for `warning`, `danger`, `info`, `violet`.
+
+**Contrast rule we added:** `--success`, `--warning` and `--accent-gold` fail WCAG AA as text
+(3.2–3.5:1). Use them for dots, bars and fills only. **Text always uses the `*-text` variant** (all
+≥ 4.5:1 on surface, surface-2 and bg, both themes). The paper ground stays near-neutral (HSL
+saturation under 15%) so it never reads as cream.
+
+Every number, amount and date: class `num` (tabular figures) and right-aligned in tables.
 
 Radius: inputs/buttons `rounded-md` (8) · cards `rounded-lg` (12) · dialogs/sheets `rounded-xl` (16) ·
-chips `rounded-full`. Spacing: 4-point base; page padding 24 desktop / 16 mobile; 16–24 between cards.
+the page sheet `rounded-2xl` · chips `rounded-full`. Spacing: 4-point base; page padding 32–40 desktop /
+16 mobile; 16–24 between cards.
 Density: table row height `var(--row-height)` (44, or 36 in compact mode).
 
 ## 3. House rules for app screens (taste-skill, adapted to the spec)
@@ -80,16 +94,15 @@ Density: table row height `var(--row-height)` (44, or 36 in compact mode).
 | Charts (Recharts): one series per chart, one hue (`--chart-1`), 3–5 faint horizontal gridlines, no y-axis line, no legend for one series, straight lines, square bars, round ticks; every chart has a table alternative (§13) | Rainbow charts, smoothed splines, gradient area fills, rotated x labels, donuts with labels on slices |
 | Icons: lucide outline, 16px in nav/buttons, 14px inline, grey | Icons in coloured boxes repeated down a list |
 | Row actions: icon-only buttons are **ghost** (no box); one kebab for the rest; a row's lesser answer (Decline) is ghost beside an outlined main answer | A bordered box around every icon in every row |
-| Nav active item: `bg-primary-soft` with `text-primary` label (spec §3.1) | A coloured left bar *and* a fill |
-| One filled primary button per screen (spec: `--primary` blue), the page's own; the sidebar's "+ New" is outlined. Secondary: outline. Tertiary: ghost/text | Brand fill on every button; two blue fills on one screen |
+| Nav active item (on the navy frame): a lighter step of the frame and a short gold rule at its edge | Saturated pills; a coloured left bar *and* a coloured fill |
+| One filled primary button per screen (navy `--primary`), the page's own; the sidebar's "+ New" is outlined. Secondary: outline. Tertiary: ghost/text | Brand fill on every button; two filled buttons on one screen |
 | Dashed borders only for empty slots and drop zones | Dashed filter chips or controls |
 | Sentence case everywhere | ALL-CAPS labels (one exception: none) |
 | Titles are nouns ("Clients", "Firm today") | "Welcome back 👋", hero headers |
 | Emoji: never as icons or decoration | |
 
-The spec asks for a navy band at the top of the sidebar (logo area) and a navy login panel: keep those
-as the brand moments. The rest of the sidebar is `bg-surface` with a right `border-border` (taste: no
-dark or saturated sidebar).
+The spec's navy brand band now runs the whole frame (the navy binder, §2): sidebar and top bar are one
+navy L around the paper sheet, so the brand is the shell itself rather than a stripe of it.
 
 ## 4. Patterns (build once in `components/app/`, reuse everywhere)
 
@@ -155,3 +168,8 @@ last card and pin its "View all"), or keep their own height when stretching woul
   per screen, the Partner setup checklist dominating Firm today, the declined task listed twice on Team
   today, ragged/void rows on both dashboards and the UDIN register. Kept on purpose: the spec's violet
   for Under review (now a dot only), `--info` blue, the navy login panel, monospace for IDs.
+- **Oct 2026, the premium pass ("look expensive").** ui-ux-pro-max's design system for traditional
+  finance ("trust navy + premium gold") and the taste-skill's framed-sheet style (one frame, the page
+  on an inset sheet), pushed to a deep navy frame. Newsreader chosen over Instrument Serif (no ₹, no
+  tabular figures), Source Serif 4 (too bookish) and Fraunces (too playful) from rendered specimens.
+  Primary buttons moved from SaaS blue to navy ink; charts draw in navy. Inspector: no new failures.

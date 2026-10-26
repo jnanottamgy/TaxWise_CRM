@@ -242,7 +242,7 @@ export function StatementEditor(props: StatementEditorProps) {
       {ledgers.length === 0 ? (
         <div className="mb-4 flex flex-col gap-3 rounded-lg border border-border bg-surface px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
           <div className="min-w-0">
-            <h2 className="text-md font-semibold text-text">No trial balance on this statement yet</h2>
+            <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">No trial balance on this statement yet</h2>
             <p className="mt-0.5 text-sm text-text-muted">Load the client&apos;s closing trial balance for FY {financialYear}; every ledger is then mapped to a Schedule III line and the statements are built.</p>
           </div>
           {!readOnly ? <ReplaceTrialBalanceButton id={id} clientId={clientId} fy={financialYear} getUpdatedAt={getUpdatedAt} dirty={dirty} /> : null}

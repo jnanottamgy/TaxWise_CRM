@@ -75,7 +75,7 @@ export default async function PortalDocumentsPage(props: { searchParams: Promise
       />
 
       <section aria-labelledby="requests-title" className="mb-6 md:mb-8">
-        <h2 id="requests-title" className="mb-3 text-md font-semibold text-text">
+        <h2 id="requests-title" className="mb-3 font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           What we&apos;ve asked for
         </h2>
         {!requests.ok ? (
@@ -119,7 +119,7 @@ export default async function PortalDocumentsPage(props: { searchParams: Promise
       </section>
 
       <section aria-labelledby="shared-title">
-        <h2 id="shared-title" className="text-md font-semibold text-text">
+        <h2 id="shared-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Shared with you
         </h2>
         <p className="mt-0.5 mb-3 text-sm text-text-muted">Returns, computations, financial statements and letters from the firm.</p>

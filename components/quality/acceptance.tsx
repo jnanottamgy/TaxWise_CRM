@@ -31,7 +31,7 @@ export function AcceptanceSection({ s }: { s: AcceptanceSummary }) {
       />
       <section aria-labelledby="acc-title" className="rounded-lg border border-border bg-surface">
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 md:px-5">
-          <h2 id="acc-title" className="text-md font-semibold text-text">
+          <h2 id="acc-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Latest conflict checks
           </h2>
           <Button asChild size="sm" variant="outline">

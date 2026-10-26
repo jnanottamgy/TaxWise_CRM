@@ -28,7 +28,7 @@ export function PublicNotice({
     <section role={tone === "danger" ? "alert" : "status"} className={cn("flex gap-3 rounded-lg border px-4 py-3.5", cls, className)}>
       {icon ? <span className="mt-0.5 flex-none [&_svg]:size-5">{icon}</span> : null}
       <div className="min-w-0">
-        <h2 className="text-md leading-6 font-semibold text-text">{title}</h2>
+        <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">{title}</h2>
         <p className="mt-0.5 text-base text-text">{children}</p>
       </div>
     </section>

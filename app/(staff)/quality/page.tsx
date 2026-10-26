@@ -244,7 +244,7 @@ export default async function QualityPage({ searchParams }: { searchParams: Prom
             {summary.ok ? <RetentionSummary years={summary.data} thisYear={Number(today.slice(0, 4))} /> : <ErrorBlock message="Couldn't load the retention summary." errorRef={summary.ref} size="compact" />}
           </SectionCard>
           <div className="min-w-0">
-            <h2 className="mb-2 text-md font-semibold text-text">Review for disposal</h2>
+            <h2 className="mb-2 font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">Review for disposal</h2>
             <FilterBar
               searchLabel="Search documents past retention"
               searchPlaceholder="Title, file or client"

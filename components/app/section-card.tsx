@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * A section on an overview (DESIGN.md §4): 1px border on surface, no shadow, 12px radius. Header row
- * with the 16/600 title and an optional right slot (period, action), the body, and an optional
+ * with the title in the serif (19px) and an optional right slot (period, action), the body, and an optional
  * "View all" footer. Overviews show 4–6 rows and never paginate. Server-safe.
  *
  *   <SectionCard
@@ -56,7 +56,7 @@ export function SectionCard({
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3 md:px-5">
         <div className="min-w-0">
-          <H id={headingId} className="text-md leading-6 font-semibold text-text">
+          <H id={headingId} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             {title}
           </H>
           {description ? <p className="mt-0.5 text-sm text-text-muted">{description}</p> : null}

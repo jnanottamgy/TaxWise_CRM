@@ -95,7 +95,7 @@ function ApprovalLine({ label, n, href, sub }: { label: string; n: number; href:
           <span className="block text-base text-text group-hover:text-primary">{label}</span>
           {sub ? <span className="block text-sm text-text-muted">{sub}</span> : null}
         </span>
-        <span className={cn("num text-lg leading-7 font-semibold tabular-nums", n > 0 ? "text-text" : "text-text-muted")}>{figure(n)}</span>
+        <span className={cn("num font-serif text-[26px] leading-8 font-[450] tabular-nums", n > 0 ? "text-text" : "text-text-muted")}>{figure(n)}</span>
         <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
       </Link>
     </li>

@@ -150,7 +150,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                     <ArrowLeftIcon aria-hidden="true" className="size-4" />
                   </Link>
                   <div className="min-w-0">
-                    <h2 className="truncate text-md leading-6 font-semibold text-text">{selected.client.display_name}</h2>
+                    <h2 className="truncate font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">{selected.client.display_name}</h2>
                     <p className="truncate text-sm text-text-muted">
                       {selected.client.client_code}
                       {selected.client.owner_name ? ` · owner ${selected.client.owner_name}` : ""}

@@ -31,8 +31,9 @@ describe("the home pages' KPI grid", () => {
     expect(out).toContain('href="/clients?status=active"');
     // The compact amount is shown, the full one is read out.
     expect(out).toContain('<span aria-hidden="true">₹3.5L</span><span class="sr-only">₹3,45,600.00</span>');
-    // The lead is the one 30px figure; the rest are 24px; the overdue amount carries the status colour.
-    expect(out.match(/text-2xl/g)).toHaveLength(1);
+    // The lead is the one 40px figure; the rest are 30px, all in the serif; the overdue amount carries the status colour.
+    expect(out.match(/text-\[40px\]/g)).toHaveLength(1);
+    expect(out).toContain("font-serif");
     expect(out).toContain("text-danger-text");
     // An honest zero, printed like any figure.
     expect(out).toContain(">0<");

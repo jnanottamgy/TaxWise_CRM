@@ -61,7 +61,7 @@ export function LinkedPcsCard({ devices, canRemove }: { devices: DeviceRow[]; ca
   return (
     <section id="linked-pcs" aria-labelledby="linked-pcs-title" className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="border-b border-border px-4 py-3.5 md:px-5">
-        <h2 id="linked-pcs-title" className="text-md leading-6 font-semibold text-text">
+        <h2 id="linked-pcs-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Linked PCs
         </h2>
         <p className="mt-0.5 max-w-[72ch] text-sm text-text-muted">

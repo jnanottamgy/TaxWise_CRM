@@ -50,7 +50,7 @@ const AUDIT_OPTIONS = LETTER_AUDIT_TYPES.map((a) => ({ value: a, label: LETTER_A
 function Card({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-surface px-4 py-4 md:px-5">
-      <h2 className="text-md leading-6 font-semibold text-text">{title}</h2>
+      <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">{title}</h2>
       {description ? <p className="mb-4 text-sm text-text-muted">{description}</p> : <div className="mb-4" />}
       {children}
     </section>

@@ -43,7 +43,7 @@ npx tsx scripts/local-stack/stack.ts down --purge  # also drop taxwise_qa and fo
 `up` rebuilds the app whenever the source tree (HEAD plus uncommitted changes) or `.next/BUILD_ID`
 changed, so run it again after any edit, or after anyone else's `npm run build`. The QA data is built
 relative to **today in IST**; reload it with `--fresh` on a later day so "due today", "overdue" and the
-relative dates stay meaningful. Logs: `.local-stack/logs/{app,mock,postgrest,build,data}.log`; the
+relative dates stay meaningful. Logs: `$TMPDIR/taxwise-qa-stack/logs/{app,mock,postgrest,build,data}.log` (outside the project, so `next dev` doesn't reload on every log line; `QA_LOG_DIR` overrides); the
 stand-in logs every PostgREST error it forwards (status, path, role, body), which is usually the
 fastest route to the cause of a block error.
 

@@ -16,7 +16,7 @@ export function TwMark({ className, size = "md" }: { className?: string; size?: 
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex flex-none items-center justify-center rounded-[10px] bg-brand-navy",
+        "inline-flex flex-none items-center justify-center rounded-[10px] bg-[#0c1830]",
         size === "md" ? "size-11" : "size-9",
         className,
       )}
@@ -71,17 +71,22 @@ export function BrandPanel() {
   return (
     <aside
       aria-label="TaxWise Consultants"
-      className="relative hidden overflow-hidden bg-brand-navy text-white md:sticky md:top-0 md:flex md:h-dvh md:w-2/5 md:flex-none md:flex-col md:justify-between md:p-10 lg:p-14"
+      className="relative hidden overflow-hidden bg-frame text-white md:sticky md:top-0 md:flex md:h-dvh md:w-2/5 md:flex-none md:flex-col md:justify-between md:p-10 lg:p-14"
     >
       <DiagonalLines />
       <div className="relative">
         <TwMark />
       </div>
-      <div className="relative flex flex-col gap-3">
-        <p className="text-2xl font-semibold tracking-[-0.01em] text-white">TaxWise Consultants</p>
-        <p className="text-base text-white/80">Chartered Accountants · Bengaluru</p>
-        <span aria-hidden="true" className="my-3 block h-px w-10 bg-gold/70" />
-        <p className="max-w-xs text-base text-white/70">Your practice, in one place.</p>
+      <div className="relative flex flex-col">
+        {/* The firm's name in large type (§3.5), set in the serif like the app's titles. */}
+        <p className="font-serif text-[44px] leading-[1.02] font-[420] tracking-[-0.02em] text-white lg:text-[56px]">
+          TaxWise
+          <br />
+          Consultants
+        </p>
+        <p className="mt-5 text-base text-white/75">Chartered Accountants · Bengaluru</p>
+        <span aria-hidden="true" className="my-8 block h-px w-12 bg-gold/80" />
+        <p className="max-w-xs font-serif text-xl leading-7 text-white/80 italic">Your practice, in one place.</p>
       </div>
       <PoweredBy className="relative" />
     </aside>

@@ -50,11 +50,9 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
 
   const brand = (
     <>
-      <span className="flex size-9 flex-none items-center justify-center rounded-md bg-brand-navy">
-        <FirmMark logoUrl={firm.logoUrl} firmName={firm.name} className="size-7" />
-      </span>
+      <FirmMark logoUrl={firm.logoUrl} firmName={firm.name} className="size-8" />
       <span className="flex min-w-0 flex-col">
-        <span className="truncate text-base font-semibold tracking-[-0.01em] text-text">{firm.name}</span>
+        <span className="truncate font-serif text-[17px] leading-6 font-medium tracking-[-0.01em] text-text">{firm.name}</span>
         {/* Phones: the client's name under the firm's, instead of a row of its own in the sticky header. */}
         {clientName ? (
           <span aria-hidden="true" className="truncate text-xs text-text-muted sm:hidden">
@@ -66,14 +64,15 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
   );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg">
+    // The navy binder (DESIGN.md §2): the firm's band on the navy frame, the client's pages on a paper sheet.
+    <div className="flex min-h-dvh flex-col bg-frame">
       <a
         href="#main"
         className="sr-only rounded-md bg-surface px-3 py-2 text-sm font-medium text-primary shadow-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:outline-2 focus:outline-ring"
       >
         Skip to main content
       </a>
-      <header className="sticky top-0 z-30 border-b border-border bg-surface">
+      <header className="on-frame sticky top-0 z-30 bg-frame">
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 md:px-6">
           {welcome ? (
             // Until the privacy notice is acknowledged there is nowhere else to go: a link home here would
@@ -112,7 +111,7 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
                       className={cn(
                         "relative flex h-11 items-center gap-2 rounded-t-md px-3 text-base outline-none transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
                         active
-                          ? "font-medium text-primary after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary"
+                          ? "font-medium text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-gold"
                           : "text-text-muted hover:text-text",
                       )}
                     >
@@ -127,14 +126,16 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
         )}
       </header>
 
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-5 outline-none md:px-6 md:py-8">
-        {children}
-      </main>
+      <div className="flex flex-1 flex-col bg-bg md:mx-2.5 md:mb-2.5 md:rounded-2xl">
+        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 outline-none md:px-6 md:py-10">
+          {children}
+        </main>
 
-      <footer className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 border-t border-border px-4 py-4 md:px-6">
-        <p className="text-xs text-text-muted">{firm.name}</p>
-        <PoweredBy />
-      </footer>
+        <footer className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 border-t border-border px-4 py-4 md:px-6">
+          <p className="text-xs text-text-muted">{firm.name}</p>
+          <PoweredBy />
+        </footer>
+      </div>
     </div>
   );
 }

@@ -6,9 +6,10 @@ import { BrandPanel, PhoneBrand, PhonePoweredBy } from "./_components/brand";
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh bg-bg">
+    // The navy binder (DESIGN.md §2): the brand panel on the navy frame, the form on a paper sheet.
+    <div className="flex min-h-dvh bg-bg md:bg-frame">
       <BrandPanel />
-      <main className="flex min-w-0 flex-1 flex-col items-center justify-center px-4 py-10 sm:px-8 md:py-12">
+      <main className="flex min-w-0 flex-1 flex-col items-center justify-center bg-bg px-4 py-10 sm:px-8 md:my-2.5 md:mr-2.5 md:rounded-2xl md:py-12">
         <PhoneBrand />
         {children}
         <PhonePoweredBy />

@@ -490,7 +490,7 @@ export function ItrEditor({ mode, initial, computation, client: initialClient, f
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:self-start" aria-label="Live comparison">
           <section className="rounded-lg border border-border bg-surface">
             <div className="px-4 pt-4 pb-3">
-              <h2 className="text-md leading-6 font-semibold text-text">Comparison</h2>
+              <h2 className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">Comparison</h2>
               <p className="mt-0.5 text-sm text-text-muted">Updates as you type. Saved figures are recomputed on the server.</p>
             </div>
             {!client ? (

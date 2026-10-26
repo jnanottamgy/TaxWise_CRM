@@ -60,7 +60,7 @@ npx tsx scripts/local-stack/stack.ts down --purge  # …and drop taxwise_qa and 
 `up` is idempotent: it loads the database only when `taxwise_qa` has no complete QA load, starts only what
 isn't running, and rebuilds only when the source tree (HEAD plus uncommitted changes), the keys or
 `.next/BUILD_ID` changed. Anyone else's `npm run build` replaces the build the stack serves; `up` notices
-and rebuilds (even while the app is running). Logs: `.local-stack/logs/{app,mock,postgrest,build,data}.log`. The stand-in logs
+and rebuilds (even while the app is running). Logs: `$TMPDIR/taxwise-qa-stack/logs/{app,mock,postgrest,build,data}.log` (outside the project, so `next dev` doesn't reload on every log line; `QA_LOG_DIR` overrides). The stand-in logs
 every PostgREST error it forwards (status, path, role, body), which is usually the fastest way to the cause
 of a block error.
 

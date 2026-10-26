@@ -48,7 +48,7 @@ export function SearchGroupCard({ q, type, total, items }: { q: string; type: Se
   return (
     <section aria-labelledby={`search-${type}`} className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="flex items-baseline justify-between gap-3 px-4 pt-4 pb-2 md:px-5">
-        <h2 id={`search-${type}`} className="text-md leading-6 font-semibold text-text">
+        <h2 id={`search-${type}`} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           {label}
         </h2>
         <span className="num text-sm text-text-muted tabular-nums">

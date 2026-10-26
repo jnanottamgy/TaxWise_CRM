@@ -276,39 +276,44 @@ export function StaffShell({
       >
         Skip to main content
       </a>
-      <div className="flex min-h-dvh bg-bg">
+      {/* The navy binder (DESIGN.md §2): sidebar and top bar are one navy frame; the page is a sheet of
+          paper inset in it. On phones the sheet is the whole screen under a navy top bar. */}
+      <div className="flex min-h-dvh bg-frame">
         {/* 768–1023px (tablets, the Desktop app beside WhatsApp): always the 64px rail, so the page keeps
             its width. The saved collapsed/expanded choice applies from 1024px. */}
-        <aside
-          aria-label="Sidebar"
-          className="sticky top-0 hidden h-dvh w-16 flex-none overflow-hidden border-r border-border bg-surface md:block lg:hidden"
-        >
+        <aside aria-label="Sidebar" className="on-frame sticky top-0 hidden h-dvh w-16 flex-none overflow-hidden md:block lg:hidden">
           <Sidebar rail fixedRail />
         </aside>
         <aside
           id="tw-sidebar"
           aria-label="Sidebar"
           className={cn(
-            "sticky top-0 hidden h-dvh flex-none overflow-hidden border-r border-border bg-surface transition-[width] duration-200 ease-out lg:block",
-            collapsed ? "w-16" : "w-[260px]",
+            "on-frame sticky top-0 hidden h-dvh flex-none overflow-hidden transition-[width] duration-200 ease-out lg:block",
+            collapsed ? "w-16" : "w-[248px]",
           )}
         >
           <Sidebar rail={collapsed} />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col md:pr-2.5 md:pb-2.5">
           <TopBar />
-          {warning ? <ShellWarning message={warning.message} errorRef={warning.ref} /> : null}
-          <main id="main" tabIndex={-1} className={cn("min-w-0 flex-1 px-4 py-4 outline-none md:px-6 md:py-6", employee && "pb-24 md:pb-6")}>
-            {children}
-          </main>
+          <div className="flex min-w-0 flex-1 flex-col bg-bg md:overflow-clip md:rounded-2xl">
+            {warning ? <ShellWarning message={warning.message} errorRef={warning.ref} /> : null}
+            <main
+              id="main"
+              tabIndex={-1}
+              className={cn("min-w-0 flex-1 px-4 py-5 outline-none md:px-8 md:py-8 xl:px-10", employee && "pb-24 md:pb-8")}
+            >
+              {children}
+            </main>
+          </div>
         </div>
       </div>
 
       {employee ? <MobileTabBar /> : null}
 
       <Sheet open={panel === "drawer"} onOpenChange={(o) => setOpen("drawer", o)}>
-        <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,18rem)] gap-0 p-0 md:hidden">
+        <SheetContent side="left" showCloseButton={false} className="on-frame w-[min(86vw,18rem)] gap-0 border-0 bg-frame p-0 md:hidden">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">Pages, favourites and your account.</SheetDescription>
           <Sidebar inDrawer onNavigate={() => setOpen("drawer", false)} onClose={() => setOpen("drawer", false)} />

@@ -69,7 +69,7 @@ export function TaskCalendar({
               <ChevronLeftIcon aria-hidden="true" />
             </Link>
           </Button>
-          <h2 className="min-w-36 text-center text-md font-semibold text-text">{monthTitle(month)}</h2>
+          <h2 className="min-w-36 text-center font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">{monthTitle(month)}</h2>
           <Button asChild variant="ghost" size="icon-sm">
             <Link href={hrefFor(monthParam(month, 1))} aria-label="Next month" scroll={false}>
               <ChevronRightIcon aria-hidden="true" />

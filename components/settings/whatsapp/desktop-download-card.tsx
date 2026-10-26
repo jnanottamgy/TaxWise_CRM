@@ -10,7 +10,7 @@ export function DesktopDownloadCard({ url, canEdit }: { url: string | null; canE
     <section id="download" aria-labelledby="download-title" className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 md:px-5">
         <div className="min-w-0">
-          <h2 id="download-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="download-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             TaxWise Desktop installer
           </h2>
           <p className="mt-0.5 max-w-[68ch] text-sm text-text-muted">

@@ -95,7 +95,7 @@ export function LedgerMapping({
     <section aria-labelledby={`${baseId}-title`} className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="flex flex-col gap-3 px-4 pt-4 pb-3 md:px-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id={`${baseId}-title`} className="text-md font-semibold text-text">
+          <h2 id={`${baseId}-title`} className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Ledger mapping
           </h2>
           <p className="text-sm text-text-muted">

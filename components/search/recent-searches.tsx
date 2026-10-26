@@ -50,7 +50,7 @@ export function RecentSearches({ searches }: { searches: RecentSearchView[] }) {
   return (
     <section aria-labelledby="recent-searches" className="min-w-0 rounded-lg border border-border bg-surface md:max-w-2xl">
       <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 md:px-5">
-        <h2 id="recent-searches" className="text-md leading-6 font-semibold text-text">
+        <h2 id="recent-searches" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
           Recent searches
         </h2>
         {visible.length > 0 ? (

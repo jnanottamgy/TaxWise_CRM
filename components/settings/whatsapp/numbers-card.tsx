@@ -65,7 +65,7 @@ export function NumbersCard({
     <section id="numbers" aria-labelledby="numbers-title" className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3.5 md:px-5">
         <div className="min-w-0">
-          <h2 id="numbers-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="numbers-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Firm WhatsApp numbers
           </h2>
           <p className="mt-0.5 max-w-[72ch] text-sm text-text-muted">

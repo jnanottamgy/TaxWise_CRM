@@ -188,7 +188,7 @@ export function ChecklistView({ clientId, clientName, rows, documents, canManage
     <section aria-labelledby="checklist-title" className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 pb-3 md:px-5">
         <div>
-          <h2 id="checklist-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="checklist-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Document checklist
           </h2>
           <p className="text-sm text-text-muted">

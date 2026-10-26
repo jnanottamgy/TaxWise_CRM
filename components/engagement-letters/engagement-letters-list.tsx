@@ -55,7 +55,7 @@ export async function EngagementLettersList({ clientId, user, supabase }: { clie
     <section aria-labelledby="client-letters-title" className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 id="client-letters-title" className="text-md leading-6 font-semibold text-text">
+          <h2 id="client-letters-title" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
             Engagement letters
           </h2>
           <p className="text-sm text-text-muted">The terms agreed for each FY: SA 210 for audits, a services schedule with fees for other work.</p>

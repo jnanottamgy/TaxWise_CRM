@@ -53,8 +53,9 @@ export function KpiStrip({
             <div className="text-sm leading-5 text-text-muted">{item.label}</div>
             <div
               className={cn(
-                "num mt-1 font-semibold tracking-[-0.01em] text-text tabular-nums",
-                big ? "text-2xl leading-9" : "text-xl leading-8"
+                // Money and counts set in the serif, like an engraved statement (DESIGN.md §2).
+                "num mt-1.5 font-serif font-[450] tracking-[-0.012em] text-text tabular-nums",
+                big ? "text-[40px] leading-[44px]" : "text-[30px] leading-9"
               )}
             >
               {item.value}
