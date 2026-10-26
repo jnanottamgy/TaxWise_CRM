@@ -11,8 +11,9 @@ import { CAPACITY_WINDOW_DAYS } from "@/lib/schemas/people"
  * client component and renders inside them).
  */
 
-const BAND_TONE: Record<CapacityBand, "success" | "info" | "warning" | "danger"> = {
-  clear: "success",
+// CLEAR is the normal state, so it stays grey: colour marks only the people who are filling up.
+const BAND_TONE: Record<CapacityBand, "neutral" | "info" | "warning" | "danger"> = {
+  clear: "neutral",
   busy: "info",
   tight: "warning",
   over: "danger",

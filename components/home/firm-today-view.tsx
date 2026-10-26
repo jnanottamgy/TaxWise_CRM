@@ -52,10 +52,10 @@ const ROWS = 6
 
 /**
  * Firm today (§7.2 Partner): "What needs my decision today, and is the firm on time and getting
- * paid?" The setup checklist until it's done, then Approvals (leave decided in place) beside the
- * nine figures, overdue receivables leading; the review queue and this week's deadlines; invoiced
- * against collected by month, receivables ageing, filing status this month and at-risk clients;
- * practice health; the pipeline, who is away without cover, and recent activity.
+ * paid?" The setup checklist (compact) until it's done, then Approvals (leave decided in place)
+ * beside the nine figures, overdue receivables leading; the review queue and this week's deadlines;
+ * invoiced against collected by month and filing status this month, beside receivables ageing,
+ * at-risk clients and the pipeline; practice health; who is away without cover, and recent activity.
  *
  * The figures come from one database call (0216, Partner only; the payments figures are the
  * Partner's, §4.1); practice health reads each register through its own module. Every block loads
@@ -179,24 +179,16 @@ export async function FirmTodayView({ user, supabase }: { user: CurrentUser; sup
         {m ? (
           <MoneyAndFilings m={m} today={today} />
         ) : (
-          <BlockError title="Invoiced, collected and filed" message="Couldn't load the charts and at-risk clients." errorRef={!main.ok ? main.ref : ""} />
+          <BlockError title="Invoiced, collected and filed" message="Couldn't load the charts, at-risk clients and the pipeline." errorRef={!main.ok ? main.ref : ""} />
         )}
 
         <SectionCard title="Practice health" description={healthSummary}>
           <PracticeHealthBlock items={health} />
         </SectionCard>
 
+        {/* Two lists of about the same length: who is away without cover, and what changed lately. */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <div className="flex min-w-0 flex-col gap-4 lg:gap-6 lg:[&>*:last-child]:flex-1">
-            {m ? (
-              <SectionCard title="Pipeline" viewAll={{ href: "/leads", label: "Leads & quotations" }}>
-                <PipelineBlock p={m.pipeline} fy={m.fy} />
-              </SectionCard>
-            ) : (
-              <BlockError title="Pipeline" message="Couldn't load leads and quotations." errorRef={!main.ok ? main.ref : ""} />
-            )}
-            <AbsentWithoutCover user={user} supabase={supabase} />
-          </div>
+          <AbsentWithoutCover user={user} supabase={supabase} />
           {activity.ok ? (
             <SectionCard title="Recent activity" viewAll={{ href: "/audit-log", label: "Audit log" }}>
               <ActivityList rows={activity.data} />
@@ -325,6 +317,10 @@ function MoneyAndFilings({ m, today }: { m: FirmToday; today: DateString }) {
           viewAll={m.atRisk.total > m.atRisk.rows.length ? { href: "/clients?flag=at_risk", label: `All ${figure(m.atRisk.total)} at-risk clients` } : undefined}
         >
           <AtRiskList rows={m.atRisk.rows} />
+        </SectionCard>
+        {/* Fees still to come in: the pipeline closes the money column, level with the filing chart. */}
+        <SectionCard title="Pipeline" viewAll={{ href: "/leads", label: "Leads & quotations" }}>
+          <PipelineBlock p={m.pipeline} fy={m.fy} />
         </SectionCard>
       </div>
     </div>

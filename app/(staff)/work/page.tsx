@@ -176,7 +176,11 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
   const kpis = summary.ok
     ? [
         { label: user.role === "employee" ? "My open tasks" : "Open tasks", value: formatNumber(summary.data.open), href: tableHref("/work", { filters: { ...mineQ, status: open } }) },
-        { label: "Overdue", value: formatNumber(summary.data.overdue), href: tableHref("/work", { filters: { ...mineQ, due: ["overdue"] } }) },
+        {
+          label: "Overdue",
+          value: <span className={summary.data.overdue ? "text-danger-text" : undefined}>{formatNumber(summary.data.overdue)}</span>,
+          href: tableHref("/work", { filters: { ...mineQ, due: ["overdue"] } }),
+        },
         { label: "Due this week", value: formatNumber(summary.data.dueThisWeek), href: tableHref("/work", { filters: { ...mineQ, due: ["this_week"], status: open } }) },
         { label: "Data awaited", value: formatNumber(summary.data.dataAwaited), href: tableHref("/work", { filters: { ...mineQ, status: ["data_awaited"] } }) },
         { label: "Waiting for acceptance", value: formatNumber(summary.data.waiting), href: tableHref("/work", { filters: { ...mineQ, acceptance: ["pending"] } }) },
@@ -209,7 +213,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
         description={canManage ? "Every task in the firm, with who has it, what it's waiting on and when it's due." : "Tasks assigned to you, waiting for your review, and your clients' work."}
         actions={options ? <NewTaskButton options={options} defaultFy={fy} client={prefillClient} /> : null}
       />
-      {kpis ? <KpiStrip items={kpis} className="mb-4" aria-label="Work at a glance" /> : null}
+      {kpis ? <KpiStrip items={kpis} lead className="mb-4" aria-label="Work at a glance" /> : null}
       <div className="flex flex-col gap-2 pb-3 md:flex-row md:items-center md:justify-between">
         <WorkViewTabs active={view} params={params} reviewCount={summary.ok ? summary.data.reviewQueue : null} />
         {views.ok ? <WorkViewsMenu views={views.data} canShare={canManage} /> : null}

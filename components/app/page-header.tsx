@@ -53,7 +53,7 @@ export function PageHeader({
               <h1 className="min-w-0 text-xl leading-8 font-semibold tracking-[-0.01em] text-balance text-text">{title}</h1>
               {meta ? <div className="flex flex-wrap items-center gap-2">{meta}</div> : null}
             </div>
-            {description ? <p className="mt-1 max-w-[72ch] text-base text-text-muted">{description}</p> : null}
+            {description ? <p className="mt-1 max-w-[104ch] text-base text-text-muted">{description}</p> : null}
           </div>
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div> : null}

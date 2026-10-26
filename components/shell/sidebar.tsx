@@ -7,7 +7,7 @@ import { HistoryIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, StarIcon, XIcon } f
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { navItemByHref, navMatchScore, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
-import { FirmMark, PoweredBy } from "./brand";
+import { FirmMark, JTacsMark, PoweredBy } from "./brand";
 import { FySwitcher } from "./fy-switcher";
 import { NewSplitButton } from "./new-menu";
 import { useShell } from "./shell-context";
@@ -22,6 +22,8 @@ import { UserMenu } from "./user-menu";
 export interface SidebarProps {
   /** The 64px icon rail (desktop only). */
   rail?: boolean;
+  /** The rail the tablet band always shows: no expand toggle (there is no room to expand into). */
+  fixedRail?: boolean;
   /** Rendered inside the phone drawer: touch-sized rows, a close button, the FY switcher. */
   inDrawer?: boolean;
   /** Called when a link is followed (closes the drawer). */
@@ -33,7 +35,7 @@ function formatCount(n: number): string {
   return n > 99 ? "99+" : String(n);
 }
 
-export function Sidebar({ rail = false, inDrawer = false, onNavigate, onClose }: SidebarProps) {
+export function Sidebar({ rail = false, fixedRail = false, inDrawer = false, onNavigate, onClose }: SidebarProps) {
   const shell = useShell();
   const { user, firm, nav, favourites, recent, unreadCount, collapsed, setCollapsed, setOpen } = shell;
   const pathname = usePathname() ?? "/";
@@ -82,7 +84,11 @@ export function Sidebar({ rail = false, inDrawer = false, onNavigate, onClose }:
       </div>
 
       <div className={cn("flex-none pt-3 pb-1", rail ? "px-2" : "px-3")}>
-        <NewSplitButton rail={rail} onNavigate={onNavigate} />
+        <NewSplitButton
+          rail={rail}
+          placement={inDrawer ? "drawer" : fixedRail ? "tablet-rail" : "sidebar"}
+          onNavigate={onNavigate}
+        />
       </div>
 
       <nav aria-label="Main" className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3", rail ? "px-2" : "px-3")}>
@@ -168,7 +174,7 @@ export function Sidebar({ rail = false, inDrawer = false, onNavigate, onClose }:
             <span className="text-sm text-text-muted">Financial year</span>
             <FySwitcher />
           </div>
-        ) : (
+        ) : fixedRail ? null : (
           <RailToggle rail={rail} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
         )}
         <UserMenu
@@ -181,9 +187,7 @@ export function Sidebar({ rail = false, inDrawer = false, onNavigate, onClose }:
           onNavigate={onNavigate}
         />
         {rail ? (
-          <p className="pt-1 text-center text-xs font-semibold tracking-[0.02em] text-gold-text" aria-label="Powered by J-TACS">
-            J-TACS
-          </p>
+          <JTacsMark className="pt-1" />
         ) : (
           <PoweredBy className="px-2 pt-1" />
         )}

@@ -46,7 +46,7 @@ export function DecideLeaveButtons({ leave, actorRole, staff }: { leave: LeaveRo
           <CheckIcon aria-hidden="true" />
           Approve
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => setDecision("declined")}>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setDecision("declined")}>
           <XIcon aria-hidden="true" />
           Decline
         </Button>

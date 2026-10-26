@@ -77,7 +77,7 @@ function standing(r: CeilingRow): { text: string; tone: "ok" | "warn" | "danger"
  * never) plus the audits signed elsewhere they enter, against the ICAI ceiling of 60, warned at 50
  * and 58; and their company audits as engaging partner against the limit of 20, warned from the 18th.
  */
-export function CeilingPanel({ data, canEdit }: { data: CeilingPanelData; canEdit: boolean }) {
+export function CeilingPanel({ data, canEdit, footer }: { data: CeilingPanelData; canEdit: boolean; /** A one-line note under the rows (the UDIN check when nothing is missing). */ footer?: React.ReactNode }) {
   const [editing, setEditing] = React.useState<CeilingRow | null>(null)
   const ceiling = data.rows[0]?.ceiling ?? 60
   const warnAt = data.rows[0]?.warnAt ?? [50, 58]
@@ -86,6 +86,7 @@ export function CeilingPanel({ data, canEdit }: { data: CeilingPanelData; canEdi
       title="Tax-audit ceiling"
       description={`${ceiling} reports per member in FY ${data.fy}, counted by the date signed and including audits signed elsewhere. Warned at ${warnAt.join(" and ")}.`}
       action={<span className="text-sm text-text-muted">FY {data.fy}</span>}
+      footer={footer}
     >
       {data.unverified.length ? <p className="mb-3 text-sm text-text-muted">Some limits used here are marked [verify] in Settings → Law and should be checked against the latest ICAI guidance.</p> : null}
       {data.rows.length === 0 ? (

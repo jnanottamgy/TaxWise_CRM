@@ -26,7 +26,7 @@ type Explicit = {
 }
 
 export type StatusChipProps = (FromVocabulary | Explicit) & {
-  /** `dot` (default): dot + coloured label. `pill`: pale tint pair, for headers and dense grids. */
+  /** `dot` (default): coloured dot + ink label. `pill`: pale tint pair, for headers and dense grids. */
   variant?: "dot" | "pill"
   /** Use the vocabulary's short label (filings grid cells). */
   short?: boolean
@@ -70,10 +70,13 @@ export function StatusChip(props: StatusChipProps) {
     </>
   )
 
+  // The dot carries the colour and the label stays in ink (grey for "nothing happening"), so a column
+  // of statuses reads calmly and red stays a signal (DESIGN.md §2). The pill keeps the pale tint pair.
   const chipClass = cn(
-    "relative inline-flex max-w-full flex-none items-center gap-1.5 whitespace-nowrap rounded-full text-sm leading-5 font-medium",
-    variant === "pill" ? cn("h-6 border px-2", t.soft, t.border) : "h-6 px-0.5",
-    t.text,
+    "relative inline-flex max-w-full flex-none items-center gap-1.5 whitespace-nowrap rounded-full text-sm leading-5",
+    variant === "pill"
+      ? cn("h-6 border px-2 font-medium", t.soft, t.border, t.text)
+      : cn("h-6 px-0.5", info.tone === "muted" ? "text-text-muted" : "text-text"),
     className
   )
 

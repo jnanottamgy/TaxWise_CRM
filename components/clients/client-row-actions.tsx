@@ -76,10 +76,9 @@ export function ClientRowActions({
   const email = contact?.email ?? client.email
 
   return (
-    <div className="flex items-center justify-end gap-1" data-row-click-ignore>
+    <div className="flex items-center justify-end gap-0.5" data-row-click-ignore>
       <WhatsAppButton
         iconOnly
-        variant="outline"
         recipientName={`${contactName} · ${client.display_name}`}
         number={picked?.digits ?? null}
         draft={sign(`Hi ${first},\n\n`)}

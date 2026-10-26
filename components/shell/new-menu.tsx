@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,19 +16,39 @@ import { Kbd } from "@/components/ui/kbd";
 import { defaultNewAction, type NewAction } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { useShell } from "./shell-context";
+import { useMediaQuery } from "./use-media";
 
 /**
  * The sidebar's "+ New" split button (§3.3): the main half does the role's everyday action (New task
  * for Partners and Managers, Log time for Employees); the chevron opens every New item the role may
- * use. `N` opens the menu (§3.4). In the 64px rail it is one "+" button that opens the menu.
+ * use. `N` opens the menu (§3.4). In the 64px rail it is one "+" button that opens the menu. Outlined, so
+ * the page's own primary action stays the one filled button on the screen (DESIGN.md §3).
  */
-export function NewSplitButton({ rail = false, onNavigate }: { rail?: boolean; onNavigate?: () => void }) {
+export function NewSplitButton({
+  rail = false,
+  placement = "sidebar",
+  onNavigate,
+}: {
+  rail?: boolean;
+  /** Which copy of the sidebar this sits in: only the one on screen answers `N` (the others are display:none). */
+  placement?: "sidebar" | "tablet-rail" | "drawer";
+  onNavigate?: () => void;
+}) {
   const { user, newActions, isOpen, setOpen } = useShell();
+  const wide = useMediaQuery("(min-width: 1024px)", true);
+  const tablet = useMediaQuery("(min-width: 768px) and (max-width: 1023.98px)", false);
+  // Inside the phone drawer the menu keeps its own state: the shared "new" panel would close the
+  // drawer it sits in (on phones `N` opens search instead).
+  const [drawerMenuOpen, setDrawerMenuOpen] = React.useState(false);
+  const inDrawer = placement === "drawer";
+  const onScreen = placement === "tablet-rail" ? tablet : wide;
+  const open = inDrawer ? drawerMenuOpen : onScreen && isOpen("new");
+  const onOpenChange = (o: boolean) => (inDrawer ? setDrawerMenuOpen(o) : setOpen("new", o));
   const main = defaultNewAction(user.role);
   if (!main) return null;
 
   const menu = (trigger: React.ReactNode, side: "bottom" | "right") => (
-    <DropdownMenu open={isOpen("new")} onOpenChange={(o) => setOpen("new", o)}>
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       {trigger}
       <DropdownMenuContent side={side} align="start" className="w-56">
         <DropdownMenuLabel className="flex items-center justify-between text-xs font-medium text-text-muted">
@@ -46,7 +67,7 @@ export function NewSplitButton({ rail = false, onNavigate }: { rail?: boolean; o
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button size="icon" className="mx-auto flex" aria-label="New">
+            <Button size="icon" variant="outline" className="mx-auto flex [&_svg]:text-primary" aria-label="New">
               <PlusIcon aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
@@ -58,7 +79,12 @@ export function NewSplitButton({ rail = false, onNavigate }: { rail?: boolean; o
   }
 
   const mainButton = (
-    <Button asChild size="sm" className={cn("min-w-0 flex-1 justify-start", newActions.length > 1 && "rounded-r-none")}>
+    <Button
+      asChild
+      size="sm"
+      variant="outline"
+      className={cn("min-w-0 flex-1 justify-start [&_svg]:text-primary", newActions.length > 1 && "rounded-r-none")}
+    >
       <Link href={main.href} onClick={onNavigate}>
         <PlusIcon aria-hidden="true" />
         <span className="truncate">{main.label}</span>
@@ -73,7 +99,7 @@ export function NewSplitButton({ rail = false, onNavigate }: { rail?: boolean; o
       {mainButton}
       {menu(
         <DropdownMenuTrigger asChild>
-          <Button size="icon-sm" className="rounded-l-none border-l border-primary-foreground/25" aria-label="More new items">
+          <Button size="icon-sm" variant="outline" className="-ml-px rounded-l-none text-text-muted" aria-label="More new items">
             <ChevronDownIcon aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>,

@@ -174,7 +174,8 @@ export function ClientsTable(props: {
         cell: (r) => (
           <span className="inline-flex flex-col items-end leading-5">
             <span>{r.open_tasks}</span>
-            {r.overdue_tasks ? <span className="text-xs text-danger-text">{r.overdue_tasks} overdue</span> : null}
+            {/* Grey: the deadline column already flags what is late in red (one red mark per fact). */}
+            {r.overdue_tasks ? <span className="text-xs text-text-muted">{r.overdue_tasks} overdue</span> : null}
           </span>
         ),
       },

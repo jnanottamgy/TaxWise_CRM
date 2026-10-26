@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { unstable_rethrow } from "next/navigation"
+import { cn } from "@/lib/utils"
 import { requireStaff } from "@/lib/auth/guards"
 import { isManagerOrPartner, isPartner } from "@/lib/auth/roles"
 import type { CurrentUser } from "@/lib/auth/current-user"
@@ -269,12 +270,24 @@ async function UdinSection({ user, supabase, sp, clientId, scope, canManage, tod
     { id: "year", label: "FY signed", multi: false, options: fyOptions(today).map((y) => ({ value: y, label: `FY ${y}` })) },
   ]
   const missingRows = missing && missing.ok ? (clientId ? missing.data.rows.filter((r) => r.client_id === clientId) : missing.data.rows) : []
+  // Nothing missing: the check is one line under the ceiling, which then takes the full width.
+  const noneMissing = !!ceiling?.ok && !!missing?.ok && missingRows.length === 0
   return (
     <>
       {canManage && (ceiling || missing) ? (
-        <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          {ceiling ? ceiling.ok ? <CeilingPanel data={ceiling.data} canEdit={isPartner(user.role)} /> : <Failed what="the tax-audit ceiling" errorRef={ceiling.ref} /> : null}
-          {missing ? missing.ok ? <MissingUdinList rows={missingRows} total={clientId ? missingRows.length : missing.data.total} members={memberList} isPartner={isPartner(user.role)} /> : <Failed what="the signed reports without a UDIN" errorRef={missing.ref} /> : null}
+        <div className={cn("mb-4 grid grid-cols-1 gap-4", !noneMissing && "xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]")}>
+          {ceiling ? (
+            ceiling.ok ? (
+              <CeilingPanel
+                data={ceiling.data}
+                canEdit={isPartner(user.role)}
+                footer={noneMissing ? <p className="text-sm text-text-muted">Every signed audit report has its UDIN.</p> : undefined}
+              />
+            ) : (
+              <Failed what="the tax-audit ceiling" errorRef={ceiling.ref} />
+            )
+          ) : null}
+          {missing && !noneMissing ? missing.ok ? <MissingUdinList rows={missingRows} total={clientId ? missingRows.length : missing.data.total} members={memberList} isPartner={isPartner(user.role)} /> : <Failed what="the signed reports without a UDIN" errorRef={missing.ref} /> : null}
         </div>
       ) : null}
       <FilterBar searchLabel="Search UDINs" searchPlaceholder="UDIN, client, code, document or remarks" filters={filters} />

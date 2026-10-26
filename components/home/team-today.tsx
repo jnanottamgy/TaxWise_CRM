@@ -25,14 +25,25 @@ import { count, moneyHref, workHref, type TeamLoadRow } from "@/components/home/
  * Server-safe; the hand-off buttons are client islands.
  */
 
-/** Declined tasks, unassigned again, with who declined and why (§7.6.3), ready to reassign. */
-export function DeclinedList({ rows, today }: { rows: TaskListRow[]; today: string }) {
-  if (rows.length === 0) return <EmptyState size="compact" message="No declined tasks waiting to be reassigned." />
+/**
+ * Work with nobody on it (§7.2, §7.6.3): tasks declined back to the Manager first, each with who
+ * declined and why, then the rest of the unassigned work, soonest due first. One list, so a declined
+ * task is never shown twice.
+ */
+export function NeedsOwnerList({ declined, unassigned, today, limit }: { declined: TaskListRow[]; unassigned: TaskListRow[]; today: string; limit: number }) {
+  const declinedIds = new Set(declined.map((r) => r.id))
+  const rows = [...declined, ...unassigned.filter((r) => !declinedIds.has(r.id))].slice(0, limit)
+  if (rows.length === 0) return <EmptyState size="compact" message="Every open task has someone on it." />
   return (
     <ul className="divide-y divide-border/70">
       {rows.map((r) => (
         <li key={r.id} className="flex min-h-11 flex-col justify-center gap-0.5 py-2.5">
-          <RowLink href={`/work/${r.id}`}>{r.title}</RowLink>
+          <div className="flex min-w-0 items-center gap-3">
+            <RowLink href={`/work/${r.id}`} className="min-w-0 flex-1 truncate">
+              {r.title}
+            </RowLink>
+            <StatusChip kind="task_status" value={r.status} />
+          </div>
           <MetaLine>
             <span className="font-mono text-xs">{r.task_number}</span>
             {r.client_name ? <span>{r.client_name}</span> : null}
@@ -42,9 +53,11 @@ export function DeclinedList({ rows, today }: { rows: TaskListRow[]; today: stri
               </span>
             ) : null}
           </MetaLine>
-          <p className="text-sm text-text">
-            {r.declined_by_name ?? "The assignee"} declined: {r.decline_reason ? DECLINE_REASON_LABELS[r.decline_reason] : "no reason recorded"}
-          </p>
+          {declinedIds.has(r.id) ? (
+            <p className="text-sm text-text">
+              {r.declined_by_name ?? "The assignee"} declined: {r.decline_reason ? DECLINE_REASON_LABELS[r.decline_reason] : "no reason recorded"}
+            </p>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -94,16 +107,16 @@ export function CallList({ rows, today, messaging, portalLink }: { rows: CallLis
                 {missing.length ? <span> · Needs {missing.slice(0, 3).join(", ")}{missing.length > 3 ? ` and ${missing.length - 3} more` : ""}</span> : null}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="-mx-2 flex flex-wrap items-center gap-1 lg:mx-0">
               {phone ? (
-                <Button asChild size="sm" variant="outline" className="pointer-coarse:h-11">
+                <Button asChild size="sm" variant="ghost" className="pointer-coarse:h-11">
                   <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
                     <PhoneIcon aria-hidden="true" />
                     Call
                   </a>
                 </Button>
               ) : (
-                <Button size="sm" variant="outline" disabled title="No phone number for this client. Add one in Contacts.">
+                <Button size="sm" variant="ghost" disabled title="No phone number for this client. Add one in Contacts.">
                   <PhoneIcon aria-hidden="true" />
                   Call
                 </Button>
@@ -113,6 +126,7 @@ export function CallList({ rows, today, messaging, portalLink }: { rows: CallLis
                   taskId={task.id}
                   clientId={task.client_id}
                   size="sm"
+                  variant="ghost"
                   recipient={{ contact, client }}
                   facts={{
                     clientName: task.client_name ?? "",

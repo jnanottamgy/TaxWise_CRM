@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // TaxWise Desktop is its own project with its own lint/typecheck.
     "desktop/**",
+    // Vendored design-skill tooling and its working files, and the local QA stack's state: not app code.
+    ".claude/**",
+    ".taste-skill/**",
+    ".local-stack/**",
   ]),
 ]);
 

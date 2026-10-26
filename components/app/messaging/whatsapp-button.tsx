@@ -61,10 +61,11 @@ export function WhatsAppButton({
   templatePicker?: React.ReactNode
   onHandedOff?: (info: { number: string; text: string; templateId: string | null }) => void | Promise<void>
   label?: string
-  /** Compact icon button for table rows and contact lists. */
+  /** Compact icon button for table rows and contact lists (a ghost button with the green icon). */
   iconOnly?: boolean
   size?: "sm" | "default"
-  variant?: "whatsapp" | "outline"
+  /** `whatsapp` (green fill), `outline`, or `ghost` for an action repeated down a list. */
+  variant?: "whatsapp" | "outline" | "ghost"
   disabledReason?: string
   className?: string
 }) {
@@ -74,18 +75,20 @@ export function WhatsAppButton({
   const textId = React.useId()
   const tplId = React.useId()
 
-  const iconClass = variant === "outline" ? "text-success-text" : undefined
+  // Icon-only buttons repeat down lists, so they are ghost buttons: no box around each icon (DESIGN.md §4).
+  const buttonVariant = iconOnly ? "ghost" : variant
+  const iconClass = iconOnly || variant !== "whatsapp" ? "text-success-text" : undefined
 
   if (!number) {
     return (
       <Explain content={<p>{disabledReason}</p>}>
         <Button
             type="button"
-            variant="outline"
+            variant={iconOnly || variant === "ghost" ? "ghost" : "outline"}
             size={iconOnly ? (size === "sm" ? "icon-sm" : "icon") : size}
             aria-disabled="true"
             aria-label={iconOnly ? `${label} unavailable: ${disabledReason}` : undefined}
-            className={cn("cursor-not-allowed text-text-muted hover:bg-surface hover:text-text-muted", className)}
+            className={cn("cursor-not-allowed text-text-muted hover:text-text-muted", iconOnly || variant === "ghost" ? "hover:bg-transparent" : "hover:bg-surface", className)}
           >
             <MessageCircleIcon aria-hidden="true" />
             {iconOnly ? null : label}
@@ -99,7 +102,7 @@ export function WhatsAppButton({
     <>
       <Button
         type="button"
-        variant={variant}
+        variant={buttonVariant}
         size={iconOnly ? (size === "sm" ? "icon-sm" : "icon") : size}
         aria-label={iconOnly ? `${label} ${recipientName}` : undefined}
         onClick={(e) => {

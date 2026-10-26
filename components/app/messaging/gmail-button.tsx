@@ -43,6 +43,7 @@ export function GmailButton({
   appName = "Gmail",
   iconOnly = false,
   size = "sm",
+  variant = "outline",
   disabledReason = NO_EMAIL,
   className,
 }: {
@@ -59,9 +60,12 @@ export function GmailButton({
   appName?: string
   iconOnly?: boolean
   size?: "sm" | "default"
+  /** `ghost` for an action repeated down a list (icon-only buttons are always ghost). */
+  variant?: "outline" | "ghost"
   disabledReason?: string
   className?: string
 }) {
+  const quiet = iconOnly || variant === "ghost"
   const [open, setOpen] = React.useState(false)
   const [fields, setFields] = React.useState<ComposeFields>({ to: to ?? "", cc, subject, body })
   const subjectId = React.useId()
@@ -72,11 +76,11 @@ export function GmailButton({
       <Explain content={<p>{disabledReason}</p>}>
         <Button
             type="button"
-            variant="outline"
+            variant={quiet ? "ghost" : "outline"}
             size={iconOnly ? (size === "sm" ? "icon-sm" : "icon") : size}
             aria-disabled="true"
             aria-label={iconOnly ? `${label} unavailable: ${disabledReason}` : undefined}
-            className={cn("cursor-not-allowed text-text-muted hover:bg-surface hover:text-text-muted", className)}
+            className={cn("cursor-not-allowed text-text-muted hover:text-text-muted", quiet ? "hover:bg-transparent" : "hover:bg-surface", className)}
           >
             <MailIcon aria-hidden="true" />
             {iconOnly ? null : label}
@@ -90,7 +94,7 @@ export function GmailButton({
     <>
       <Button
         type="button"
-        variant="outline"
+        variant={quiet ? "ghost" : "outline"}
         size={iconOnly ? (size === "sm" ? "icon-sm" : "icon") : size}
         aria-label={iconOnly ? `${label} to ${to}` : undefined}
         onClick={(e) => {

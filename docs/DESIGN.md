@@ -71,15 +71,18 @@ Density: table row height `var(--row-height)` (44, or 36 in compact mode).
 | Colour on **data and status** only, plus the primary action | Accent on chrome: tinted tab pills, coloured icons per category |
 | Tables: 12–13px grey sentence-case headers, no zebra, row rules 1px, numbers right-aligned `num`, identity column widest | Uppercase tracked headers, zebra stripes, left-aligned numbers |
 | Sticky table header on `bg-surface-2` (it must cover scrolling rows) — the one band allowed | Fill bands elsewhere |
-| Status as `StatusChip`: dot + label, pale tint pair only when a pill is needed; hover explains (§3.4) | Saturated chips with white text; status by colour alone |
+| Status as `StatusChip`: coloured dot + **ink** label (grey for muted states), pale tint pair only when a pill is needed; hover explains (§3.4) | Saturated chips with white text; status by colour alone; a column of coloured labels |
+| Red is a signal: one red mark per fact (an overdue date, overdue money); normal states stay grey (capacity CLEAR, Low/Medium priority) | Red on every row (priority label *and* due date *and* counts) |
 | Missing value = grey em dash; real zero printed (`₹0.00`, `0`) | `--` at value size; blank cells |
 | Empty section keeps its frame + header + one sentence + one action (§3.4) | Illustrations, "No data" pictures, emoji |
 | Loading = skeletons at the real size of the content, no shimmer gradient, no layout shift | Full-page spinners after first paint |
 | Error inside the block that failed, one sentence, the **Ref**, a Retry | Full-screen error banners for a block failure |
 | Charts (Recharts): one series per chart, one hue (`--chart-1`), 3–5 faint horizontal gridlines, no y-axis line, no legend for one series, straight lines, square bars, round ticks; every chart has a table alternative (§13) | Rainbow charts, smoothed splines, gradient area fills, rotated x labels, donuts with labels on slices |
 | Icons: lucide outline, 16px in nav/buttons, 14px inline, grey | Icons in coloured boxes repeated down a list |
+| Row actions: icon-only buttons are **ghost** (no box); one kebab for the rest; a row's lesser answer (Decline) is ghost beside an outlined main answer | A bordered box around every icon in every row |
 | Nav active item: `bg-primary-soft` with `text-primary` label (spec §3.1) | A coloured left bar *and* a fill |
-| One filled primary button per screen region (spec: `--primary` blue). Secondary: outline. Tertiary: ghost/text | Brand fill on every button |
+| One filled primary button per screen (spec: `--primary` blue), the page's own; the sidebar's "+ New" is outlined. Secondary: outline. Tertiary: ghost/text | Brand fill on every button; two blue fills on one screen |
+| Dashed borders only for empty slots and drop zones | Dashed filter chips or controls |
 | Sentence case everywhere | ALL-CAPS labels (one exception: none) |
 | Titles are nouns ("Clients", "Firm today") | "Welcome back 👋", hero headers |
 | Emoji: never as icons or decoration | |
@@ -92,7 +95,11 @@ dark or saturated sidebar).
 
 - **PageHeader**: title (h1, 24/600), one-line description (13–14 grey, about the data, not the
   interface), primary action at right; breadcrumbs above on detail pages.
-- **FilterBar**: search (debounced, URL-synced), filter chips, saved views, column chooser, export.
+- **FilterBar**: search (debounced, URL-synced), filter chips, saved views, column chooser, export —
+  one row of controls above the list: the first 4 chips inline (`maxInline`), the rest behind
+  "More filters"; a filter in use always shows as a chip.
+- **Sibling-page navs** (Workpapers, Growth): a quiet row of links above the title, the open one in
+  ink, counts as small pills; never a second segmented control above the page's own view switch.
 - **DataTable**: server-paginated (25/50/100), sortable headers (sort glyph on active column only),
   checkbox bulk actions, row click → detail, column chooser, CSV export of the current view, sticky
   header; below 768px rows become stacked cards with the 3–4 key fields (§3.3).
@@ -121,10 +128,12 @@ ring (`ring-ring`), keyboard-complete; `⌘K` search, `N` new, `G C/T/I`, `?` sh
 
 ## 7. Responsive
 
-Test at **1366×768** and **390×844** (§0.1 rule 4), plus dark mode. Sidebar 260px (collapsible to a
-64px rail) → drawer below 768px; Employees get the bottom tab bar (Today · Tasks · Timer · Clients ·
-More). No horizontal page scroll ever; wide tables scroll inside their own frame with the first column
-fixed, or become card lists.
+Test at **1366×768**, **768×1024** and **390×844** (§0.1 rule 4), plus dark mode. Sidebar 260px
+(collapsible to a 64px rail) from 1024px; always the 64px rail from 768 to 1023px (tablets, and the
+Desktop app beside WhatsApp); a drawer below 768px. Employees get the bottom tab bar (Today · Tasks ·
+Timer · Clients · More). No horizontal page scroll ever; wide tables scroll inside their own frame with
+the first column fixed, or become card lists. Cards that share a row share a bottom edge (stretch the
+last card and pin its "View all"), or keep their own height when stretching would leave a hole.
 
 ## 8. Pre-delivery checklist (ui-ux-pro-max + spec §0.2)
 
@@ -135,3 +144,14 @@ fixed, or become card lists.
 - [ ] No emoji icons, no gradients, no glass, no shadows on resting cards, no zebra, no uppercase headers
 - [ ] Status never by colour alone; chips explain themselves on hover/tap
 - [ ] Role-correct: hidden for roles that can't use it, and refused by the server/RLS anyway
+
+## 9. UI review log
+
+- **Oct 2026, taste-skill app run** (`draw.mjs --app --kind finance --keep palette,type`, style
+  *achromatic ledger*, seed 646198405; the dealt shell was not used because §3.3 fixes the shell).
+  Measured with `inspect.mjs --app` at 1440/768/390 before and after. Fixed: sideways scroll at 768px
+  on every staff screen (tablet rail), coloured status labels (ink labels, violet text gone), dashed
+  and wrapping filter chips (one row, "More filters"), boxed icon buttons in rows, two filled primaries
+  per screen, the Partner setup checklist dominating Firm today, the declined task listed twice on Team
+  today, ragged/void rows on both dashboards and the UDIN register. Kept on purpose: the spec's violet
+  for Under review (now a dot only), `--info` blue, the navy login panel, monospace for IDs.

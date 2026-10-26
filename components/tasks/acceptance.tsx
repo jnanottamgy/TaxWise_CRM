@@ -61,7 +61,8 @@ export function AcceptDecline({
         {accepting ? <Spinner /> : <CheckIcon aria-hidden="true" />}
         Accept
       </Button>
-      <Button size={size} variant="outline" onClick={() => setDeclining(true)}>
+      {/* Decline is the lesser answer: a ghost button, so a list of requests isn't a wall of boxes. */}
+      <Button size={size} variant="ghost" onClick={() => setDeclining(true)}>
         <XIcon aria-hidden="true" />
         Decline
       </Button>

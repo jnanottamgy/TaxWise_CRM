@@ -28,42 +28,54 @@ import { count, moneyHref, practiceHref, workHref } from "@/components/home/logi
 // -------------------------------------------------------------------------------------------------
 
 /**
- * The setup checklist (§7.2, §4.3), shown until every item is done: what is left first, each with
- * what is still missing and a link to the exact place to finish it; done items stay, struck
- * through, so the progress reads at its true size.
+ * The setup checklist (§7.2, §4.3), shown until every item is done. Compact, so the decisions below
+ * it stay on the first screen: the progress at its true size, then only what is left, each with
+ * what is still missing and a link to the exact place to finish it. What is done folds away.
  */
 export function SetupChecklist({ items, done, percent }: { items: SetupStep[]; done: number; percent: number }) {
-  const ordered = [...items.filter((i) => !i.done), ...items.filter((i) => i.done)]
+  const left = items.filter((i) => !i.done)
+  const finished = items.filter((i) => i.done)
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <ThinBar percent={percent} tone="primary" label={`Setup: ${done} of ${items.length} done`} className="max-w-64" />
-        <span className="num flex-none text-sm text-text-muted">
-          {done} of {items.length} done
-        </span>
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-8">
+      <div className="flex flex-none flex-col gap-2 lg:w-52 lg:pt-3">
+        <p className="num text-sm text-text-muted">
+          <span className="font-medium text-text">{done}</span> of {items.length} done
+        </p>
+        <ThinBar percent={percent} tone="primary" label={`Setup: ${done} of ${items.length} done`} />
+        {finished.length ? (
+          <details className="group text-sm">
+            <summary className="w-fit cursor-pointer rounded-sm text-text-muted marker:content-none hover:text-text focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">Show what&apos;s done</span>
+              <span className="hidden group-open:inline">Hide what&apos;s done</span>
+            </summary>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {finished.map((i) => (
+                <li key={i.id} className="flex items-start gap-2 text-text-muted">
+                  <CheckIcon aria-hidden="true" className="mt-0.5 size-3.5 flex-none text-success-text" />
+                  <span>
+                    {i.label}
+                    <span className="sr-only"> (done)</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </div>
-      <ul className="grid grid-cols-1 gap-x-6 md:grid-cols-2 xl:grid-cols-3">
-        {ordered.map((i) => (
-          <li key={i.id} className="border-t border-border/70 first:border-t-0 md:[&:nth-child(2)]:border-t-0 xl:[&:nth-child(3)]:border-t-0">
-            {i.done ? (
-              <p className="flex min-h-11 items-center gap-2.5 py-2 text-base text-text-muted">
-                <CheckIcon aria-hidden="true" className="size-4 flex-none text-success-text" />
-                <span className="line-through decoration-text-muted/40">{i.label}</span>
-                <span className="sr-only">(done)</span>
-              </p>
-            ) : (
-              <Link
-                href={i.href}
-                className="group flex min-h-11 items-center gap-2.5 rounded-sm py-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring"
-              >
-                <span aria-hidden="true" className="size-4 flex-none rounded-full border border-text-muted/60" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-base text-text group-hover:text-primary">{i.label}</span>
-                  {i.detail ? <span className="block text-sm text-text-muted">{i.detail}</span> : null}
-                </span>
-                <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
-              </Link>
-            )}
+      <ul className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 md:grid-cols-2">
+        {left.map((i) => (
+          <li key={i.id} className="border-t border-border/70 first:border-t-0 md:[&:nth-child(2)]:border-t-0">
+            <Link
+              href={i.href}
+              className="group flex min-h-11 items-center gap-2.5 rounded-sm py-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <span aria-hidden="true" className="size-4 flex-none rounded-full border border-text-muted/60" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-base text-text group-hover:text-primary">{i.label}</span>
+                {i.detail ? <span className="block text-sm text-text-muted">{i.detail}</span> : null}
+              </span>
+              <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
+            </Link>
           </li>
         ))}
       </ul>

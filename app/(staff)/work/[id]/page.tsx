@@ -239,6 +239,8 @@ export default async function TaskPage({ params }: Params) {
           <AskClientForData
             taskId={task.id}
             clientId={task.client_id}
+            // Asking the client is the job while the task waits on their data; otherwise it stays quiet.
+            variant={task.status === "data_awaited" ? "outline" : "ghost"}
             recipient={{ contact: client.contact, client: client.client }}
             facts={{
               clientName: client.clientName,

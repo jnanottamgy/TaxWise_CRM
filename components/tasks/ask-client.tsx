@@ -39,6 +39,7 @@ export function AskClientForData({
   recipient,
   messaging,
   size = "default",
+  variant = "outline",
 }: {
   taskId: string
   clientId: string
@@ -46,6 +47,8 @@ export function AskClientForData({
   recipient: AskClientRecipient
   messaging: AskClientMessaging
   size?: "sm" | "default"
+  /** `ghost` where the buttons repeat down a list (the Data awaited call list). */
+  variant?: "outline" | "ghost"
 }) {
   const router = useRouter()
   const contactName = recipient.contact?.name ? firstNameOf(recipient.contact.name) || recipient.contact.name : null
@@ -71,7 +74,7 @@ export function AskClientForData({
         templates={waTemplates}
         buildUrl={waMeUrl}
         size={size === "sm" ? "sm" : "default"}
-        variant="outline"
+        variant={variant}
         label="Ask on WhatsApp"
         disabledReason="No WhatsApp number for this client. Add one in Contacts."
         onHandedOff={async ({ number: n, text, templateId }) => {
@@ -86,6 +89,7 @@ export function AskClientForData({
         body={emailBody}
         buildUrl={(fields) => gmailComposeUrl({ to: fields.to, cc: fields.cc, subject: fields.subject, body: fields.body })}
         size={size === "sm" ? "sm" : "default"}
+        variant={variant}
         label="Ask by email"
         disabledReason="No email address for this client. Add one in Contacts."
         onHandedOff={async (fields) => {

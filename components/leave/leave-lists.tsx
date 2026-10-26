@@ -22,9 +22,10 @@ function daysText(n: number): string {
 export function PendingLeaveList({ rows, actorRole, staff }: { rows: LeaveRow[]; actorRole: AppRole; staff: PersonOption[] }) {
   if (rows.length === 0) return <EmptyState icon={<InboxIcon />} message="Nothing waiting for you. New requests appear here, and in your Inbox." />
   return (
-    <ul className="divide-y divide-border/70">
+    // Sized by its container: in a narrow card (Firm today's Approvals) the buttons sit under the request.
+    <ul className="@container divide-y divide-border/70">
       {rows.map((r) => (
-        <li key={r.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-5">
+        <li key={r.id} className="flex flex-col gap-2 px-4 py-3 @lg:flex-row @lg:items-center @lg:justify-between md:px-5">
           <div className="min-w-0">
             <p className="text-base text-text">
               <PersonLink id={r.employee_id} name={r.employee_name} className="font-medium" /> · {LEAVE_TYPE_LABELS[r.type]} leave {formatLeaveRange(r.start_date, r.end_date, r.half_day)}

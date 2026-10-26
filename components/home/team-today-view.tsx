@@ -18,7 +18,7 @@ import { getMessagingContext } from "@/lib/data/clients"
 import { getAttendanceSnapshot, getDataAwaitedCallList, getTeamCapacity, getTeamToday } from "@/lib/data/dashboard"
 import { BlockError, DeadlineList, moreLink } from "@/components/home/home-ui"
 import { figure } from "@/components/home/kpi-grid"
-import { AttendanceBlock, CallList, DeclinedList, SalesBlock, TeamLoadList } from "@/components/home/team-today"
+import { AttendanceBlock, CallList, NeedsOwnerList, SalesBlock, TeamLoadList } from "@/components/home/team-today"
 import { count, teamFinding, teamLoadRows, weekHref, workHref } from "@/components/home/logic"
 
 /** Rows per queue list: the three queues sit side by side and fit the first screen at 1366×768. */
@@ -38,11 +38,11 @@ async function attempt<T>(source: string, userId: string, load: () => Promise<T>
 
 /**
  * Team today (§7.2 Manager): "Who is stuck, who is over capacity, and what is due this week?"
- * The queues as one strip of figures (unassigned leading), then unassigned, declined and waiting
- * work side by side; the Data awaited call list (call, WhatsApp, Gmail, or queue every client on
- * WhatsApp) beside who is away without cover and today's attendance; this week's deadlines and the
- * review queue; the team's capacity (§7.11.4) beside each person's overdue tasks; and invoices raised
- * this month, quotations awaiting a response and leads untouched for 14 days (§7.4).
+ * The queues as one strip of figures (unassigned leading), then the three queues side by side: work
+ * that needs an owner (declined first, with why), work waiting for acceptance, and the review queue;
+ * the Data awaited call list (call, WhatsApp, Gmail, or queue every client on WhatsApp) beside who is
+ * away without cover and today's attendance; this week's deadlines beside billing and sales; and the
+ * team's capacity (§7.11.4) with each person's overdue tasks (§7.4).
  *
  * The queues and sales come from one database call (0217). Every block loads and fails on its own
  * (§0.1 rule 3).
@@ -90,7 +90,6 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
           items={[
             { label: "Unassigned", value: figure(t.unassigned.total), sub: t.declined.total ? `incl. ${figure(t.declined.total)} declined` : "Nobody on them", href: workHref.unassigned() },
             { label: "Not yet accepted", value: figure(t.waiting.total), sub: "Assigned, no answer", href: workHref.waiting() },
-            { label: "Declined", value: figure(t.declined.total), sub: "To reassign", href: workHref.declined() },
             { label: "Review queue", value: figure(t.review.total), sub: "Under review", href: workHref.review() },
             { label: "Data awaited", value: figure(t.dataAwaited), sub: "On clients", href: workHref.dataAwaited() },
             { label: "Overdue", value: <span className={t.overdue ? "text-danger-text" : undefined}>{figure(t.overdue)}</span>, sub: "Not Filed/Done", href: workHref.overdue() },
@@ -104,16 +103,29 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
 
       <div className="flex flex-col gap-4 lg:gap-6">
         {t ? (
-          // Short queues keep their own height: a card stretched over empty space reads as missing rows.
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start lg:gap-6">
-            <SectionCard title="Unassigned tasks" description="Open, with nobody on them. Soonest due first." viewAll={moreLink(workHref.unassigned(), t.unassigned.total, t.unassigned.rows.length)}>
-              <TaskList rows={t.unassigned.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Every open task has someone on it." />
+          // The three queues a Manager works through, side by side and capped at the same number of rows;
+          // the cards share a bottom edge with their "View all" pinned to it.
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+            <SectionCard
+              title="Needs an owner"
+              description={t.declined.total ? "Declined tasks first, with who declined and why; then the rest, soonest due first." : "Open, with nobody on them. Soonest due first."}
+              viewAll={{ href: workHref.unassigned(), label: t.unassigned.total > QUEUE_ROWS ? `View all ${figure(t.unassigned.total)}` : "Unassigned in the work tracker" }}
+            >
+              <NeedsOwnerList declined={t.declined.rows} unassigned={t.unassigned.rows} today={today} limit={QUEUE_ROWS} />
             </SectionCard>
-            <SectionCard title="Declined to reassign" description="Unassigned by the person who declined." viewAll={moreLink(workHref.declined(), t.declined.total, t.declined.rows.length)}>
-              <DeclinedList rows={t.declined.rows} today={today} />
-            </SectionCard>
-            <SectionCard title="Waiting for acceptance" description="Assigned, not yet accepted or declined." viewAll={moreLink(workHref.waiting(), t.waiting.total, t.waiting.rows.length)}>
+            <SectionCard
+              title="Waiting for acceptance"
+              description="Assigned, not yet accepted or declined."
+              viewAll={{ href: workHref.waiting(), label: t.waiting.total > t.waiting.rows.length ? `View all ${figure(t.waiting.total)}` : "In the work tracker" }}
+            >
               <TaskList rows={t.waiting.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Every assigned task has been answered." />
+            </SectionCard>
+            <SectionCard
+              title="Review queue"
+              description="Submitted Under review to you, or to any Manager."
+              viewAll={{ href: workHref.review(), label: t.review.total > t.review.rows.length ? `View all ${figure(t.review.total)}` : "Review queue" }}
+            >
+              <TaskList rows={t.review.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Nothing is waiting for review." />
             </SectionCard>
           </div>
         ) : null}
@@ -179,15 +191,6 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
             ) : (
               <BlockError title="Attendance today" message="Couldn't load today's attendance." errorRef={attendance.ref} />
             )}
-            {t ? (
-              <SectionCard
-                title="Review queue"
-                description="Submitted Under review to you, or to any Manager."
-                viewAll={t.review.total ? { href: workHref.review(), label: t.review.total > t.review.rows.length ? `View all ${figure(t.review.total)}` : "Review queue" } : undefined}
-              >
-                <TaskList rows={t.review.rows} today={today} running={null} viewerEmployeeId={user.employeeId} actions={false} emptyMessage="Nothing is waiting for review." />
-              </SectionCard>
-            ) : null}
           </div>
         </div>
 

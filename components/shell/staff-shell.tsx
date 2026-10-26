@@ -277,11 +277,19 @@ export function StaffShell({
         Skip to main content
       </a>
       <div className="flex min-h-dvh bg-bg">
+        {/* 768–1023px (tablets, the Desktop app beside WhatsApp): always the 64px rail, so the page keeps
+            its width. The saved collapsed/expanded choice applies from 1024px. */}
+        <aside
+          aria-label="Sidebar"
+          className="sticky top-0 hidden h-dvh w-16 flex-none overflow-hidden border-r border-border bg-surface md:block lg:hidden"
+        >
+          <Sidebar rail fixedRail />
+        </aside>
         <aside
           id="tw-sidebar"
           aria-label="Sidebar"
           className={cn(
-            "sticky top-0 hidden h-dvh flex-none overflow-hidden border-r border-border bg-surface transition-[width] duration-200 ease-out md:block",
+            "sticky top-0 hidden h-dvh flex-none overflow-hidden border-r border-border bg-surface transition-[width] duration-200 ease-out lg:block",
             collapsed ? "w-16" : "w-[260px]",
           )}
         >

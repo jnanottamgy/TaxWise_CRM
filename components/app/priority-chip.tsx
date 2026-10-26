@@ -11,8 +11,8 @@ const LEVEL: Record<string, number> = { low: 1, medium: 2, high: 3, urgent: 4, c
 
 /**
  * Task or client priority (§3.6): a four-step bar glyph plus the label, so it never reads as a
- * second status dot in the same row. High and above take the warning / danger text tokens; Low and
- * Medium stay grey. Explains itself on hover, focus or tap.
+ * second status dot in the same row. High and above colour the bars (warning / danger) with an ink
+ * label; Low and Medium stay grey. Explains itself on hover, focus or tap.
  *
  *   <PriorityChip kind="task_priority" value={task.priority} />
  *   <PriorityChip kind="client_priority" value="critical" hideLabel />
@@ -50,9 +50,10 @@ export function PriorityChip({
         aria-describedby={descId}
         aria-label={hideLabel ? `${info.label} priority` : undefined}
         className={cn(
-          "relative inline-flex h-6 flex-none cursor-help items-center gap-1.5 rounded-md px-0.5 text-sm font-medium whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "relative inline-flex h-6 flex-none cursor-help items-center gap-1.5 rounded-md px-0.5 text-sm whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           "pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-2.5 pointer-coarse:after:content-['']",
-          loud ? t.text : "text-text-muted",
+          // The bars carry the colour; the label stays ink, so red is kept for what is overdue.
+          loud ? "text-text" : "text-text-muted",
           className
         )}
       >

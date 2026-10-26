@@ -129,18 +129,7 @@ export default async function PortalHomePage() {
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3 lg:gap-6">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2 lg:gap-6">
-          {!deadlines.ok ? (
-            <PortalBlockError title="Next deadlines" message="Couldn't load your deadlines." errorRef={deadlines.ref} />
-          ) : (
-            <SectionCard
-              title="Next deadlines"
-              description={counts.ok && counts.data.overdue > 0 ? `${counts.data.overdue} overdue` : "What's coming up, and what we need from you"}
-              viewAll={counts.ok ? moreLink("/portal/deadlines", counts.data.overdue + counts.data.upcoming, deadlines.data.length) ?? { href: "/portal/deadlines", label: "All deadlines" } : { href: "/portal/deadlines", label: "All deadlines" }}
-            >
-              <DeadlineList rows={deadlines.data} today={today} showNeeds="all" compact emptyMessage="No deadlines coming up. We'll add them as your services start." />
-            </SectionCard>
-          )}
-
+          {/* What the client has to do first: the documents asked for, then what is being filed for them. */}
           {!requests.ok ? (
             <PortalBlockError title="Documents we've asked for" message="Couldn't load your document requests." errorRef={requests.ref} />
           ) : (
@@ -173,6 +162,17 @@ export default async function PortalHomePage() {
                   })}
                 </ul>
               )}
+            </SectionCard>
+          )}
+          {!deadlines.ok ? (
+            <PortalBlockError title="Next deadlines" message="Couldn't load your deadlines." errorRef={deadlines.ref} />
+          ) : (
+            <SectionCard
+              title="Next deadlines"
+              description={counts.ok && counts.data.overdue > 0 ? `${counts.data.overdue} overdue` : "What's coming up, and what we need from you"}
+              viewAll={counts.ok ? moreLink("/portal/deadlines", counts.data.overdue + counts.data.upcoming, deadlines.data.length) ?? { href: "/portal/deadlines", label: "All deadlines" } : { href: "/portal/deadlines", label: "All deadlines" }}
+            >
+              <DeadlineList rows={deadlines.data} today={today} showNeeds="all" compact emptyMessage="No deadlines coming up. We'll add them as your services start." />
             </SectionCard>
           )}
         </div>

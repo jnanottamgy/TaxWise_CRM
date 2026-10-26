@@ -59,6 +59,21 @@ export function FirmMark({ logoUrl, firmName, className }: { logoUrl: string | n
   return <TwMonogram className={cn("size-8", className)} />;
 }
 
+/** The J-TACS mark for the 64px rail: a navy J on a small gold square, named for screen readers. */
+export function JTacsMark({ className }: { className?: string }) {
+  return (
+    <span className={cn("flex justify-center", className)} title="Powered by J-TACS">
+      <span
+        aria-hidden="true"
+        className="inline-flex size-5 flex-none select-none items-center justify-center rounded-sm bg-gold text-xs font-bold text-brand-navy"
+      >
+        J
+      </span>
+      <span className="sr-only">Powered by J-TACS</span>
+    </span>
+  );
+}
+
 /** "Powered by J-TACS", small and in gold text (§0). */
 export function PoweredBy({ className }: { className?: string }) {
   return (

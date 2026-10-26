@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
@@ -60,6 +60,7 @@ export function FilterBar({
   searchPlaceholder = "Search",
   hideSearch = false,
   filters = [],
+  maxInline = 4,
   savedViews,
   columns,
   exportSlot,
@@ -70,6 +71,11 @@ export function FilterBar({
   searchPlaceholder?: string
   hideSearch?: boolean
   filters?: FilterDef[]
+  /**
+   * Filters shown as chips before the rest move behind "More filters" (one row of controls above the
+   * list, DESIGN.md §4). A filter in use, or one picked from "More filters", always shows as a chip.
+   */
+  maxInline?: number
   savedViews?: React.ReactNode
   columns?: React.ReactNode
   exportSlot?: React.ReactNode
@@ -79,6 +85,15 @@ export function FilterBar({
   const filterIds = filters.map((f) => f.id)
   const url = useTableUrlState({ filters: filterIds })
   const anyActive = !!url.q || filterIds.some((fid) => readParamList(url.searchParams, fid).length > 0)
+  const [pinned, setPinned] = React.useState<string[]>([])
+  const [justPinned, setJustPinned] = React.useState<string | null>(null)
+
+  // One row: the first few chips, then any filter in use or picked from "More filters".
+  const limit = filters.length > maxInline + 1 ? maxInline : filters.length
+  const inline = filters.filter(
+    (f, i) => i < limit || pinned.includes(f.id) || readParamList(url.searchParams, f.id).length > 0
+  )
+  const more = filters.filter((f) => !inline.includes(f))
 
   return (
     <div
@@ -90,14 +105,29 @@ export function FilterBar({
       {hideSearch ? null : <SearchBox label={searchLabel} placeholder={searchPlaceholder} />}
       {filters.length > 0 || anyActive ? (
         <div className="-mx-4 flex min-w-0 items-center gap-2 overflow-x-auto px-4 pb-0.5 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
-          {filters.map((f) => (
+          {inline.map((f) => (
             <FilterChip
               key={f.id}
               def={f}
+              defaultOpen={justPinned === f.id}
               selected={readParamList(url.searchParams, f.id)}
-              onChange={(values) => url.setFilter(f.id, values)}
+              onChange={(values) => {
+                // Once touched, a chip stays in the row for this visit, so clearing it doesn't whisk it
+                // (and the focus inside its menu) back behind "More filters".
+                setPinned((p) => (p.includes(f.id) ? p : [...p, f.id]))
+                url.setFilter(f.id, values)
+              }}
             />
           ))}
+          {more.length > 0 ? (
+            <MoreFilters
+              defs={more}
+              onPick={(id) => {
+                setPinned((p) => (p.includes(id) ? p : [...p, id]))
+                setJustPinned(id)
+              }}
+            />
+          ) : null}
           {anyActive ? (
             <Button variant="ghost" size="sm" className="flex-none text-text-muted" onClick={() => url.clearFilters(filterIds)}>
               Clear filters
@@ -193,12 +223,15 @@ export function FilterChip({
   def,
   selected,
   onChange,
+  defaultOpen = false,
 }: {
   def: FilterDef
   selected: string[]
   onChange: (values: string[]) => void
+  /** Open the menu on mount (a filter just picked from "More filters"). */
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(defaultOpen)
   const multi = def.multi !== false
   const searchable = def.searchable ?? def.options.length > 7
   const labels = selected.map((v) => def.options.find((o) => o.value === v)?.label ?? v)
@@ -224,7 +257,7 @@ export function FilterChip({
             "inline-flex h-8 max-w-64 flex-none cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-sm whitespace-nowrap transition-colors duration-150 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:h-11",
             active
               ? "border-primary/30 bg-primary-soft text-text"
-              : "border-dashed border-text-muted/40 bg-surface text-text-muted hover:border-text-muted/60 hover:text-text"
+              : "border-text-muted/30 bg-surface text-text-muted hover:border-text-muted/55 hover:text-text"
           )}
         >
           <span>{def.label}</span>
@@ -284,6 +317,58 @@ export function FilterChip({
               </button>
             </div>
           ) : null}
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/** "More filters": the filters past the first few. Picking one adds its chip to the row and opens it. */
+function MoreFilters({ defs, onPick }: { defs: FilterDef[]; onPick: (id: string) => void }) {
+  const [open, setOpen] = React.useState(false)
+  const picked = React.useRef(false)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-8 flex-none cursor-pointer items-center gap-1.5 rounded-md px-2 text-sm whitespace-nowrap text-text-muted transition-colors duration-150 outline-none hover:bg-surface-2 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:h-11"
+        >
+          <PlusIcon aria-hidden="true" className="size-3.5 flex-none" />
+          More filters
+          <span className="num text-text-muted">{defs.length}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-56 p-0"
+        onCloseAutoFocus={(e) => {
+          // The picked filter's own menu takes focus as it opens.
+          if (picked.current) e.preventDefault()
+          picked.current = false
+        }}
+      >
+        <Command>
+          {defs.length > 7 ? <CommandInput placeholder="Search filters" /> : null}
+          <CommandList className="max-h-72">
+            <CommandEmpty>No matches.</CommandEmpty>
+            <CommandGroup>
+              {defs.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={`${d.label} ${d.id}`}
+                  onSelect={() => {
+                    picked.current = true
+                    setOpen(false)
+                    onPick(d.id)
+                  }}
+                  className="min-h-8 pointer-coarse:min-h-11"
+                >
+                  <span className="truncate">{d.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
