@@ -431,7 +431,7 @@ const I = {
     label: "Diagnostics",
     href: "/settings/diagnostics",
     icon: StethoscopeIcon,
-    description: "Database, schema version, email, storage and job health.",
+    description: "Database, schema version, storage and scheduled job health.",
     keywords: ["health", "status", "schema"],
   },
 } as const satisfies Record<string, NavItem>;
@@ -443,7 +443,7 @@ const SETTINGS_SECTIONS: Array<{ slug: string; label: string; keywords?: string[
   { slug: "numbering", label: "Numbering", keywords: ["invoice number", "prefix", "series"] },
   { slug: "billing", label: "Billing", keywords: ["sac", "gst rate", "approval limit", "payment terms"] },
   { slug: "working-hours", label: "Working hours", keywords: ["holidays", "late", "capacity"] },
-  { slug: "reminders", label: "Reminders", keywords: ["digest", "lead days"] },
+  { slug: "reminders", label: "Reminders", keywords: ["due dates", "lead days"] },
   { slug: "whatsapp", label: "WhatsApp", keywords: ["numbers", "signature", "open chat", "house rules"] },
   { slug: "law", label: "Law & rules", keywords: ["statutory parameters", "due dates", "extensions"] },
   { slug: "templates", label: "Templates", keywords: ["job templates", "message templates"] },

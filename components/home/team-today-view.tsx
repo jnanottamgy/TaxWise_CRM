@@ -40,7 +40,7 @@ async function attempt<T>(source: string, userId: string, load: () => Promise<T>
  * Team today (§7.2 Manager): "Who is stuck, who is over capacity, and what is due this week?"
  * The queues as one strip of figures (unassigned leading), then the three queues side by side: work
  * that needs an owner (declined first, with why), work waiting for acceptance, and the review queue;
- * the Data awaited call list (call, WhatsApp, Gmail, or queue every client on WhatsApp) beside who is
+ * the Data awaited call list (call, WhatsApp, or queue every client on WhatsApp) beside who is
  * away without cover and today's attendance; this week's deadlines beside billing and sales; and the
  * team's capacity (§7.11.4) with each person's overdue tasks (§7.4).
  *
@@ -74,7 +74,7 @@ export async function TeamTodayView({ user, supabase }: { user: CurrentUser; sup
       <PageGuide title="Team today">
         <p>Start at the top: work nobody has, work declined back to you, and work nobody has accepted yet. Each figure opens the list behind it.</p>
         <p className="mt-2">
-          The call list is every task waiting on a client&apos;s data, soonest due first, with who to call and what is still needed. WhatsApp and Gmail open a preview and are logged against the task as handed off. Queue
+          The call list is every task waiting on a client&apos;s data, soonest due first, with who to call and what is still needed. WhatsApp opens a preview and is logged against the task as handed off. Queue
           all on WhatsApp drafts a message for every client in Data awaited; you open each chat and press Send.
         </p>
         <p className="mt-2">People away today whose clients have work due in the next two days, with no cover, are listed with Set up cover.</p>

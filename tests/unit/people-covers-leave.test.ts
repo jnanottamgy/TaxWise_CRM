@@ -70,7 +70,6 @@ describe("GrantCoverSchema (§4.7 Fields)", () => {
     const ok = GrantCoverSchema.safeParse({ mode: "client", cover_employee_id: A, client_id: C, ...window });
     expect(ok.success).toBe(true);
     if (ok.success) {
-      expect(ok.data.email_cover_person).toBe(true); // default on
       expect(ok.data.include_vault).toBe(false);
       expect(ok.data.note).toBeNull();
     }

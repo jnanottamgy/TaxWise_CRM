@@ -66,6 +66,9 @@ const nextConfig: NextConfig = {
   // Every screen is per-user and RLS-scoped; nothing is cached across users (§0.1 rule 15).
   cacheComponents: false,
   poweredByHeader: false,
+  // Netlify sets COMMIT_REF during the build only: carry it into the server code so /api/health can
+  // name the deployed commit.
+  env: { COMMIT_REF: process.env.COMMIT_REF ?? "" },
   experimental: {
     // forbidden() → app/(staff)/forbidden.tsx and app/(portal)/portal/forbidden.tsx: a real 403 for a
     // page the role may not open (lib/auth/guards.ts denyAccess). Without it, denyAccess falls back to 404.
@@ -91,7 +94,11 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: PERMISSIONS_POLICY },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          // same-origin-allow-popups, not same-origin: the WhatsApp Web window the app opens (Send on
+          // WhatsApp, Open chat) has to stay reachable by its name, so the next send reuses it instead of
+          // opening another (WhatsApp Web allows one active tab). Sites that open the app still can't reach
+          // it, and the app cuts the WhatsApp window's link back to it (whatsapp-button.tsx).
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
           // §12: nothing is indexed except the sign-in page (overridden below).
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],

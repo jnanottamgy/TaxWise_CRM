@@ -298,7 +298,6 @@ const JOB_STALE_HOURS: Readonly<Record<string, number>> = {
   "upload-cleanup": 30,
   "receivables-sweep": 30,
   escalation: 30,
-  digest: 30,
   reminders: 30,
   "retainer-billing": 30,
   "invoice-reminders": 30,

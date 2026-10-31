@@ -174,8 +174,9 @@ export const NOTIFICATION_EVENTS: readonly NotificationEvent[] = [
   { type: "cover_ending", label: "A cover you granted ends tomorrow", group: "Team", roles: PM },
   { type: "cover_ended", label: "A cover for you or by you ends", group: "Team", roles: STAFF },
   { type: "whatsapp_group_missing", label: "A client has no WhatsApp group yet", group: "WhatsApp and security", roles: PM },
-  { type: "whatsapp_device_linked", label: "A PC links a firm WhatsApp number", group: "WhatsApp and security", roles: ["partner"] },
-  { type: "whatsapp_client_mode_down", label: "Client mode stops working on a PC", group: "WhatsApp and security", roles: ["partner"] },
+  // The next two came from the retired desktop app; nothing sends them now, but older notices keep their group.
+  { type: "whatsapp_device_linked", label: "A PC linked a firm WhatsApp number (desktop app, retired)", group: "WhatsApp and security", roles: ["partner"] },
+  { type: "whatsapp_client_mode_down", label: "Client mode stopped on a PC (desktop app, retired)", group: "WhatsApp and security", roles: ["partner"] },
   { type: "security_alert", label: "A security alert", group: "WhatsApp and security", roles: ["partner"] },
   { type: "info", label: "General updates", group: "General", roles: STAFF },
   { type: "warning", label: "Warnings that need a look", group: "General", roles: STAFF },

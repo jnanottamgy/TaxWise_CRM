@@ -52,18 +52,18 @@ export function authCookieOptions(secure: boolean): CookieOptions {
 // Path classes
 // -------------------------------------------------------------------------------------------------
 
-const PUBLIC_EXACT = new Set(["/login", "/forgot-password", "/reset-password", "/setup", "/auth/confirm", "/api/health"]);
+const PUBLIC_EXACT = new Set(["/login", "/forgot-password", "/setup", "/api/health"]);
 /** /q/ and /api/q/: the public quotation page and its PDF (token-checked, rate-limited, §7.23). */
-const PUBLIC_PREFIXES = ["/q/", "/api/q/", "/api/cron/", "/api/webhooks/"];
+const PUBLIC_PREFIXES = ["/q/", "/api/q/", "/api/cron/"];
 /** Machine endpoints: no cookies to refresh, skip Supabase entirely. */
-const MACHINE_PREFIXES = ["/api/health", "/api/cron/", "/api/webhooks/"];
+const MACHINE_PREFIXES = ["/api/health", "/api/cron/"];
 const STATIC_FILE = /\.(?:svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|css|js|map|txt|xml|webmanifest)$/i;
 
 /** Pages a signed-in person may need while they are still being let in. */
 export const GATE_PATHS = ["/no-access", "/set-password", "/mfa"] as const;
 
 /** Auth pages that make no sense as a destination after signing in. */
-const NOT_A_DESTINATION = new Set(["/login", "/forgot-password", "/reset-password", "/setup", "/auth/confirm", "/no-access", "/set-password", "/mfa"]);
+const NOT_A_DESTINATION = new Set(["/login", "/forgot-password", "/setup", "/no-access", "/set-password", "/mfa"]);
 
 function under(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);

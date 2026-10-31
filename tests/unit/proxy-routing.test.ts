@@ -30,12 +30,12 @@ function route(pathname: string, session: SessionHint | null, extra: Partial<Rou
 }
 
 describe("public paths", () => {
-  it.each(["/login", "/forgot-password", "/reset-password", "/auth/confirm", "/setup", "/q/abc123", "/q/abc123/pdf", "/api/q/abc123/pdf", "/api/health", "/api/cron/receivables", "/api/webhooks/resend", "/_next/static/chunk.js", "/favicon.ico", "/logo.svg"])(
+  it.each(["/login", "/forgot-password", "/setup", "/q/abc123", "/q/abc123/pdf", "/api/q/abc123/pdf", "/api/health", "/api/cron/receivables", "/api/cron/tick", "/_next/static/chunk.js", "/favicon.ico", "/logo.svg"])(
     "%s is public",
     (p) => expect(isPublicPath(p)).toBe(true),
   );
 
-  it.each(["/dashboard", "/clients/1", "/portal", "/portal/invoices/1", "/api/files/sign", "/api/pdf/quotation/1", "/api/portal/invoices/1/pdf", "/api/desktop/context", "/api/qx/1", "/no-access", "/mfa", "/set-password", "/q", "/loginx", "/setup/extra"])("%s is not public", (p) =>
+  it.each(["/dashboard", "/clients/1", "/portal", "/portal/invoices/1", "/api/files/sign", "/api/pdf/quotation/1", "/api/portal/invoices/1/pdf", "/api/desktop/context", "/api/webhooks/resend", "/reset-password", "/auth/confirm", "/api/qx/1", "/no-access", "/mfa", "/set-password", "/q", "/loginx", "/setup/extra"])("%s is not public", (p) =>
     expect(isPublicPath(p)).toBe(false),
   );
 

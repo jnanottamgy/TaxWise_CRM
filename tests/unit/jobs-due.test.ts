@@ -15,7 +15,6 @@ describe("dueRuns: what the scheduler's check runs", () => {
       "recurring-tasks", // 07:00 IST
       "receivables-sweep",
       "escalation",
-      "digest",
       "cover-lifecycle", // hourly, :07
       "lead-follow-ups", // hourly, 09:00 IST
       "reminders", // 09:00 IST, after lead-follow-ups in schedule order

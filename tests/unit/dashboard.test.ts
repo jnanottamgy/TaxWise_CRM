@@ -146,7 +146,6 @@ describe("setup checklist", () => {
     hasLogo: false,
     hasBankAndUpi: false,
     hasFrnAndMembership: false,
-    emailDomainVerified: false,
     hasWhatsAppNumbers: false,
     teamAdded: false,
     firstClientOnboarded: false,
@@ -154,18 +153,19 @@ describe("setup checklist", () => {
     lawReviewed: false,
   };
 
-  it("lists the nine §7.2 items in order with where to do each", () => {
+  it("lists the eight items in order with where to do each (§7.2, less the email domain)", () => {
     const c = setupChecklist(none);
-    expect(c.items).toHaveLength(9);
+    expect(c.items).toHaveLength(8);
     expect(c.items[0]).toMatchObject({ id: "hasLogo", href: "/settings/firm", done: false });
-    expect(c.items[8]).toMatchObject({ id: "lawReviewed", href: "/settings/law" });
+    expect(c.items[7]).toMatchObject({ id: "lawReviewed", href: "/settings/law" });
+    expect(c.items.map((i) => i.href)).not.toContain("/settings/email");
     expect(c).toMatchObject({ done: 0, complete: false });
   });
 
   it("is complete once every item is done", () => {
     const all = Object.fromEntries(Object.keys(none).map((k) => [k, true])) as SetupFacts;
-    expect(setupChecklist(all)).toMatchObject({ done: 9, complete: true });
-    expect(setupChecklist({ ...all, lawReviewed: false })).toMatchObject({ done: 8, complete: false });
+    expect(setupChecklist(all)).toMatchObject({ done: 8, complete: true });
+    expect(setupChecklist({ ...all, lawReviewed: false })).toMatchObject({ done: 7, complete: false });
   });
 });
 

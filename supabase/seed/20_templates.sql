@@ -547,27 +547,11 @@ from t cross join (values
 ) as i(sort_order, offset_days, title, description);
 
 -- =================================================================================================
--- Message templates (§7.13.4, §7.13.2, §10, §16): every template type, for email and for WhatsApp.
+-- Message templates (§7.13.4, §7.13.2, §10, §16): every template type, on WhatsApp (the firm sends no email).
 -- =================================================================================================
 insert into public.message_templates (name, type, channel, subject, body)
 values
   -- document_reminder -----------------------------------------------------------------------------
-  ('Document reminder (email)', 'document_reminder', 'email',
-   '{{firm_name}} | Reminder: documents pending for {{period}}',
-   $body$Dear {{contact_name}},
-
-This is a gentle reminder that we are still waiting for the following documents for your {{service_type}} for {{period}}:
-
-{{missing_items}}
-
-You can upload them securely on our client portal: {{portal_link}}
-
-If you have already sent them, thank you, and please ignore this reminder. If anything is unclear, just reply to this email and we will help.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Document reminder (WhatsApp)', 'document_reminder', 'whatsapp', null,
    $body$Hi {{contact_name}}, a gentle reminder from {{firm_name}}: for your {{service_type}} for {{period}} we are still waiting for:
 {{missing_items}}
@@ -576,24 +560,6 @@ You can upload them here: {{portal_link}}
 If you have already sent them, thank you!$body$),
 
   -- compliance_reminder ---------------------------------------------------------------------------
-  ('Compliance reminder (email)', 'compliance_reminder', 'email',
-   '{{firm_name}} | {{compliance_type}} for {{period}} is due on {{due_date}}',
-   $body$Dear {{contact_name}},
-
-{{compliance_type}} for {{period}} is due on {{due_date}}.
-
-To file it on time, we need the following from you:
-
-{{missing_items}}
-
-Kindly upload them on our client portal: {{portal_link}}
-
-Filing on time avoids late fees and interest. If you have any questions, please reply to this email or call us on {{firm_phone}}.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Compliance reminder (WhatsApp)', 'compliance_reminder', 'whatsapp', null,
    $body$Hi {{contact_name}}, {{compliance_type}} for {{period}} is due on {{due_date}}. To file it on time, we need:
 {{missing_items}}
@@ -602,21 +568,6 @@ You can upload them here: {{portal_link}}
 Thank you!$body$),
 
   -- payment_reminder: before and after the due date -----------------------------------------------
-  ('Payment reminder: before due (email)', 'payment_reminder', 'email',
-   '{{firm_name}} | Invoice {{invoice_number}} is due on {{due_date}}',
-   $body$Dear {{contact_name}},
-
-A friendly reminder that our invoice {{invoice_number}} for {{amount}} is due on {{due_date}}.
-
-You can view the invoice and pay online here: {{payment_link}}
-To pay by UPI: {{upi_link}}
-
-Kindly quote the invoice number when you pay. If you deduct TDS, please let us know the amount and share the TDS certificate when it is issued. If you have already made the payment, thank you, and please ignore this reminder.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Payment reminder: before due (WhatsApp)', 'payment_reminder', 'whatsapp', null,
    $body$Hi {{contact_name}}, a friendly reminder from {{firm_name}}: invoice {{invoice_number}} for {{amount}} is due on {{due_date}}.
 
@@ -624,21 +575,6 @@ View and pay: {{payment_link}}
 Pay by UPI: {{upi_link}}
 
 If you have already paid, thank you!$body$),
-
-  ('Payment reminder: after due (email)', 'payment_reminder', 'email',
-   '{{firm_name}} | Invoice {{invoice_number}} is overdue',
-   $body$Dear {{contact_name}},
-
-Our records show that invoice {{invoice_number}} for {{amount}}, which was due on {{due_date}}, is still outstanding.
-
-We would be grateful if you could arrange the payment at the earliest. You can view the invoice and pay here: {{payment_link}}
-To pay by UPI: {{upi_link}}
-
-If the payment has already been made, please share the transaction reference so that we can match it. If there is anything about the invoice you would like to discuss, just reply to this email or call us on {{firm_phone}}.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
 
   ('Payment reminder: after due (WhatsApp)', 'payment_reminder', 'whatsapp', null,
    $body$Hi {{contact_name}}, invoice {{invoice_number}} for {{amount}} was due on {{due_date}} and is still outstanding. We would be grateful if you could arrange the payment at the earliest.
@@ -649,22 +585,6 @@ Pay by UPI: {{upi_link}}
 If it is already paid, please share the reference so that we can match it. Thank you!$body$),
 
   -- task_assignment (to a member of staff) --------------------------------------------------------
-  ('Task assignment (email)', 'task_assignment', 'email',
-   '{{firm_name}} | New task: {{task_title}}',
-   $body$Hello,
-
-{{sender_name}} has assigned you a new task.
-
-Task: {{task_title}}
-Client: {{client_name}} ({{client_code}})
-Due date: {{due_date}}
-Priority: {{priority}}
-
-Please open it in the app and accept it, or decline it with a reason if you can't take it on.
-
-Thank you,
-{{firm_name}}$body$),
-
   ('Task assignment (WhatsApp)', 'task_assignment', 'whatsapp', null,
    $body$New task for you: {{task_title}}
 Client: {{client_name}} ({{client_code}})
@@ -673,22 +593,6 @@ Due: {{due_date}} · Priority: {{priority}}
 Please accept it in the app, or decline it with a reason.$body$),
 
   -- overdue_notification (to the client: a filing past its due date) -------------------------------
-  ('Overdue notice (email)', 'overdue_notification', 'email',
-   '{{firm_name}} | {{compliance_type}} for {{period}} is overdue',
-   $body$Dear {{contact_name}},
-
-{{compliance_type}} for {{period}} was due on {{due_date}} and has not been filed yet, as we are still waiting for:
-
-{{missing_items}}
-
-Late fees and interest grow every day a return is late. Kindly upload the pending items on our client portal at the earliest, so that we can file without further delay: {{portal_link}}
-
-If you would like to talk it through, please call us on {{firm_phone}}.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Overdue notice (WhatsApp)', 'overdue_notification', 'whatsapp', null,
    $body$Hi {{contact_name}}, {{compliance_type}} for {{period}} was due on {{due_date}} and is still pending, as we need:
 {{missing_items}}
@@ -697,46 +601,12 @@ Late fees and interest grow every day, so please upload them as soon as you can:
 For anything urgent, call us on {{firm_phone}}.$body$),
 
   -- quotation ---------------------------------------------------------------------------------------
-  ('Quotation (email)', 'quotation', 'email',
-   '{{firm_name}} | Our quotation for {{client_name}}',
-   $body$Dear {{contact_name}},
-
-Thank you for considering {{firm_name}}. As discussed, our quotation for {{client_name}} is ready. The quoted total is {{amount}}, and you can view, download, accept or decline it online:
-
-{{quotation_link}}
-
-The scope, fees and terms are set out in the quotation. If you would like to change anything or discuss it, just reply to this email or call us on {{firm_phone}}.
-
-We look forward to working with you.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Quotation (WhatsApp)', 'quotation', 'whatsapp', null,
    $body$Hi {{contact_name}}, thank you for your time. Our quotation for {{client_name}} ({{amount}}) is here: {{quotation_link}}
 
 You can view, download, accept or decline it on that page. Happy to answer any questions.$body$),
 
   -- welcome -----------------------------------------------------------------------------------------
-  ('Welcome (email)', 'welcome', 'email',
-   'Welcome to {{firm_name}}',
-   $body$Dear {{contact_name}},
-
-Welcome to {{firm_name}}, and thank you for choosing us for {{client_name}}. Your client code with us is {{client_code}}; please mention it whenever you write to us.
-
-I will be your first point of contact, and our team will keep you informed at every step.
-
-Our client portal is where you can see your upcoming deadlines, upload the documents we ask for, view invoices and message us: {{portal_link}}
-
-We will also set up a WhatsApp group with our Partners and our team for quick day-to-day questions. For anything urgent, please call {{firm_phone}}.
-
-We look forward to working with you.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Welcome (WhatsApp)', 'welcome', 'whatsapp', null,
    $body$Hi {{contact_name}}, welcome to {{firm_name}}, and thank you for choosing us for {{client_name}}! Your client code with us is {{client_code}}.
 
@@ -748,43 +618,10 @@ For anything urgent, please call {{firm_phone}}.$body$),
    'Welcome to the {{firm_name}} group for {{client_name}}. Our Partners, our Managers'' desk and our team desk are all here, and our team sign their messages with their name. For anything urgent, please call {{firm_phone}}.'),
 
   -- custom: data-awaited request (§7.13.2 "Data awaited" task) --------------------------------------
-  ('Data awaited request (email)', 'custom', 'email',
-   '{{firm_name}} | Information needed for your {{service_type}} for {{period}}',
-   $body$Dear {{contact_name}},
-
-We have started work on your {{service_type}} for {{period}}, and we need a few things from you to complete it:
-
-{{missing_items}}
-
-You can upload them securely on our client portal: {{portal_link}}
-
-As the due date is {{due_date}}, we would be grateful to receive them at the earliest. If you have any questions, just reply to this email.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Data awaited request (WhatsApp)', 'custom', 'whatsapp', null,
    'Hi {{contact_name}}, for your {{service_type}} for {{period}} we still need: {{missing_items}}. You can upload them here: {{portal_link}}'),
 
   -- custom: document request (PBC list, §7.14) ------------------------------------------------------
-  ('Document request (email)', 'custom', 'email',
-   '{{firm_name}} | Documents requested for {{period}}',
-   $body$Dear {{contact_name}},
-
-To proceed with your work for {{period}}, kindly share the following documents:
-
-{{missing_items}}
-
-Please upload each one against its item on our client portal: {{portal_link}}
-We would appreciate receiving them by {{due_date}}.
-
-If an item does not apply to you, or you would like help with what we are asking for, just reply to this email.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Document request (WhatsApp)', 'custom', 'whatsapp', null,
    $body$Hi {{contact_name}}, to proceed with your work for {{period}}, please share these documents:
 {{missing_items}}
@@ -793,21 +630,6 @@ You can upload them here: {{portal_link}}
 Thank you!$body$),
 
   -- custom: invoice (§7.13.2, §10) ------------------------------------------------------------------
-  ('Invoice (email)', 'custom', 'email',
-   '{{firm_name}} | Invoice {{invoice_number}}',
-   $body$Dear {{contact_name}},
-
-Thank you for your continued trust in {{firm_name}}. Our invoice {{invoice_number}} for {{amount}} is ready, and is due on {{due_date}}.
-
-View and pay online: {{payment_link}}
-Pay by UPI: {{upi_link}}
-
-Our bank details are on the invoice. Kindly quote the invoice number when you pay. If you deduct TDS, please issue the TDS certificate in time, so that the credit reflects in our tax statement.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Invoice (WhatsApp)', 'custom', 'whatsapp', null,
    $body$Hi {{contact_name}}, our invoice {{invoice_number}} for {{amount}} is ready, and is due on {{due_date}}.
 
@@ -816,22 +638,7 @@ Pay by UPI: {{upi_link}}
 
 Thank you for your continued trust in {{firm_name}}!$body$),
 
-  -- custom: staff login share (§4.5 "Login created"). The login link, email and temporary password
   -- are added by the People screen when it builds the draft; they are never stored in a template.
-  ('Staff login share (email)', 'custom', 'email',
-   '{{firm_name}} | Your login is ready',
-   $body$Hello,
-
-Welcome to {{firm_name}}! Your login to our practice system is ready.
-
-Sign in with your office email address and the temporary password shared with you. You will be asked to choose your own password the first time you sign in, and nobody else will know it.
-
-If anything doesn't work, call {{firm_phone}}.
-
-Regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Staff login share (WhatsApp)', 'custom', 'whatsapp', null,
    $body$Welcome to {{firm_name}}! Your login to our practice system is ready.
 
@@ -839,22 +646,7 @@ Sign in with your office email address and the temporary password shared with yo
 
 If anything doesn't work, call {{firm_phone}}.$body$),
 
-  -- custom: supplier follow-up from GST reconciliation (§7.8.1). {{missing_items}} lists the
   -- suppliers to chase.
-  ('Supplier follow-up (email)', 'custom', 'email',
-   '{{firm_name}} | Suppliers to follow up for your GST input tax credit for {{period}}',
-   $body$Dear {{contact_name}},
-
-While reconciling your purchases with GSTR-2B for {{period}}, we found invoices from the suppliers below that are missing from their GST returns, or don't match them:
-
-{{missing_items}}
-
-Until these suppliers file or correct their GSTR-1, the input tax credit on these invoices is at risk. Kindly ask them to do so at the earliest; we will check again once GSTR-2B is updated.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Supplier follow-up (WhatsApp)', 'custom', 'whatsapp', null,
    $body$Hi {{contact_name}}, while reconciling your GST purchases for {{period}}, we found invoices from these suppliers that are missing from GSTR-2B, or don't match it:
 {{missing_items}}
@@ -862,18 +654,6 @@ Warm regards,
 Please ask them to file or correct their GSTR-1 soon, so that your input tax credit isn't lost. We will check again once GSTR-2B is updated.$body$),
 
   -- custom: lead follow-up (§7.5.1) -----------------------------------------------------------------
-  ('Lead follow-up (email)', 'custom', 'email',
-   '{{firm_name}} | Following up on our conversation',
-   $body$Dear {{contact_name}},
-
-Thank you for your interest in {{firm_name}}. I am following up on our recent conversation about your {{service_type}} requirements.
-
-If you would like a quotation, or have any questions about how we can help, just reply to this email or call us on {{firm_phone}}. We would be happy to meet at a time that suits you.
-
-Warm regards,
-{{sender_name}}
-{{firm_name}}$body$),
-
   ('Lead follow-up (WhatsApp)', 'custom', 'whatsapp', null,
    $body$Hi {{contact_name}}, greetings from {{firm_name}}! Following up on our conversation about your {{service_type}} requirements: shall we send you a quotation, or is there anything we can clarify? Happy to help.$body$)
 on conflict (name) do nothing;
@@ -895,7 +675,7 @@ TaxWise Consultants, Chartered Accountants, 307, 14th Main Rd, Raj Mahal Vilas E
 - **Financial and business records** you share for our work: books of account, bank statements, invoices, returns, Form 16 and other tax documents.
 - **Government portal logins** that you authorise us in writing to use, stored encrypted.
 - **Client portal use:** sign-in times, IP address and device details, kept for security.
-- **Communications** with our team: emails, portal messages and notes of calls and meetings.
+- **Communications** with our team: the messages we send you on WhatsApp, portal messages, and notes of calls and meetings.
 
 ## Why we use it
 - To provide the services you engage us for: income tax, GST, TDS, audit and assurance, accounting, payroll, company law and related advice.

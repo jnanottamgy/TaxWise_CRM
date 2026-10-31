@@ -12,7 +12,6 @@ import { run as invoiceReminders } from "@/server/jobs/invoice-reminders";
 import { run as leadFollowUps } from "@/server/jobs/lead-follow-ups";
 import { run as newFy } from "@/server/jobs/new-fy";
 import { run as noticeReminders } from "@/server/jobs/notice-reminders";
-import { run as partnerDigest } from "@/server/jobs/partner-digest";
 import { run as practiceReminders } from "@/server/jobs/practice-reminders";
 import { run as quotations } from "@/server/jobs/quotations";
 import { run as receivablesSweep } from "@/server/jobs/receivables-sweep";
@@ -42,7 +41,6 @@ export const JOBS: Record<ScheduledJobName, JobRun> = {
   "recurring-tasks": recurringTasks,
   "receivables-sweep": receivablesSweep,
   escalation,
-  digest: partnerDigest,
   "compliance-top-up": complianceTopUp,
   reminders,
   "register-expiries": registerExpiries,

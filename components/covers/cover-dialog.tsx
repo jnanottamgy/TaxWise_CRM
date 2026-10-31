@@ -29,8 +29,8 @@ export type CoverTarget =
  * Grant cover (§4.7 Fields): Cover person (with their capacity band, and a warning if they're on
  * leave in the window) · Covering for · Client (client cover) · From (default now) · Until, with
  * quick picks (end of today, end of tomorrow, end of this week, until their leave ends; at most 90
- * days) · Reason · Note · Handover note · Include portal passwords (Partner) · Also email the cover
- * person (default on).
+ * days) · Reason · Note · Handover note · Include portal passwords (Partner). The cover person is told
+ * in-app.
  *
  * For a person (People → person → Cover their clients, the leave approval prompt, Absent today
  * without cover): one person for all their clients (a person cover, which also reaches clients
@@ -83,7 +83,6 @@ export function CoverDialog({
       note: "",
       handover_note: "",
       include_vault: false,
-      email_cover_person: true,
       leave_id: leave?.id ?? null,
     },
     resetOnSuccess: false,
@@ -265,7 +264,6 @@ export function CoverDialog({
               description="Lets the cover person reveal these clients' stored portal passwords, only if they already have Vault access. Every reveal is logged."
             />
           ) : null}
-          <SwitchField control={f.control} name="email_cover_person" label="Also email the cover person" description="They get an in-app notification either way." />
         </div>
       </div>
     </FormDialog>

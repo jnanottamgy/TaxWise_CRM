@@ -22,7 +22,7 @@ your report.
 
 ```
 app/
-  (auth)/login, forgot-password, reset-password, set-password, setup, no-access
+  (auth)/login, forgot-password (ask a Partner or Manager), set-password, setup, no-access
   (staff)/…            the firm's app (sidebar shell, app/(staff)/layout.tsx)
   (portal)/portal/…    client portal (lighter shell)
   q/[token]/           public quotation page (no login)

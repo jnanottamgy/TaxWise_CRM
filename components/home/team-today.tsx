@@ -66,7 +66,7 @@ export function NeedsOwnerList({ declined, unassigned, today, limit }: { decline
 
 /**
  * Data awaited (§7.2 Manager, "the call list"): client, task, days waiting, contact person, and the
- * Call / WhatsApp / Gmail buttons. The hand-offs open a preview first and are logged as "handed off"
+ * Call and WhatsApp buttons. The WhatsApp hand-off opens a preview first and is logged as "handed off"
  * against the task (§7.13.1).
  */
 export function CallList({ rows, today, messaging, portalLink }: { rows: CallListRow[]; today: string; messaging: AskClientMessaging | null; portalLink: string }) {

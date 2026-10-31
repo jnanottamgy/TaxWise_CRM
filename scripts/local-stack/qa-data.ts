@@ -1366,8 +1366,8 @@ async function governance(ctx: Ctx) {
   ], "");
 
   await q(db, "update public.job_runs set name = 'reminders', status = 'succeeded', started_at = now() - interval '10 hours', finished_at = now() - interval '10 hours' + interval '14 seconds', counts = '{\"sent\": 12}'");
-  const jobs = ["attendance", "escalation", "invoice-reminders", "lead-follow-ups", "compliance-top-up", "register-expiries", "retainer-billing", "partner-digest", "cover-lifecycle", "receivables-sweep", "quotations"];
-  await ins(db, "job_runs", jobs.flatMap((name, i) => [0, 1].map((d) => ({ name, started_at: ist(daysAgo(today, d), `0${(i % 9) + 1}:00`), finished_at: ist(daysAgo(today, d), `0${(i % 9) + 1}:01`), status: name === "partner-digest" && d === 0 ? "failed" : "succeeded", counts: { processed: 3 + i }, error: name === "partner-digest" && d === 0 ? "Email isn't configured (RESEND_API_KEY)." : null }))), "");
+  const jobs = ["attendance", "escalation", "invoice-reminders", "lead-follow-ups", "compliance-top-up", "register-expiries", "retainer-billing", "cover-lifecycle", "receivables-sweep", "quotations"];
+  await ins(db, "job_runs", jobs.flatMap((name, i) => [0, 1].map((d) => ({ name, started_at: ist(daysAgo(today, d), `0${(i % 9) + 1}:00`), finished_at: ist(daysAgo(today, d), `0${(i % 9) + 1}:01`), status: name === "register-expiries" && d === 0 ? "failed" : "succeeded", counts: { processed: 3 + i }, error: name === "register-expiries" && d === 0 ? "Stopped before it finished (the host's time limit for a request). The scheduler tries again on its next check." : null }))), "");
   await q(db, "update public.saved_views set name = 'My overdue GST work', filters = '{\"status\":[\"in_progress\",\"data_awaited\"],\"service\":\"gst\"}' where user_id = $1", [uid("P1")]);
   await q(db, "update public.saved_views set name = 'Team review queue', filters = '{\"view\":\"review\"}' where user_id = $1", [uid("M1")]);
   await ins(db, "recent_searches", [{ user_id: uid("P1"), query: "beta" }, { user_id: uid("P1"), query: "29AAKCB1111F1Z3" }, { user_id: uid("E1"), query: "alpha" }, { user_id: uid("M1"), query: "TDS" }], "");
