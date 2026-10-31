@@ -62,7 +62,7 @@ header (`--json` gives Playwright cookies).
 ## 3. Running the crawler
 
 ```bash
-npx tsx scripts/local-stack/crawl.ts --round r-final --out <dir>          # everything (897 visits, ~20 min)
+npx tsx scripts/local-stack/crawl.ts --round r-final --out <dir>          # everything (891 visits, ~10 min)
 npx tsx scripts/local-stack/crawl.ts --roles employee --viewports mobile-light --only work
 npx tsx scripts/local-stack/crawl.ts --round r-final --out <dir> --report-only   # rebuild report.md
 ```
@@ -141,7 +141,45 @@ the stand-in logs `42501 permission denied` for `employees`, `client_credentials
 (tables the API roles can't read by design; the page marks them as such). Crawling `/q/<token>`
 signed out counts as the client viewing the quotation, so its view counter rises with every crawl.
 
-## 5. Final run (r-final)
+## 5. Latest run (r-wa2): WhatsApp only, no desktop app, Netlify
+
+Run on 31 Oct 2026, after TaxWise Desktop and email were removed, the 15-minute scheduler replaced
+Vercel Cron, quotations stopped requiring an email (0241) and issued invoices got their WhatsApp button:
+QA data reloaded from every migration (`stack.ts reset-data`, schema 0241), production build.
+
+### Checks run in the same pass
+
+| Check | Result |
+|---|---|
+| `npm run typecheck` · `npm run lint` | clean · clean |
+| `npm test` | 128 files, 2,527 tests, all pass |
+| `npm run test:db` | 34 files, 743 tests, all pass |
+| `npm run build` (CI placeholder env) · `node scripts/check-service-role.mjs` | success · ok |
+| `netlify build --context deploy-preview` (Netlify CLI 27.16, Next.js Runtime 5.16.5) | success: the app's server function, the scheduler function and `proxy.ts` (as an edge function) packaged |
+| `supabase db push --db-url … --include-seed` (CLI 2.122) on a fresh shim database | 124 migrations and 7 seed files applied; run again: "Remote database is up to date" |
+| The scheduler: `POST /api/cron/tick` | 401 with no secret or a wrong one; the first check ran the 13 jobs due since their times (all succeeded, about 1 s in all); a second check ran nothing; `/api/cron/compliance-top-up` by hand planned 83 deadlines for 38 clients |
+| `npx tsx scripts/local-stack/api-smoke.ts` | 38 route checks, 0 bad |
+| Send on WhatsApp in a real browser (invoice → WhatsApp; `window.open` recorded) | the preview showed the client's number, three templates, the message and the PDF; Download and open WhatsApp pointed the one WhatsApp window at `web.whatsapp.com/send?phone=91…&text=…` and downloaded `Invoice TW-26-27-0062.pdf` |
+
+### Crawl results
+
+**891 visits (297 role × route pairs × 3 viewports), 0 with problems.** No error boundaries, no block
+errors, no page or console errors, no failed requests, no response ≥ 500, no horizontal overflow at 1366
+or 390, dark mode applied on all 297 dark visits, one h1 on every allowed page, slowest settle 4.5 s
+(Partner `/filings`, light). All 738 allowed visits answered 200; all 153 refusal visits were refused:
+111 with 403, 3 with 404 and 39 by redirect. The routes that are gone (`/settings/email`,
+`/reset-password`, `/auth/confirm`, `/api/desktop/*`, `/api/webhooks/resend`) are no longer crawled.
+
+The first crawl of this pass (r-wa) found two React hydration errors (#418), on `/search` and
+`/workpapers/notices`, one viewport each: an "x minutes ago" label that the browser draws again can
+cross a minute after the server drew it. Fixed in the eight places that draw one in the browser without
+the server's time (`suppressHydrationWarning`, as the WhatsApp register already did); r-wa2 is the crawl
+after the fix.
+
+## 6. Earlier full run (r-final, 25 Oct 2026)
+
+Before the WhatsApp-only change: the desktop app's checks and `/settings/email` below no longer exist.
+
 
 Run on 25 Oct 2026, 04:06–04:15 IST (24 Oct, 22:36–22:45 UTC), after the last fix of the hardening
 phase: the stack stopped (`stack.ts down`) and started from scratch (`up --fresh`: `taxwise_qa` rebuilt
@@ -387,7 +425,7 @@ role's route.
   everywhere), message timestamps consistent, nothing dated later today when loaded before office
   hours, a notification that printed an ISO date.
 
-### Known and accepted (not failures)
+## 7. Known and accepted (not failures)
 
 - Capacity bands print as CLEAR / BUSY / TIGHT / OVER because §7.11.4 names them so; `docs/DESIGN.md`
   otherwise bans all-caps labels. The spec wins until a Partner decides otherwise.
