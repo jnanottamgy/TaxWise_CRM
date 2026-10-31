@@ -111,23 +111,23 @@ sending the presence heartbeat at once (expects all eight answered).
 
 ## 4. What the stack cannot cover
 
-These need a real Supabase project, Resend and a real WhatsApp session, so they are on the go-live
+These need a real Supabase project, Netlify and a real WhatsApp session, so they are on the go-live
 checklist (`docs/GO-LIVE.md`) and the §18.3 acceptance run instead:
 
 - **Supabase Auth.** The stand-in issues and verifies signed JWTs for the fixture users: one shared
-  password and one TOTP code, no real factor enrolment, no email links (invite, set password, reset
-  password, `/auth/confirm`), no sign-up settings, no session expiry by Supabase's clock, and admin
-  user changes (create, disable, reset) answer 501. Sign-in, MFA, sessions and role routing are
+  password and one TOTP code, no real factor enrolment, no sign-up settings, no session expiry by
+  Supabase's clock, and admin user changes (create, disable, reset) answer 501. Sign-in, MFA, sessions and role routing are
   covered as far as the app's own code goes; the provider's side is not.
 - **Supabase Storage.** There are no buckets or objects: document rows exist but downloads, previews,
   uploads, signed URLs and PDF archiving show their designed error states (the file routes answer a
   JSON 404/501). The magic-byte and size checks are covered by unit tests (`lib/domain/files.ts`).
-- **Resend.** `RESEND_API_KEY` is empty, so nothing is ever emailed; pages show "Email isn't set up"
-  where they should, and the delivery webhook (`/api/webhooks/resend`) and bounce handling are covered
-  by unit and DB tests only.
-- **WhatsApp.** The live `web.whatsapp.com` page is never loaded. TaxWise Desktop's e2e suite
-  (`cd desktop && xvfb-run --auto-servernum npm run e2e`) drives the real Electron app against a
-  fixture page and a mock CRM; the CRM's WhatsApp groups, numbers and checklist pages are crawled.
+- **WhatsApp.** The live `web.whatsapp.com` page is never loaded: Send on WhatsApp builds the
+  `web.whatsapp.com/send` (or `wa.me` on a phone) link, which unit tests check; whether WhatsApp opens
+  the chat with the text is checked by hand in the go-live pilot. The CRM's WhatsApp groups, numbers
+  and checklist pages are crawled.
+- **Netlify.** The scheduler function, the 10-second request limit and the edge-run proxy are
+  Netlify's own; `netlify build` was run locally to check the app packages for it. The scheduler's
+  decisions (what is due, retries, continuations) are unit-tested (`tests/unit/jobs-due.test.ts`).
 - **Scheduled jobs and writes.** The crawler only reads. Cron jobs (`/api/cron/[job]`) and server
   actions are covered by unit tests (2,608) and DB tests (742, RLS role × table), not by the crawl.
 - **Scale and network.** One database on the same machine: load times are not production numbers,
@@ -398,7 +398,5 @@ role's route.
   separately), by design. Changing either needs a migration.
 - Invoice numbers in large type show wide hyphens (`TW/26 - 27/0068`): Inter's tabular figures apply
   to the hyphen under the global `.num` rule.
-- TaxWise Desktop: `safeStorage.isEncryptionAvailable` is deprecated in Electron 45 (move to the async
-  call); packaged builds (fuses, asar integrity, signing) were not exercised here.
 - QA-data quirks that come from `tests/db/fixtures.ts` rather than the app: a placeholder PT number
   (`PTEC-…`), Beta Industries' fee history and DSC rows, and timeline entries written by the fixture.
