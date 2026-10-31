@@ -6,7 +6,7 @@ import type { ServerSupabase } from "@/lib/supabase/server"
 import { logUnexpected } from "@/lib/log"
 import { getSelectedFy } from "@/lib/fy-context"
 import { addDays, compareDates, endOfMonth, todayIST, type DateString } from "@/lib/domain/fy"
-import { ceilingLevel, countLevel, fyToDate, healthTally, linkedPcLevel, peerReviewLevel, setupSteps, udinLevel } from "@/lib/domain/dashboard"
+import { ceilingLevel, countLevel, fyToDate, healthTally, peerReviewLevel, setupSteps, udinLevel } from "@/lib/domain/dashboard"
 import { formatINR, formatINRCompact, fromPaise } from "@/lib/domain/money"
 import { formatDate, formatDateRange, formatMinutes } from "@/lib/format"
 import { PageHeader } from "@/components/app/page-header"
@@ -96,7 +96,6 @@ export async function FirmTodayView({ user, supabase }: { user: CurrentUser; sup
     peerItem(peer),
     assemblyItem(assembly, today),
     noGroupItem(whatsapp),
-    linkedPcsItem(whatsapp),
     noticesItem(notices, today),
   ]
   const tally = healthTally(health.map((h) => h.level))
@@ -494,30 +493,6 @@ function noGroupItem(r: L<Awaited<ReturnType<typeof getWhatsAppHealth>>>): Healt
     level: n > 0 ? "watch" : "fine",
     ok: true,
     body: n ? `${count(n, "active client")} ${n === 1 ? "has" : "have"} no WhatsApp group yet.` : "Every active client has a WhatsApp group.",
-  }
-}
-
-function linkedPcsItem(r: L<Awaited<ReturnType<typeof getWhatsAppHealth>>>): HealthItemView {
-  const key = "wa-pcs"
-  const title = "PCs linked per firm number"
-  if (!r.ok) return failed(key, title, practiceHref.linkedPcs(), r, "Couldn't load the linked PCs.")
-  const nums = r.data.numbers
-  return {
-    key,
-    title,
-    href: practiceHref.linkedPcs(),
-    level: linkedPcLevel(nums),
-    ok: true,
-    body:
-      nums.length === 0 ? (
-        "No firm WhatsApp numbers switched on yet."
-      ) : (
-        <ul className="flex flex-col gap-0.5">
-          {nums.map((n) => (
-            <HealthRow key={n.id} name={n.label} value={n.limit !== null ? `${n.links} of ${n.limit} PCs` : count(n.links, "PC")} tone={n.overLimit ? "danger" : n.atLimit ? "warning" : undefined} />
-          ))}
-        </ul>
-      ),
   }
 }
 

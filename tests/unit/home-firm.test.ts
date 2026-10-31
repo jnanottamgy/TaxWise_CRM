@@ -7,7 +7,6 @@ import {
   fyMonthRows,
   fyToDate,
   healthTally,
-  linkedPcLevel,
   peerReviewLevel,
   setupFactsOf,
   setupSteps,
@@ -24,7 +23,6 @@ const fresh: SetupDetail = {
   hasBank: false,
   hasUpi: false,
   hasFrn: false,
-  domainStatus: "not_started",
   lawReviewedAt: null,
   partners: 1,
   partnersMissingMembership: [{ profileId: ME, employeeId: "e-me", name: "CA Vinay" }],
@@ -41,7 +39,6 @@ const done: SetupDetail = {
   hasBank: true,
   hasUpi: true,
   hasFrn: true,
-  domainStatus: "verified",
   lawReviewedAt: "2026-10-01T10:00:00+05:30",
   partnersMissingMembership: [],
   whatsappNumbers: 2,
@@ -58,7 +55,6 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
       "hasLogo",
       "hasBankAndUpi",
       "hasFrnAndMembership",
-      "emailDomainVerified",
       "hasWhatsAppNumbers",
       "teamAdded",
       "firstClientOnboarded",
@@ -71,9 +67,9 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
     expect(by.hasFrnAndMembership).toMatchObject({ href: "/settings/firm", detail: "FRN still to add · No membership number for CA Vinay" });
   });
 
-  it("is complete, and leaves the page, once all nine are done", () => {
+  it("is complete, and leaves the page, once all eight are done", () => {
     const s = setupSteps(done, { profileId: ME });
-    expect(s).toMatchObject({ done: 9, complete: true, percent: 100 });
+    expect(s).toMatchObject({ done: 8, complete: true, percent: 100 });
     expect(s.items.every((i) => i.detail === null)).toBe(true);
     expect(Object.values(setupFactsOf(done)).every(Boolean)).toBe(true);
   });
@@ -83,7 +79,7 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
     expect(bankOnly.items.find((i) => i.id === "hasBankAndUpi")).toMatchObject({ done: false, detail: "UPI ID still to add" });
     const upiOnly = setupSteps({ ...done, hasBank: false }, { profileId: ME });
     expect(upiOnly.items.find((i) => i.id === "hasBankAndUpi")).toMatchObject({ done: false, detail: "Bank account still to add" });
-    expect(bankOnly.percent).toBe(89);
+    expect(bankOnly.percent).toBe(88); // 7 of 8
   });
 
   it("sends a missing membership number to the Partner's own Profile, or to the other Partner in People", () => {
@@ -104,11 +100,6 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
       { profileId: ME },
     );
     expect(many.items.find((i) => i.id === "hasFrnAndMembership")?.detail).toBe("No membership number for Anita, Ravi and 1 more");
-  });
-
-  it("explains a pending or failed email domain", () => {
-    expect(setupSteps({ ...done, domainStatus: "pending" }, { profileId: ME }).items.find((i) => i.id === "emailDomainVerified")?.detail).toMatch(/waiting for verification/);
-    expect(setupSteps({ ...done, domainStatus: "failed" }, { profileId: ME }).items.find((i) => i.id === "emailDomainVerified")?.detail).toMatch(/failed/);
   });
 
   it("does not count the FRN as done with no active Partner", () => {
@@ -178,7 +169,7 @@ describe("practice health levels", () => {
     expect(udinLevel([{ daysLate: 0 }], 1)).toBe("watch");
   });
 
-  it("marks peer review, counts and linked PCs", () => {
+  it("marks peer review and counts", () => {
     expect(peerReviewLevel("missing")).toBe("act");
     expect(peerReviewLevel("expired")).toBe("act");
     expect(peerReviewLevel("expiring")).toBe("watch");
@@ -186,9 +177,6 @@ describe("practice health levels", () => {
     expect(countLevel(1, 0)).toBe("act");
     expect(countLevel(0, 2)).toBe("watch");
     expect(countLevel(0, 0)).toBe("fine");
-    expect(linkedPcLevel([{ atLimit: true, overLimit: false }])).toBe("watch");
-    expect(linkedPcLevel([{ atLimit: true, overLimit: true }])).toBe("act");
-    expect(linkedPcLevel([])).toBe("fine");
   });
 
   it("tallies what needs action and what is coming up, ignoring items that failed to load", () => {

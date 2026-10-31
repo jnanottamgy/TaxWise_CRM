@@ -363,41 +363,6 @@ export async function getRegisterSummary(supabase: ServerSupabase): Promise<Reco
   return out;
 }
 
-export interface LinksPerNumber {
-  number_id: string;
-  label: string;
-  kind: string;
-  active_links: number;
-  device_limit: number | null;
-  at_limit: boolean;
-  over_limit: boolean;
-}
-
-/**
- * PCs linked per active firm number against WhatsApp's limit (§7.25.7), from the desktop tables
- * (Partners and Managers, RLS). Only the dashboard's practice health reads it; nothing records new
- * links since TaxWise Desktop was removed.
- */
-export async function getLinksPerNumber(supabase: ServerSupabase): Promise<LinksPerNumber[]> {
-  const { data, error } = await supabase
-    .from("whatsapp_links_per_number")
-    .select("number_id, label, kind, active_links, device_limit, at_limit, over_limit, is_active")
-    .eq("is_active", true)
-    .limit(100);
-  if (error) throw error;
-  return ((data ?? []) as Array<LinksPerNumber & { is_active: boolean | null }>)
-    .map((r) => ({
-      number_id: r.number_id,
-      label: r.label,
-      kind: r.kind,
-      active_links: r.active_links ?? 0,
-      device_limit: r.device_limit ?? null,
-      at_limit: !!r.at_limit,
-      over_limit: !!r.over_limit,
-    }))
-    .sort(compareFirmNumbers);
-}
-
 /**
  * Partners' numbers that are still in client groups after the Partner left (house rule 7): the
  * number is switched off, or its owner is no longer active. With how many groups still hold it.

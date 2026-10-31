@@ -172,7 +172,6 @@ export type SetupFacts = {
   hasLogo: boolean;
   hasBankAndUpi: boolean;
   hasFrnAndMembership: boolean;
-  emailDomainVerified: boolean;
   hasWhatsAppNumbers: boolean;
   teamAdded: boolean;
   firstClientOnboarded: boolean;
@@ -186,7 +185,6 @@ const SETUP_ITEMS: ReadonlyArray<Omit<SetupItem, "done">> = [
   { id: "hasLogo", label: "Upload the firm's logo", href: "/settings/firm" },
   { id: "hasBankAndUpi", label: "Add the bank account and UPI ID", href: "/settings/bank" },
   { id: "hasFrnAndMembership", label: "Enter the ICAI FRN and membership numbers", href: "/settings/firm" },
-  { id: "emailDomainVerified", label: "Verify the email domain", href: "/settings/email" },
   { id: "hasWhatsAppNumbers", label: "Enter the firm's WhatsApp numbers", href: "/settings/whatsapp" },
   { id: "teamAdded", label: "Add the team", href: "/people" },
   { id: "firstClientOnboarded", label: "Onboard the first client", href: "/clients/new" },
@@ -415,11 +413,9 @@ export function attendanceSoFar(input: {
 }
 
 // -------------------------------------------------------------------------------------------------
-// The setup checklist with what is still missing (§7.2, §4.3): the same nine items, in order, with a
+// The setup checklist with what is still missing (§7.2, §4.3): the same eight items, in order, with a
 // one-line detail from the data and a link to the exact place to finish each one.
 // -------------------------------------------------------------------------------------------------
-
-export type DomainStatus = "not_started" | "pending" | "verified" | "failed";
 
 /** What dashboard_firm_today reports about the firm's setup (0216). */
 export type SetupDetail = {
@@ -427,7 +423,6 @@ export type SetupDetail = {
   hasBank: boolean;
   hasUpi: boolean;
   hasFrn: boolean;
-  domainStatus: DomainStatus;
   lawReviewedAt: string | null;
   partners: number;
   /** Active Partners with no ICAI membership number yet (it goes on every UDIN, §6.8). */
@@ -441,13 +436,12 @@ export type SetupDetail = {
   invoicesIssued: number;
 };
 
-/** The nine yes/no facts of the checklist (the order and links are SETUP_ITEMS'). */
+/** The eight yes/no facts of the checklist (the order and links are SETUP_ITEMS'). */
 export function setupFactsOf(d: SetupDetail): SetupFacts {
   return {
     hasLogo: d.hasLogo,
     hasBankAndUpi: d.hasBank && d.hasUpi,
     hasFrnAndMembership: d.hasFrn && d.partners > 0 && d.partnersMissingMembership.length === 0,
-    emailDomainVerified: d.domainStatus === "verified",
     hasWhatsAppNumbers: d.whatsappNumbers > 0,
     // The first Partner is on the team from setup; the checklist wants someone else added.
     teamAdded: d.teamMembers > 1,
@@ -490,8 +484,6 @@ export function setupSteps(d: SetupDetail, viewer: { profileId: string }): { ite
         const href = !d.hasFrn ? "/settings/firm" : mine ? "/profile" : firstOther?.employeeId ? `/people/${firstOther.employeeId}` : "/people";
         return { ...item, href, detail: parts.join(" · ") || null };
       }
-      case "emailDomainVerified":
-        return { ...item, detail: d.domainStatus === "pending" ? "DNS records added, waiting for verification" : d.domainStatus === "failed" ? "Verification failed: check the DNS records" : null };
       case "hasWhatsAppNumbers":
         return { ...item, detail: d.whatsappSlots > 0 ? `0 of ${d.whatsappSlots} numbers entered` : null };
       case "teamAdded":
@@ -588,12 +580,6 @@ export function peerReviewLevel(state: "missing" | "valid" | "expiring" | "expir
 /** A count that is overdue (act) or coming up (watch). */
 export function countLevel(overdue: number, upcoming: number): HealthLevel {
   return overdue > 0 ? "act" : upcoming > 0 ? "watch" : "fine";
-}
-
-/** PCs on a firm number: over WhatsApp's limit is act; at it, watch (§7.25.7). */
-export function linkedPcLevel(numbers: ReadonlyArray<{ atLimit: boolean; overLimit: boolean }>): HealthLevel {
-  if (numbers.some((n) => n.overLimit)) return "act";
-  return numbers.some((n) => n.atLimit) ? "watch" : "fine";
 }
 
 /** How many health items need acting on, and how many to watch (the block's one-line summary). */

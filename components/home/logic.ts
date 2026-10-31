@@ -236,7 +236,6 @@ export const practiceHref = {
   assemblyDue: () => "/audits?attention=assembly_due",
   assemblyOverdue: () => "/audits?attention=assembly_overdue",
   noWhatsAppGroup: () => tableHref("/whatsapp-groups", { filters: { status: ["none"] } }),
-  linkedPcs: () => "/settings/whatsapp",
   noticesOverdue: () => "/workpapers/notices?attention=reply_overdue",
   noticesDue: () => "/workpapers/notices?attention=reply_week",
   dataRequests: () => "/quality?tab=data-requests&status=open_all",

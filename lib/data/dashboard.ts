@@ -26,7 +26,6 @@ import {
   type AgeingRow,
   type AtRiskClient,
   type AttendanceSoFar,
-  type DomainStatus,
   type FyMonthRow,
   type PersonCount,
   type SetupDetail,
@@ -44,7 +43,7 @@ import { getCeilingPanel, getDscSummary, getRegistrationSummary, listReportsWith
 import { getLetterSummary } from "@/lib/data/engagement-letters";
 import { getAuditParams, getAuditSummary } from "@/lib/data/audits";
 import { listPeerReviews } from "@/lib/data/quality";
-import { getLinksPerNumber, getRegisterSummary } from "@/lib/data/whatsapp";
+import { getRegisterSummary } from "@/lib/data/whatsapp";
 import { getNoticeAlerts, type NoticeAlerts } from "@/lib/data/notices";
 
 /**
@@ -516,8 +515,6 @@ export type FirmToday = {
   review: Counted<TaskListRow>;
 };
 
-const DOMAIN_STATUSES: readonly DomainStatus[] = ["not_started", "pending", "verified", "failed"];
-
 /**
  * Firm today in one call (0216; Partner only): the setup checklist's facts, the KPIs, approvals, the
  * FY's invoiced and collected by month, receivables ageing, this month's filing status, at-risk
@@ -544,7 +541,6 @@ function parseFirmToday(data: Json, fy: FinancialYear, today: DateString): FirmT
   const a = obj(r.approvals);
   const p = obj(r.pipeline);
   const risk = obj(r.at_risk);
-  const domain = str(s.domain_status) as DomainStatus | null;
   const decided = { accepted: int(p.accepted), rejected: int(p.rejected), expired: int(p.expired) };
   return {
     fy: (str(r.financial_year) ?? fy) as FinancialYear,
@@ -555,7 +551,6 @@ function parseFirmToday(data: Json, fy: FinancialYear, today: DateString): FirmT
       hasBank: s.has_bank === true,
       hasUpi: s.has_upi === true,
       hasFrn: s.has_frn === true,
-      domainStatus: domain && DOMAIN_STATUSES.includes(domain) ? domain : "not_started",
       lawReviewedAt: str(s.law_reviewed_at),
       partners: int(s.partners),
       partnersMissingMembership: arr(s.partners_missing_membership).map((m) => {
@@ -727,15 +722,12 @@ export async function getAssemblyHealth(supabase: ServerSupabase, today: DateStr
   };
 }
 
-export type WhatsAppHealth = { withoutGroup: number; numbers: Array<{ id: string; label: string; links: number; limit: number | null; atLimit: boolean; overLimit: boolean }> };
+export type WhatsAppHealth = { withoutGroup: number };
 
-/** Active clients with no WhatsApp group, and PCs linked per firm number against WhatsApp's limit (§7.25.7). */
+/** Active clients with no WhatsApp group (the group register, §7.25). */
 export async function getWhatsAppHealth(supabase: ServerSupabase): Promise<WhatsAppHealth> {
-  const [register, links] = await Promise.all([getRegisterSummary(supabase), getLinksPerNumber(supabase)]);
-  return {
-    withoutGroup: register.none,
-    numbers: links.map((n) => ({ id: n.number_id, label: n.label, links: n.active_links, limit: n.device_limit, atLimit: n.at_limit, overLimit: n.over_limit })),
-  };
+  const register = await getRegisterSummary(supabase);
+  return { withoutGroup: register.none };
 }
 
 /** Notice replies overdue and due within 7 days, firm-wide (notices). */
