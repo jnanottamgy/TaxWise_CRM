@@ -12,7 +12,8 @@ Tick every line before real client data goes into production. Owner: a Partner, 
 - [ ] The GitHub repository is **private**.
 
 ## 2. Database
-- [ ] Migrations applied in order with `supabase db push`; seed applied once.
+- [ ] Migrations and seed applied: GitHub → Actions → **Database** → Run workflow → production (it skips what is
+      already applied).
 - [ ] Settings → Diagnostics: schema version matches, every table answers, enums complete, RLS helpers present, buckets exist.
 - [ ] RLS is on for every table — prove it in the SQL editor:
       `select tablename from pg_tables where schemaname = 'public' and not rowsecurity;` returns no rows.

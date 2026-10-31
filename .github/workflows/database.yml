@@ -1,0 +1,59 @@
+name: Database
+
+# Applies the database migrations and the §16 seed to a Supabase project, when someone runs it:
+# GitHub → Actions → Database → Run workflow → staging or production.
+#
+# Migrations already applied are skipped, and the seed never overwrites what Settings has changed,
+# so running it again is harmless. Run it once for a new project, then after any update that adds a
+# file to supabase/migrations (the app's Settings → Diagnostics says when the database is behind).
+#
+# Needs repository secrets (Settings → Secrets and variables → Actions → New repository secret):
+#   SUPABASE_DB_URL_STAGING and SUPABASE_DB_URL_PRODUCTION: each project's connection string from
+#   Supabase → Connect → Session pooler (port 5432), with the database password in place of
+#   [YOUR-PASSWORD]. A password of letters and digits only needs no escaping.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which Supabase project
+        type: choice
+        options: [staging, production]
+        default: staging
+      dry_run:
+        description: Only list what would be applied
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  push:
+    name: Migrations and seed → ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Apply migrations and seed
+        env:
+          TARGET: ${{ inputs.target }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          URL_STAGING: ${{ secrets.SUPABASE_DB_URL_STAGING }}
+          URL_PRODUCTION: ${{ secrets.SUPABASE_DB_URL_PRODUCTION }}
+        run: |
+          if [ "$TARGET" = "production" ]; then DB_URL="$URL_PRODUCTION"; NAME=SUPABASE_DB_URL_PRODUCTION; else DB_URL="$URL_STAGING"; NAME=SUPABASE_DB_URL_STAGING; fi
+          if [ -z "$DB_URL" ]; then
+            echo "::error::The repository secret $NAME isn't set. Add it under Settings → Secrets and variables → Actions (see the top of this file)."
+            exit 1
+          fi
+          FLAGS="--include-seed --yes"
+          if [ "$DRY_RUN" = "true" ]; then FLAGS="$FLAGS --dry-run"; fi
+          supabase db push --db-url "$DB_URL" $FLAGS

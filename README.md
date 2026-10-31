@@ -73,10 +73,13 @@ answers fastest. Pick one before real data goes in: a project can't move region 
 
 For each project:
 
-1. **Schema:** apply the migrations with the Supabase CLI against the project's *direct* (session) connection —
-   `supabase link --project-ref <ref>` then `supabase db push` (applies `supabase/migrations/*.sql` in order and records
-   them). Seed with `supabase db push --include-seed` the first time. Diagnostics (Settings → Diagnostics) compares the
-   database's `schema_version` with the code's `EXPECTED_SCHEMA_VERSION`.
+1. **Schema:** from GitHub, no tools needed: add the repository secrets `SUPABASE_DB_URL_STAGING` and
+   `SUPABASE_DB_URL_PRODUCTION` (Settings → Secrets and variables → Actions; the value is Supabase → Connect →
+   Session pooler, with the database password filled in), then Actions → **Database** → Run workflow → staging or
+   production. It applies `supabase/migrations/*.sql` in order (skipping those already applied) and the seed
+   (`.github/workflows/database.yml`). From a computer instead: `supabase db push --db-url "<session pooler URL>"
+   --include-seed`. Settings → Diagnostics compares the database's `schema_version` with the code's
+   `EXPECTED_SCHEMA_VERSION`, so it shows when an update needs the workflow run again.
 2. **Auth → Providers → Email:** enabled (people sign in with an email address and a password; no email is sent);
    **disable sign-ups**; enable TOTP MFA. Session: refresh-token rotation on.
 3. **Auth → URL configuration:** Site URL = the app URL.
