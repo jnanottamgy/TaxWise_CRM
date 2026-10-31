@@ -249,7 +249,6 @@ describe("deviceLabel (active sessions, §7.1)", () => {
     expect(deviceLabel("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1")).toBe("Safari on iPhone");
     expect(deviceLabel("Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/141.0 Mobile Safari/537.36")).toBe("Chrome on Android");
     expect(deviceLabel("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6; rv:131.0) Gecko/20100101 Firefox/131.0")).toBe("Firefox on Mac");
-    expect(deviceLabel("Mozilla/5.0 (Windows NT 10.0) TaxWiseDesktop/1.2.0 Electron/33")).toBe("TaxWise Desktop");
     expect(deviceLabel(null)).toBe("Unknown device");
     expect(deviceLabel("curl/8.0")).toBe("Unknown device");
   });

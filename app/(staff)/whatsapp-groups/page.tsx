@@ -11,9 +11,8 @@ import { KpiStrip } from "@/components/app/kpi-strip"
 import { PageGuide } from "@/components/shell/page-slots"
 import { REGISTER_STATUSES, REGISTER_STATUS_LABEL } from "@/lib/domain/whatsapp"
 import { REGISTER_FILTERS, REGISTER_SORTABLE } from "@/lib/schemas/whatsapp"
-import { getDepartedPartnerNumbers, getLinksPerNumber, getRegisterSummary, listFirmNumbers, listWhatsAppRegister } from "@/lib/data/whatsapp"
+import { getDepartedPartnerNumbers, getRegisterSummary, listFirmNumbers, listWhatsAppRegister } from "@/lib/data/whatsapp"
 import { RegisterTable } from "@/components/whatsapp/register-table"
-import { LinksStrip } from "@/components/whatsapp/links-strip"
 
 export const metadata: Metadata = { title: "WhatsApp groups" }
 
@@ -35,18 +34,16 @@ const TONE = { none: "warning", to_create: "warning", active: "success", closed:
  * and who opened it last?" Every group with its status, members and when it was last opened, plus
  * every active client with no group yet; filters No group yet · To create · Active · Closed, and by
  * firm number (house rule 7: when a Partner leaves, this lists every group to remove their number
- * from). Above the list, PCs linked per number against WhatsApp's limit ("Staff office: 3 of 4").
- * Searched, sorted and paged in SQL (§2.3).
+ * from). Searched, sorted and paged in SQL (§2.3).
  */
 export default async function WhatsAppGroupsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { user, supabase } = await requireManagerOrPartner()
   const sp = await searchParams
   const t = parseTableParams(sp, { sortable: REGISTER_SORTABLE, defaultSort: { sort: "status_rank", dir: "asc" }, filters: REGISTER_FILTERS })
 
-  const [list, summary, links, numbers] = await Promise.all([
+  const [list, summary, numbers] = await Promise.all([
     attempt("list", user.id, () => listWhatsAppRegister(supabase, t)),
     attempt("summary", user.id, () => getRegisterSummary(supabase)),
-    attempt("links", user.id, () => getLinksPerNumber(supabase)),
     attempt("numbers", user.id, () => listFirmNumbers(supabase)),
   ])
   const departed = numbers.ok ? await attempt("departed", user.id, () => getDepartedPartnerNumbers(supabase, numbers.data)) : null
@@ -76,7 +73,6 @@ export default async function WhatsAppGroupsPage({ searchParams }: { searchParam
       <PageGuide title="WhatsApp groups">
         <p>Every client gets one WhatsApp group with the Partners&apos; numbers, the Managers&apos; office, the Staff office and the client&apos;s people. Each row opens the client&apos;s WhatsApp group tab, where the setup checklist and Open chat are.</p>
         <p className="mt-2">Filter by a firm number to see every group that holds it: when a Partner leaves, remove their number from each of those groups in WhatsApp, then select the groups here and record it.</p>
-        <p className="mt-2">PCs linked per number counts the PCs where TaxWise Desktop has that number open. WhatsApp allows 4 linked devices per number, or 10 with Meta Verified multi-agent.</p>
       </PageGuide>
       <PageHeader title="WhatsApp groups" description={description} className="pb-0 md:pb-0" />
 
@@ -92,14 +88,6 @@ export default async function WhatsAppGroupsPage({ searchParams }: { searchParam
       ) : summary.ok ? null : (
         <div className="rounded-lg border border-border bg-surface">
           <ErrorBlock message="Couldn't count the groups." errorRef={summary.ref} size="compact" />
-        </div>
-      )}
-
-      {links.ok ? (
-        <LinksStrip rows={links.data} />
-      ) : (
-        <div className="rounded-lg border border-border bg-surface">
-          <ErrorBlock message="Couldn't load the PCs linked per number." errorRef={links.ref} size="compact" />
         </div>
       )}
 

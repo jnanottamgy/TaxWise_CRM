@@ -60,7 +60,6 @@ export const can = {
   manageCovers: isManagerOrPartner,
   grantVaultInCover: isPartner,
   manageWhatsAppSettings: isPartner,
-  removeDesktopPc: isPartner,
   manageEngagementAndQuality: isManagerOrPartner,
   editPeerReview: isPartner,
   manageTemplates: isManagerOrPartner,

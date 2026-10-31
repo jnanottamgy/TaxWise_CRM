@@ -45,7 +45,6 @@ export default function WhatsAppSettingsLoading() {
           <Skeleton className="h-16 w-full" />
         </div>
       </section>
-      <CardFrame title="Linked PCs" rows={3} />
       <span role="status" className="sr-only">
         Loading the WhatsApp settings…
       </span>

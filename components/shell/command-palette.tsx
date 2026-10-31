@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Command as CommandPrimitive } from "cmdk";
-import { toast } from "sonner";
 import {
   ArrowRightIcon,
   Building2Icon,
@@ -36,7 +35,6 @@ import { cn } from "@/lib/utils";
 import { saveTheme } from "@/server/actions/preferences";
 import { useShell } from "./shell-context";
 import { useRecentSearches } from "./use-recent";
-import { getDesktopBridge } from "./use-desktop";
 import {
   MIN_SEARCH_LENGTH,
   parseSearchResponse,
@@ -259,23 +257,11 @@ function PaletteBody({ onDone }: { onDone: () => void }) {
     go(href);
   };
 
-  // §7.25.5 Open chat from ⌘K: inside TaxWise Desktop the app opens the client's group itself
-  // (POST /api/desktop/whatsapp/open does the access check and the audit); in a browser or on a
-  // phone it lands on the client's WhatsApp tab, whose Open chat button does the rest.
+  // §7.25.5 Open chat from ⌘K: lands on the client's WhatsApp group tab, whose Open chat button
+  // makes the access check and opens WhatsApp Web (or the phone app) with the group's name copied.
   const openWhatsApp = (clientId: string) => {
     remember(trimmed);
-    const bridge = getDesktopBridge();
-    if (!bridge) {
-      go(`/clients/${clientId}?tab=whatsapp`);
-      return;
-    }
-    onDone();
-    void bridge
-      .openClientChat(clientId)
-      .then((r) => {
-        if (!r.ok) toast.error(r.error);
-      })
-      .catch(() => toast.error("TaxWise Desktop didn't open the chat. Try Open chat on the client's WhatsApp tab."));
+    go(`/clients/${clientId}?tab=whatsapp`);
   };
   const whatsAppClients = user.role === "client" ? [] : (results.find((g) => g.type === "client")?.items ?? []).slice(0, WHATSAPP_COMMANDS);
 

@@ -445,7 +445,6 @@ export const LOGIN_STATUS: Record<LoginStatus, { label: string; tone: "success" 
 export function deviceLabel(userAgent: string | null | undefined): string {
   const ua = userAgent ?? "";
   if (!ua) return "Unknown device";
-  if (/TaxWiseDesktop|Electron/i.test(ua)) return "TaxWise Desktop";
   const browser = /Edg\//.test(ua)
     ? "Edge"
     : /OPR\/|Opera/.test(ua)

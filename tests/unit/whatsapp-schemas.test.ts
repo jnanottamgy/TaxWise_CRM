@@ -3,9 +3,6 @@ import { todayIST } from "@/lib/domain/fy";
 import {
   AddMemberSchema,
   CloseGroupSchema,
-  DesktopCheckinBodySchema,
-  DesktopHealthBodySchema,
-  DesktopLinkBodySchema,
   FirmNumberSchema,
   MarkCreatedSchema,
   OpenChatSchema,
@@ -51,8 +48,10 @@ describe("group forms (§7.25.2)", () => {
     expect(AddMemberSchema.safeParse({ ...base, kind: "other_person", displayName: "Auditor", number: "+91 98765 43210" }).success).toBe(true);
   });
 
-  it("Open chat goes by browser, phone or desktop", () => {
+  it("Open chat goes by browser or phone", () => {
     expect(OpenChatSchema.parse({ clientId: G, via: "browser" }).groupId).toBeNull();
+    expect(OpenChatSchema.safeParse({ clientId: G, via: "phone" }).success).toBe(true);
+    expect(OpenChatSchema.safeParse({ clientId: G, via: "desktop" }).success).toBe(false);
     expect(OpenChatSchema.safeParse({ clientId: G, via: "iframe" }).success).toBe(false);
   });
 });
@@ -63,16 +62,14 @@ describe("Settings → WhatsApp (§7.21)", () => {
     whatsapp_country_code: "+91",
     whatsapp_group_name_format: "TW · {client_code} · {short_name}",
     whatsapp_signature: "– {first_name}",
-    whatsapp_client_mode: true,
-    whatsapp_employee_notifications: false,
     whatsapp_employee_browser_window: false,
-    whatsapp_linked_device_limit: "4",
-    desktop_download_url: "",
     whatsapp_house_rules: "1. Same firm numbers in every client group, plus the client's people.",
   };
 
-  it("accepts the seeded defaults", () => {
-    expect(WhatsAppSettingsSchema.parse(settings)).toMatchObject({ whatsapp_country_code: "91", whatsapp_linked_device_limit: 4, desktop_download_url: null });
+  it("accepts the seeded defaults, and writes nothing that only TaxWise Desktop used", () => {
+    expect(WhatsAppSettingsSchema.parse(settings)).toMatchObject({ whatsapp_country_code: "91", whatsapp_employee_browser_window: false });
+    const parsed = WhatsAppSettingsSchema.parse({ ...settings, whatsapp_client_mode: false, whatsapp_linked_device_limit: "10", desktop_download_url: "https://x.example/setup.exe" });
+    expect(Object.keys(parsed).sort()).toEqual(["updated_at", "whatsapp_country_code", "whatsapp_employee_browser_window", "whatsapp_group_name_format", "whatsapp_house_rules", "whatsapp_signature"]);
   });
 
   it("refuses a format without the client code, an unknown placeholder, and a signature without {first_name}", () => {
@@ -81,10 +78,7 @@ describe("Settings → WhatsApp (§7.21)", () => {
     expect(firstError(WhatsAppSettingsSchema.safeParse({ ...settings, whatsapp_signature: "– Team" }), "whatsapp_signature")).toMatch(/first_name/);
   });
 
-  it("offers 4 or 10 linked devices and an https installer link", () => {
-    expect(WhatsAppSettingsSchema.safeParse({ ...settings, whatsapp_linked_device_limit: "10" }).success).toBe(true);
-    expect(WhatsAppSettingsSchema.safeParse({ ...settings, whatsapp_linked_device_limit: "6" }).success).toBe(false);
-    expect(firstError(WhatsAppSettingsSchema.safeParse({ ...settings, desktop_download_url: "http://x.example/setup.exe" }), "desktop_download_url")).toMatch(/https/);
+  it("takes the country code as 1 to 4 digits", () => {
     expect(firstError(WhatsAppSettingsSchema.safeParse({ ...settings, whatsapp_country_code: "091" }), "whatsapp_country_code")).toMatch(/country code/);
   });
 
@@ -100,20 +94,19 @@ describe("Settings → WhatsApp (§7.21)", () => {
     in_every_client_group: true,
     group_admin: false,
     shared: true,
-    usable_by: ["employee", "partner", "manager"],
     two_step_verification_on: true,
     is_active: true,
   };
 
-  it("normalises the number and orders usable_by", () => {
-    expect(FirmNumberSchema.parse(number)).toMatchObject({ number: "919876500005", usable_by: ["partner", "manager", "employee"], custodian_employee_id: null, employee_id: null });
+  it("normalises the number, and drops who could use it in TaxWise Desktop", () => {
+    expect(FirmNumberSchema.parse(number)).toMatchObject({ number: "919876500005", custodian_employee_id: null, employee_id: null });
+    expect(FirmNumberSchema.parse({ ...number, usable_by: ["employee"] })).not.toHaveProperty("usable_by");
   });
 
-  it("keeps a Partner's own number theirs alone", () => {
-    const partner = { ...number, kind: "partner" as const, label: "CA Vinay H Karlagere (Partner)", usable_by: ["partner", "manager"] as FirmNumberInput["usable_by"] };
-    expect(firstError(FirmNumberSchema.safeParse(partner), "usable_by")).toMatch(/Partners only/);
-    expect(firstError(FirmNumberSchema.safeParse({ ...partner, usable_by: ["partner"] }), "employee_id")).toMatch(/Choose the Partner/);
-    expect(FirmNumberSchema.safeParse({ ...partner, usable_by: ["partner"], employee_id: P }).success).toBe(true);
+  it("gives a Partner's own number its Partner, and only that kind an owner", () => {
+    const partner = { ...number, kind: "partner" as const, label: "CA Vinay H Karlagere (Partner)" };
+    expect(firstError(FirmNumberSchema.safeParse(partner), "employee_id")).toMatch(/Choose the Partner/);
+    expect(FirmNumberSchema.safeParse({ ...partner, employee_id: P }).success).toBe(true);
     expect(firstError(FirmNumberSchema.safeParse({ ...number, employee_id: P }), "employee_id")).toMatch(/Only a Partner's own number/);
   });
 
@@ -121,21 +114,5 @@ describe("Settings → WhatsApp (§7.21)", () => {
     expect(firstError(FirmNumberSchema.safeParse({ ...number, number: "" }), "number")).toMatch(/before switching it on/);
     expect(firstError(FirmNumberSchema.safeParse({ ...number, number: "080 2345" }), "number")).toMatch(/WhatsApp can use/);
     expect(FirmNumberSchema.safeParse({ ...number, number: "", is_active: false }).success).toBe(true);
-    expect(firstError(FirmNumberSchema.safeParse({ ...number, usable_by: [] }), "usable_by")).toMatch(/Choose who may use/);
-  });
-});
-
-describe("desktop API bodies (docs/DESKTOP-API.md)", () => {
-  const key = "e".repeat(64);
-  it("checks the device key and trims what the app sends", () => {
-    expect(DesktopCheckinBodySchema.parse({ deviceKey: key, deviceName: "  FRONTDESK-2  ", os: "Windows 10.0", appVersion: "1.4.0" })).toEqual({
-      deviceKey: key,
-      deviceName: "FRONTDESK-2",
-      os: "Windows 10.0",
-      appVersion: "1.4.0",
-    });
-    expect(DesktopCheckinBodySchema.safeParse({ deviceKey: "E".repeat(64), deviceName: "PC" }).success).toBe(false);
-    expect(DesktopLinkBodySchema.safeParse({ deviceKey: key, numberId: N, linked: "yes" }).success).toBe(false);
-    expect(DesktopHealthBodySchema.safeParse({ deviceKey: key, failing: ["searchBox"] }).success).toBe(true);
   });
 });

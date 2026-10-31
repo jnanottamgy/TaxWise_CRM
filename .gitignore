@@ -45,6 +45,7 @@ next-env.d.ts
 /.taste-skill/
 /test-results/
 /playwright-report/
+# Build output of the removed TaxWise Desktop app, which older checkouts may still have on disk.
 /desktop/node_modules/
 /desktop/dist/
 /desktop/out/

@@ -1,7 +1,7 @@
 /**
- * WhatsApp groups, Settings → WhatsApp and the desktop API (§7.25, §7.21, docs/DESKTOP-API.md): zod
- * schemas shared by the forms (react-hook-form + zodResolver) and the server (defineAction and the
- * route handlers parse again). Inputs are what a form holds; outputs are what the server writes.
+ * WhatsApp groups and Settings → WhatsApp (§7.25, §7.21): zod schemas shared by the forms
+ * (react-hook-form + zodResolver) and the server (defineAction parses again). Inputs are what a
+ * form holds; outputs are what the server writes.
  *
  * Client-safe: pure, no server imports.
  */
@@ -11,9 +11,6 @@ import { isDateString, todayIST } from "@/lib/domain/fy";
 import { normalizeWhatsAppNumber } from "@/lib/domain/messaging";
 import {
   CHECKLIST_STEP_IDS,
-  DESKTOP_ROLES,
-  DEVICE_KEY_PATTERN,
-  DEVICE_LIMIT_OPTIONS,
   GROUP_NAME_MAX,
   REGISTER_STATUSES,
   WHATSAPP_MEMBER_KINDS,
@@ -137,15 +134,11 @@ export type CloseGroupInput = z.input<typeof CloseGroupSchema>;
 export const GroupIdSchema = z.object({ groupId: id });
 export type GroupIdInput = z.input<typeof GroupIdSchema>;
 
-/**
- * Open chat from a page (§7.25.1, §7.25.8): a browser window, the phone app, or TaxWise Desktop for
- * a group other than the client's primary one (the app's own Open chat opens the primary group and
- * makes this check itself through /api/desktop/whatsapp/open).
- */
+/** Open chat from a page (§7.25.1, §7.25.8): WhatsApp Web in a browser window, or the phone app. */
 export const OpenChatSchema = z.object({
   clientId: id,
   groupId: id.nullish().transform((v) => v ?? null),
-  via: z.enum(["browser", "phone", "desktop"], { error: RELOAD }),
+  via: z.enum(["browser", "phone"], { error: RELOAD }),
 });
 export type OpenChatInput = z.input<typeof OpenChatSchema>;
 
@@ -216,25 +209,6 @@ function signatureError(v: string): string | null {
   return null;
 }
 
-const httpsUrl = z
-  .string()
-  .trim()
-  .max(500, { error: "Use 500 characters or fewer." })
-  .nullish()
-  .transform((v) => (v ? v : null))
-  .refine(
-    (v) => {
-      if (v === null) return true;
-      try {
-        const u = new URL(v);
-        return u.protocol === "https:" && !u.username && !u.password;
-      } catch {
-        return false;
-      }
-    },
-    { error: "Enter the installer's full https:// address." },
-  );
-
 export const WhatsAppSettingsSchema = z.object({
   updated_at: token,
   whatsapp_country_code: z
@@ -257,14 +231,7 @@ export const WhatsAppSettingsSchema = z.object({
       const e = signatureError(v);
       if (e) ctx.addIssue({ code: "custom", message: e });
     }),
-  whatsapp_client_mode: z.boolean(),
-  whatsapp_employee_notifications: z.boolean(),
   whatsapp_employee_browser_window: z.boolean(),
-  whatsapp_linked_device_limit: z
-    .union([z.string(), z.number()], { error: "Choose the linked device limit." })
-    .transform((v) => Number(v))
-    .refine((v) => (DEVICE_LIMIT_OPTIONS as readonly number[]).includes(v), { error: "Choose 4, or 10 with Meta Verified multi-agent." }),
-  desktop_download_url: httpsUrl,
   /** House rules (§7.25.10), shown to staff. */
   whatsapp_house_rules: z
     .string({ error: "Enter the house rules." })
@@ -312,7 +279,6 @@ export const FirmNumberSchema = z
     in_every_client_group: z.boolean(),
     group_admin: z.boolean(),
     shared: z.boolean(),
-    usable_by: z.array(z.enum(DESKTOP_ROLES, { error: "Choose Partners, Managers or Employees." })).transform((v) => DESKTOP_ROLES.filter((r) => v.includes(r))),
     two_step_verification_on: z.boolean(),
     is_active: z.boolean(),
   })
@@ -323,11 +289,9 @@ export const FirmNumberSchema = z
     if (v.is_active && !v.number) ctx.addIssue({ code: "custom", path: ["number"], message: "Enter the number before switching it on." });
     if (v.kind === "partner") {
       if (v.is_active && !v.employee_id) ctx.addIssue({ code: "custom", path: ["employee_id"], message: "Choose the Partner whose number this is." });
-      if (v.usable_by.join(",") !== "partner") ctx.addIssue({ code: "custom", path: ["usable_by"], message: "A Partner's own number is used by that Partner only: choose Partners only." });
     } else if (v.employee_id) {
       ctx.addIssue({ code: "custom", path: ["employee_id"], message: "Only a Partner's own number has an owner." });
     }
-    if (v.usable_by.length === 0) ctx.addIssue({ code: "custom", path: ["usable_by"], message: "Choose who may use this number in TaxWise Desktop." });
   })
   .transform((v) => ({ ...v, number: v.number ? normalizeWhatsAppNumber(v.number, { countryCode: v.country_code }) : null }));
 export type FirmNumberInput = z.input<typeof FirmNumberSchema>;
@@ -335,55 +299,3 @@ export type FirmNumberValues = z.output<typeof FirmNumberSchema>;
 
 export const NumberIdSchema = z.object({ numberId: id });
 export type NumberIdInput = z.input<typeof NumberIdSchema>;
-
-export const DeviceIdSchema = z.object({ deviceId: id });
-export type DeviceIdInput = z.input<typeof DeviceIdSchema>;
-
-export const RenameDeviceSchema = z.object({
-  deviceId: id,
-  name: z
-    .string({ error: "Enter the PC's name." })
-    .transform((v) => v.replace(/\s+/g, " ").trim())
-    .pipe(z.string().min(2, { error: "Enter a name of at least 2 characters, such as FRONTDESK-2." }).max(100, { error: "Use 100 characters or fewer." })),
-});
-export type RenameDeviceInput = z.input<typeof RenameDeviceSchema>;
-
-// -------------------------------------------------------------------------------------------------
-// Desktop API bodies (docs/DESKTOP-API.md)
-// -------------------------------------------------------------------------------------------------
-
-const deviceKey = z.string({ error: "This PC's key is missing." }).regex(DEVICE_KEY_PATTERN, { error: "This PC's key isn't valid." });
-
-export const DesktopOpenBodySchema = z.object({ clientId: z.uuid({ error: "That client doesn't exist." }) });
-
-export const DesktopCheckinBodySchema = z.object({
-  deviceKey,
-  deviceName: z.string().transform((v) => v.replace(/\s+/g, " ").trim().slice(0, 100)),
-  os: z
-    .string()
-    .max(200)
-    .nullish()
-    .transform((v) => (v ? v.trim().slice(0, 100) : null)),
-  appVersion: z
-    .string()
-    .max(80)
-    .nullish()
-    .transform((v) => (v ? v.trim().slice(0, 40) : null)),
-});
-
-export const DesktopLinkBodySchema = z.object({
-  deviceKey,
-  numberId: z.uuid({ error: "That firm number doesn't exist." }),
-  linked: z.boolean({ error: "Say whether the number was linked or unlinked." }),
-});
-
-export const DesktopHealthBodySchema = z.object({
-  deviceKey,
-  failing: z.array(z.string().max(120)).max(100),
-});
-
-export const DesktopAccessDeniedBodySchema = z.object({
-  deviceKey,
-  numberId: z.string().max(64),
-  chatTitle: z.string().max(1000),
-});

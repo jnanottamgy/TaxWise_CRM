@@ -30,12 +30,12 @@ function route(pathname: string, session: SessionHint | null, extra: Partial<Rou
 }
 
 describe("public paths", () => {
-  it.each(["/login", "/forgot-password", "/reset-password", "/auth/confirm", "/setup", "/q/abc123", "/q/abc123/pdf", "/api/q/abc123/pdf", "/api/desktop/context", "/api/desktop/devices/checkin", "/api/health", "/api/cron/receivables", "/api/webhooks/resend", "/_next/static/chunk.js", "/favicon.ico", "/logo.svg"])(
+  it.each(["/login", "/forgot-password", "/reset-password", "/auth/confirm", "/setup", "/q/abc123", "/q/abc123/pdf", "/api/q/abc123/pdf", "/api/health", "/api/cron/receivables", "/api/webhooks/resend", "/_next/static/chunk.js", "/favicon.ico", "/logo.svg"])(
     "%s is public",
     (p) => expect(isPublicPath(p)).toBe(true),
   );
 
-  it.each(["/dashboard", "/clients/1", "/portal", "/portal/invoices/1", "/api/files/sign", "/api/pdf/quotation/1", "/api/portal/invoices/1/pdf", "/api/desktop", "/api/qx/1", "/no-access", "/mfa", "/set-password", "/q", "/loginx", "/setup/extra"])("%s is not public", (p) =>
+  it.each(["/dashboard", "/clients/1", "/portal", "/portal/invoices/1", "/api/files/sign", "/api/pdf/quotation/1", "/api/portal/invoices/1/pdf", "/api/desktop/context", "/api/qx/1", "/no-access", "/mfa", "/set-password", "/q", "/loginx", "/setup/extra"])("%s is not public", (p) =>
     expect(isPublicPath(p)).toBe(false),
   );
 
@@ -44,14 +44,6 @@ describe("public paths", () => {
     expect(route("/api/q/abc123/pdf", null)).toEqual({ kind: "next" });
     expect(route("/setup", null)).toEqual({ kind: "next" });
     expect(route("/api/cron/receivables", null)).toEqual({ kind: "next" });
-  });
-
-  it("lets TaxWise Desktop's API answer for itself, signed in or not (device_revoked before the session check)", () => {
-    expect(route("/api/desktop/context", null)).toEqual({ kind: "next" });
-    expect(route("/api/desktop/devices/checkin", null)).toEqual({ kind: "next" });
-    // The route applies the two-step gate itself (server/desktop.ts), as JSON, never a redirect.
-    expect(route("/api/desktop/context", { ...partner, aal: "aal1" })).toEqual({ kind: "next" });
-    expect(route("/api/desktop/context", client)).toEqual({ kind: "next" });
   });
 });
 

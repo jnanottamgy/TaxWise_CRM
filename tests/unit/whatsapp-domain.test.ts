@@ -7,10 +7,8 @@ import {
   buildVCardFile,
   checklistProgress,
   checklistToJson,
-  chooseOpenNumber,
   contactCardName,
   contactCards,
-  contextNumbers,
   copyAllNumbersText,
   defaultSelectedContactIds,
   devicesReviewDue,
@@ -20,11 +18,8 @@ import {
   groupNameHasCode,
   groupReminderDue,
   inviteCodeFromLink,
-  isDeviceKey,
-  isDeviceStale,
   isoWeekKey,
   lastOpenedSentence,
-  linkedLabel,
   memberTone,
   membersFromChecklist,
   nextOpenStep,
@@ -57,17 +52,16 @@ function n(over: Partial<FirmNumberLike> & Pick<FirmNumberLike, "id" | "label" |
     in_every_client_group: true,
     group_admin: false,
     is_active: true,
-    usable_by: ["partner"],
     ...over,
   };
 }
 
 const FIRM: FirmNumberLike[] = [
-  n({ id: "num-staff", label: "Staff office", kind: "staff_office", number: "919876500005", usable_by: ["partner", "manager", "employee"] }),
+  n({ id: "num-staff", label: "Staff office", kind: "staff_office", number: "919876500005" }),
   n({ id: "num-p1", label: "CA Vinay H Karlagere (Partner)", kind: "partner", number: "919876500001", employee_id: P1 }),
   n({ id: "num-p2", label: "Partner 2", kind: "partner", number: "919876500002", employee_id: P2 }),
   n({ id: "num-p3", label: "Partner 3", kind: "partner", number: null, is_active: false, employee_id: null }),
-  n({ id: "num-mgr", label: "Managers' office", kind: "managers_office", number: "919876500004", group_admin: true, usable_by: ["partner", "manager"] }),
+  n({ id: "num-mgr", label: "Managers' office", kind: "managers_office", number: "919876500004", group_admin: true }),
 ];
 
 const CONTACTS: ContactLike[] = [
@@ -287,46 +281,6 @@ describe("invite links", () => {
     expect(normaliseInviteLink(" AbCdEf0123456789XyZ ")).toBe("https://chat.whatsapp.com/AbCdEf0123456789XyZ");
     expect(normaliseInviteLink("chat.whatsapp.com/AbCdEf0123456789XyZ")).toBe("https://chat.whatsapp.com/AbCdEf0123456789XyZ");
     expect(normaliseInviteLink("not a link")).toBeNull();
-  });
-});
-
-describe("TaxWise Desktop numbers (§7.25.4)", () => {
-  it("gives each role its numbers; a Partner's own number only to its owner", () => {
-    expect(contextNumbers(FIRM, "employee", ME).map((x) => x.id)).toEqual(["num-staff"]);
-    expect(contextNumbers(FIRM, "manager", ME).map((x) => x.id)).toEqual(["num-mgr", "num-staff"]);
-    expect(contextNumbers(FIRM, "partner", P1).map((x) => x.id)).toEqual(["num-p1", "num-mgr", "num-staff"]);
-    expect(contextNumbers(FIRM, "partner", P2).map((x) => x.id)).toEqual(["num-p2", "num-mgr", "num-staff"]);
-    expect(contextNumbers(FIRM, "client", null)).toEqual([]);
-    // an owned number never reaches anyone else, whatever usable_by says
-    const leaky = [n({ id: "num-x", label: "X", kind: "partner", employee_id: P1, usable_by: ["partner", "manager", "employee"] })];
-    expect(contextNumbers(leaky, "manager", ME)).toEqual([]);
-    expect(contextNumbers(leaky, "partner", P2)).toEqual([]);
-    expect(contextNumbers(FIRM, "partner", P1)[0]).toEqual({ id: "num-p1", label: "CA Vinay H Karlagere (Partner)", kind: "partner", usableBy: ["partner"], ownerEmployeeId: P1 });
-  });
-
-  it("chooses the number Open chat uses", () => {
-    const members = new Set(["num-p1", "num-mgr", "num-staff"]);
-    expect(chooseOpenNumber("employee", ME, contextNumbers(FIRM, "employee", ME), members)).toBe("num-staff");
-    expect(chooseOpenNumber("manager", ME, contextNumbers(FIRM, "manager", ME), members)).toBe("num-mgr");
-    expect(chooseOpenNumber("partner", P1, contextNumbers(FIRM, "partner", P1), members)).toBe("num-p1");
-    // Partner 2's number isn't in this group: the Managers' office
-    expect(chooseOpenNumber("partner", P2, contextNumbers(FIRM, "partner", P2), members)).toBe("num-mgr");
-    expect(chooseOpenNumber("employee", ME, [], members)).toBeNull();
-    // a Manager without the Managers' office falls back to the Staff office
-    const noMgr = contextNumbers(FIRM.filter((f) => f.kind !== "managers_office"), "manager", ME);
-    expect(chooseOpenNumber("manager", ME, noMgr, members)).toBe("num-staff");
-  });
-
-  it("checks device keys and flags idle PCs", () => {
-    expect(isDeviceKey("a".repeat(64))).toBe(true);
-    expect(isDeviceKey("A".repeat(64))).toBe(false);
-    expect(isDeviceKey("device-key-1")).toBe(false);
-    const now = new Date("2026-10-23T06:00:00Z");
-    expect(isDeviceStale({ last_seen_at: "2026-09-22T06:00:00Z" }, now)).toBe(true);
-    expect(isDeviceStale({ last_seen_at: "2026-09-24T06:00:00Z" }, now)).toBe(false);
-    expect(isDeviceStale({ last_seen_at: null, created_at: "2026-08-01T00:00:00Z" }, now)).toBe(true);
-    expect(isDeviceStale({ last_seen_at: null }, now)).toBe(false);
-    expect(linkedLabel("Staff office", 3, 4)).toBe("Staff office: 3 of 4");
   });
 });
 

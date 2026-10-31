@@ -25,9 +25,9 @@ import type { RegisterSort } from "@/lib/schemas/whatsapp";
  * Reads for client WhatsApp groups, the WhatsApp groups page and Settings → WhatsApp (§7.25, §7.21).
  * Every function runs under the caller's session, so RLS applies (§4.6): staff read groups only for
  * clients they may open (can_open_whatsapp); Employees through client_whatsapp_groups_public, never
- * the invite link; the desktop tables are Partner/Manager only. Invite links are never returned to
- * a page: Partners and Managers reveal one on demand (server/actions/whatsapp-groups.ts). Functions
- * throw on a database error; the page catches it and shows the block's error with its Ref.
+ * the invite link. Invite links are never returned to a page: Partners and Managers reveal one on
+ * demand (server/actions/whatsapp-groups.ts). Functions throw on a database error; the page catches
+ * it and shows the block's error with its Ref.
  */
 
 // -------------------------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ export interface FirmNumberRow extends FirmNumberLike {
 }
 
 const NUMBER_COLUMNS =
-  "id, label, number, kind, employee_id, custodian_employee_id, in_every_client_group, group_admin, shared, usable_by, two_step_verification_on, devices_reviewed_at, is_active, updated_at";
+  "id, label, number, kind, employee_id, custodian_employee_id, in_every_client_group, group_admin, shared, two_step_verification_on, devices_reviewed_at, is_active, updated_at";
 
 /** Every firm WhatsApp number (staff read them all, §4.6), in display order, with owner and custodian names. */
 export async function listFirmNumbers(supabase: ServerSupabase): Promise<FirmNumberRow[]> {
@@ -65,7 +65,6 @@ export async function listFirmNumbers(supabase: ServerSupabase): Promise<FirmNum
   return rows
     .map((r) => ({
       ...r,
-      usable_by: (r.usable_by ?? []) as string[],
       owner_name: r.employee_id ? (names.get(r.employee_id) ?? null) : null,
       custodian_name: r.custodian_employee_id ? (names.get(r.custodian_employee_id) ?? null) : null,
     }))
@@ -78,21 +77,15 @@ export interface WhatsAppFirmSettings {
   countryCode: string;
   nameFormat: string;
   signature: string;
-  clientMode: boolean;
-  employeeNotifications: boolean;
   browserForEmployees: boolean;
-  deviceLimit: number;
   houseRules: string | null;
-  downloadUrl: string | null;
 }
 
 /** The WhatsApp settings every staff member reads (firm_settings: SELECT for staff, §4.6). */
 export async function getWhatsAppFirmSettings(supabase: ServerSupabase): Promise<WhatsAppFirmSettings> {
   const { data, error } = await supabase
     .from("firm_settings")
-    .select(
-      "firm_name, phone, whatsapp_country_code, whatsapp_group_name_format, whatsapp_signature, whatsapp_client_mode, whatsapp_employee_notifications, whatsapp_employee_browser_window, whatsapp_linked_device_limit, whatsapp_house_rules, desktop_download_url",
-    )
+    .select("firm_name, phone, whatsapp_country_code, whatsapp_group_name_format, whatsapp_signature, whatsapp_employee_browser_window, whatsapp_house_rules")
     .eq("id", 1)
     .maybeSingle();
   if (error) throw error;
@@ -102,12 +95,8 @@ export async function getWhatsAppFirmSettings(supabase: ServerSupabase): Promise
     countryCode: data?.whatsapp_country_code ?? MESSAGING_DEFAULTS.countryCode,
     nameFormat: data?.whatsapp_group_name_format ?? DEFAULT_GROUP_NAME_FORMAT,
     signature: data?.whatsapp_signature ?? MESSAGING_DEFAULTS.whatsappSignature,
-    clientMode: data?.whatsapp_client_mode ?? true,
-    employeeNotifications: data?.whatsapp_employee_notifications ?? false,
     browserForEmployees: data?.whatsapp_employee_browser_window ?? false,
-    deviceLimit: data?.whatsapp_linked_device_limit ?? 4,
     houseRules: data?.whatsapp_house_rules ?? null,
-    downloadUrl: data?.desktop_download_url ?? (process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL || null),
   };
 }
 
@@ -384,7 +373,11 @@ export interface LinksPerNumber {
   over_limit: boolean;
 }
 
-/** PCs linked per active firm number against WhatsApp's limit (§7.25.7). Partners and Managers (RLS on the desktop tables). */
+/**
+ * PCs linked per active firm number against WhatsApp's limit (§7.25.7), from the desktop tables
+ * (Partners and Managers, RLS). Only the dashboard's practice health reads it; nothing records new
+ * links since TaxWise Desktop was removed.
+ */
 export async function getLinksPerNumber(supabase: ServerSupabase): Promise<LinksPerNumber[]> {
   const { data, error } = await supabase
     .from("whatsapp_links_per_number")
@@ -439,12 +432,8 @@ export interface WhatsAppSettingsRow {
   whatsapp_country_code: string;
   whatsapp_group_name_format: string;
   whatsapp_signature: string;
-  whatsapp_client_mode: boolean;
-  whatsapp_employee_notifications: boolean;
   whatsapp_employee_browser_window: boolean;
-  whatsapp_linked_device_limit: number;
   whatsapp_house_rules: string | null;
-  desktop_download_url: string | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -453,12 +442,8 @@ export const WHATSAPP_SETTINGS_COLUMNS = [
   "whatsapp_country_code",
   "whatsapp_group_name_format",
   "whatsapp_signature",
-  "whatsapp_client_mode",
-  "whatsapp_employee_notifications",
   "whatsapp_employee_browser_window",
-  "whatsapp_linked_device_limit",
   "whatsapp_house_rules",
-  "desktop_download_url",
 ] as const;
 
 export async function getWhatsAppSettingsRow(supabase: ServerSupabase): Promise<{ row: WhatsAppSettingsRow; lastChange: { at: string; byName: string | null } } | null> {
@@ -494,56 +479,4 @@ export async function getNumberPeople(supabase: ServerSupabase): Promise<{ partn
     .filter((e) => ["partner", "manager", "employee"].includes(String(e.staff_role)))
     .map((e) => ({ id: e.id, name: e.full_name, role: String(e.staff_role) }));
   return { partners: staff.filter((s) => s.role === "partner"), staff };
-}
-
-export interface DeviceLink {
-  link_id: string;
-  number_id: string;
-  label: string;
-  kind: string;
-  linked_at: string;
-  linked_by_name: string | null;
-}
-
-export interface DeviceRow {
-  id: string;
-  device_name: string;
-  os: string | null;
-  app_version: string | null;
-  last_user_name: string | null;
-  last_seen_at: string | null;
-  revoked_at: string | null;
-  revoked_by_name: string | null;
-  failing_checks: string[] | null;
-  created_at: string;
-  links: DeviceLink[];
-}
-
-/** Linked PCs (§7.25.7): live PCs first by last seen, then removed ones. Partners and Managers (RLS). */
-export async function listLinkedPcs(supabase: ServerSupabase): Promise<DeviceRow[]> {
-  const { data, error } = await supabase
-    .from("desktop_devices_overview")
-    .select("id, device_name, os, app_version, last_user_name, last_seen_at, revoked_at, revoked_by_name, failing_checks, created_at, links")
-    .order("revoked_at", { ascending: false, nullsFirst: true })
-    .order("last_seen_at", { ascending: false, nullsFirst: false })
-    .limit(200);
-  if (error) throw error;
-  return ((data ?? []) as unknown as DeviceRow[]).map((d) => ({ ...d, links: Array.isArray(d.links) ? d.links : [] }));
-}
-
-// -------------------------------------------------------------------------------------------------
-// Files saved from WhatsApp (§7.25.6)
-// -------------------------------------------------------------------------------------------------
-
-/** Clients the person may file a WhatsApp download under (their RLS: Employees their own and covered ones). */
-export async function searchClientsForFile(supabase: ServerSupabase, q: string, limit = 20): Promise<Array<{ value: string; label: string; description: string }>> {
-  let query = supabase.from("clients").select("id, display_name, client_code").is("deleted_at", null);
-  const s = orSafe(q).slice(0, 80);
-  if (s) {
-    const like = `%${escapeLike(s)}%`;
-    query = query.or(`display_name.ilike.${like},client_code.ilike.${like}`);
-  }
-  const { data, error } = await query.order("display_name").limit(limit);
-  if (error) throw error;
-  return (data ?? []).map((c) => ({ value: c.id, label: c.display_name, description: String(c.client_code) }));
 }

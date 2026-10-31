@@ -1,16 +1,16 @@
 /**
- * Client WhatsApp groups and TaxWise Desktop (§7.25): the rules that don't need a database.
+ * Client WhatsApp groups (§7.25): the rules that don't need a database.
  *
  * - Group names from the Settings format, default `TW · {client_code} · {short_name}` (§7.25.2
- *   step 1, §7.21). The client code is what makes a group findable in WhatsApp search, and how
- *   TaxWise Desktop finds it (§7.25.5), so every format and every name must carry it.
+ *   step 1, §7.21). The client code is what makes a group findable in WhatsApp search, where Open
+ *   chat's copied name is pasted (§7.25.8), so every format and every name must carry it.
  * - The seven-step setup checklist (§7.25.2), stored in `client_whatsapp_groups.checklist` as
  *   `{ <step>: { done, by, at } }`; the client contacts ticked in step 3 ride on that step.
  * - Contact cards (vCard 3.0) named `XYZ Traders – Ramesh (Director)` for the client's people and
  *   `TW Partner – CA Vinay`, `TW Managers' office`, `TW Staff office` for the firm's numbers.
  * - The members a group gets when it is marked created, from the checklist.
- * - TaxWise Desktop: which firm numbers a person may use (§7.25.4), which one Open chat uses, invite
- *   codes, device keys, stale PCs (§7.25.7), the browser window of §7.25.8.
+ * - Invite links, the browser window of §7.25.8, the register's statuses and the weekly
+ *   housekeeping (§8).
  *
  * Pure and client-safe.
  */
@@ -36,12 +36,6 @@ export const WHATSAPP_NUMBER_KIND_LABEL: Record<WhatsAppNumberKind, string> = {
 
 export const WHATSAPP_MEMBER_KINDS = ["firm_number", "client_contact", "other_person"] as const;
 export type WhatsAppMemberKind = (typeof WHATSAPP_MEMBER_KINDS)[number];
-
-/** The roles that may open a firm number in TaxWise Desktop (`usable_by`; clients never, §4.6). */
-export const DESKTOP_ROLES = ["partner", "manager", "employee"] as const;
-export type DesktopRole = (typeof DESKTOP_ROLES)[number];
-
-export const DESKTOP_ROLE_LABEL: Record<DesktopRole, string> = { partner: "Partners", manager: "Managers", employee: "Employees" };
 
 const KIND_ORDER: Record<string, number> = { partner: 0, managers_office: 1, staff_office: 2, other: 3 };
 
@@ -104,7 +98,7 @@ export function validateGroupNameFormat(format: string): { ok: true } | { ok: fa
   const rest = f.replace(FORMAT_TOKEN, "");
   if (rest.includes("{") || rest.includes("}")) return { ok: false, error: "A brace is left unmatched. Placeholders look like {client_code}." };
   if (!/\{\s*client_code\s*\}/.test(f)) {
-    return { ok: false, error: "Include {client_code}: it makes the group findable in WhatsApp search, and it is how TaxWise Desktop finds the group." };
+    return { ok: false, error: "Include {client_code}: it makes the group findable in WhatsApp search." };
   }
   return { ok: true };
 }
@@ -186,7 +180,7 @@ export function validateGroupName(name: string, clientCode: string): { ok: true 
   if (n.length < 3) return { ok: false, error: "Enter the group's name." };
   if (n.length > GROUP_NAME_MAX) return { ok: false, error: `WhatsApp group names are at most ${GROUP_NAME_MAX} characters.` };
   if (!groupNameHasCode(n, clientCode)) {
-    return { ok: false, error: `Keep the client code ${clientCode} in the name: TaxWise Desktop finds the group by it.` };
+    return { ok: false, error: `Keep the client code ${clientCode} in the name: it makes the group findable in WhatsApp search.` };
   }
   return { ok: true };
 }
@@ -199,7 +193,7 @@ export const CHECKLIST_STEPS = [
   {
     id: "group_name",
     title: "Group name",
-    description: "Create the group on the creating number's phone with exactly this name. The client code makes it findable in WhatsApp search, and it is how TaxWise Desktop finds it.",
+    description: "Create the group on the creating number's phone with exactly this name. The client code makes it findable in WhatsApp search.",
   },
   {
     id: "save_contacts",
@@ -214,7 +208,7 @@ export const CHECKLIST_STEPS = [
   {
     id: "group_settings",
     title: "Group settings",
-    description: "Edit group settings → Only admins, so nobody else can rename the group (TaxWise Desktop finds it by name). Approve new participants → On. Disappearing messages → Off.",
+    description: "Edit group settings → Only admins, so nobody else can rename the group (it must keep the name the CRM has for it). Approve new participants → On. Disappearing messages → Off.",
   },
   {
     id: "managers_admin",
@@ -340,7 +334,6 @@ export interface FirmNumberLike {
   in_every_client_group: boolean;
   group_admin: boolean;
   is_active: boolean;
-  usable_by: readonly string[];
 }
 
 export interface ContactLike {
@@ -637,10 +630,10 @@ export function renderWelcomeMessage(
 }
 
 // -------------------------------------------------------------------------------------------------
-// Invite links (§5.13: Partner/Manager only; TaxWise Desktop gets only the code)
+// Invite links (§5.13: Partner/Manager only)
 // -------------------------------------------------------------------------------------------------
 
-/** The code part of chat.whatsapp.com/<code>: 10–40 letters and digits (docs/DESKTOP-API.md). */
+/** The code part of chat.whatsapp.com/<code>: 10–40 letters and digits. */
 export const INVITE_CODE_PATTERN = /^[A-Za-z0-9]{10,40}$/;
 
 /** The code of a chat.whatsapp.com invite link, or null when it isn't one. */
@@ -667,104 +660,7 @@ export function normaliseInviteLink(input: string | null | undefined): string | 
 }
 
 // -------------------------------------------------------------------------------------------------
-// TaxWise Desktop (§7.25.4, §7.25.7, docs/DESKTOP-API.md)
-// -------------------------------------------------------------------------------------------------
-
-/** X-TaxWise-Device: 64 lowercase hex characters. */
-export const DEVICE_KEY_PATTERN = /^[0-9a-f]{64}$/;
-/** Ids the app accepts (uuids are fine). */
-export const DESKTOP_ID_PATTERN = /^[A-Za-z0-9-]{1,64}$/;
-/** X-TaxWise-Desktop: the app's version. */
-export const DESKTOP_VERSION_PATTERN = /^[0-9A-Za-z.+_-]{1,40}$/;
-
-export function isDeviceKey(v: unknown): v is string {
-  return typeof v === "string" && DEVICE_KEY_PATTERN.test(v);
-}
-
-/** A number as the desktop context sends it. */
-export interface ContextNumber {
-  id: string;
-  label: string;
-  kind: WhatsAppNumberKind;
-  usableBy: DesktopRole[];
-  ownerEmployeeId: string | null;
-}
-
-/**
- * The firm numbers a person may use in TaxWise Desktop (§7.25.4, docs/DESKTOP-API.md): active
- * numbers whose `usable_by` holds their role, except that a number with an owner (`employee_id`) is
- * returned only to that Partner. Clients get none. Display order.
- */
-export function contextNumbers(rows: readonly FirmNumberLike[], role: string, employeeId: string | null): ContextNumber[] {
-  if (!(DESKTOP_ROLES as readonly string[]).includes(role)) return [];
-  return rows
-    .filter((n) => n.is_active && !!n.number && n.usable_by.includes(role))
-    .filter((n) => (n.employee_id ? role === "partner" && !!employeeId && n.employee_id === employeeId : true))
-    .filter((n) => (WHATSAPP_NUMBER_KINDS as readonly string[]).includes(n.kind) && DESKTOP_ID_PATTERN.test(n.id))
-    .sort(compareFirmNumbers)
-    .map((n) => ({
-      id: n.id,
-      label: n.label,
-      kind: n.kind as WhatsAppNumberKind,
-      usableBy: n.usable_by.filter((r): r is DesktopRole => (DESKTOP_ROLES as readonly string[]).includes(r)),
-      ownerEmployeeId: n.employee_id,
-    }));
-}
-
-/**
- * The number Open chat uses (docs/DESKTOP-API.md 2): an Employee the Staff office; a Manager the
- * Managers' office (then the Staff office if they may use it); a Partner their own number if it is
- * in the group, else the Managers' office. Always one of `numbers` (the person's context numbers);
- * among numbers of one kind, one that is in the group first. Null when there is none.
- */
-export function chooseOpenNumber(
-  role: string,
-  employeeId: string | null,
-  numbers: readonly ContextNumber[],
-  memberNumberIds: ReadonlySet<string>,
-): string | null {
-  if (numbers.length === 0) return null;
-  const ofKind = (kind: WhatsAppNumberKind) => {
-    const list = numbers.filter((n) => n.kind === kind);
-    return list.find((n) => memberNumberIds.has(n.id)) ?? list[0] ?? null;
-  };
-  const inGroup = numbers.find((n) => memberNumberIds.has(n.id)) ?? null;
-  const own = role === "partner" && employeeId ? numbers.find((n) => n.kind === "partner" && n.ownerEmployeeId === employeeId) ?? null : null;
-  let pick: ContextNumber | null = null;
-  if (role === "employee") pick = ofKind("staff_office") ?? inGroup;
-  else if (role === "manager") pick = ofKind("managers_office") ?? ofKind("staff_office") ?? inGroup;
-  else if (role === "partner") pick = (own && memberNumberIds.has(own.id) ? own : null) ?? ofKind("managers_office") ?? own ?? inGroup;
-  return (pick ?? numbers[0]).id;
-}
-
-/** PCs not seen for this many days are flagged for unlinking (§7.25.7). */
-export const STALE_DEVICE_DAYS = 30;
-
-/** Whole days since `at` (0 when in the future or missing). */
-export function daysSince(at: string | null | undefined, now: Date): number {
-  if (!at) return 0;
-  const t = Date.parse(at);
-  if (Number.isNaN(t)) return 0;
-  return Math.max(0, Math.floor((now.getTime() - t) / 86_400_000));
-}
-
-/** True for a PC not seen (or, if never seen, not checked in) for 30 days or more. */
-export function isDeviceStale(device: { last_seen_at: string | null; created_at?: string | null }, now: Date, days = STALE_DEVICE_DAYS): boolean {
-  const ref = device.last_seen_at ?? device.created_at ?? null;
-  if (!ref) return false;
-  return daysSince(ref, now) >= days;
-}
-
-/** `Staff office: 3 of 4` (§7.25.1). */
-export function linkedLabel(label: string, active: number, limit: number | null): string {
-  return limit ? `${label}: ${active} of ${limit}` : `${label}: ${active}`;
-}
-
-/** The device limits Settings offers (§7.25.7): WhatsApp's 4, or 10 with Meta Verified multi-agent. */
-export const DEVICE_LIMIT_OPTIONS = [4, 10] as const;
-
-// -------------------------------------------------------------------------------------------------
-// Open chat without the desktop app (§7.25.8)
+// Open chat in a browser or on a phone (§7.25.8)
 // -------------------------------------------------------------------------------------------------
 
 export const WHATSAPP_WEB_URL = "https://web.whatsapp.com/";
@@ -834,6 +730,14 @@ export function isoWeekKey(date: DateString): string {
 export function groupReminderDue(onboardedOn: DateString | null, today: DateString): boolean {
   if (!onboardedOn) return false;
   return compareDates(addDays(onboardedOn, GROUP_MISSING_AFTER_DAYS), today) <= 0;
+}
+
+/** Whole days since `at` (0 when in the future or missing). */
+export function daysSince(at: string | null | undefined, now: Date): number {
+  if (!at) return 0;
+  const t = Date.parse(at);
+  if (Number.isNaN(t)) return 0;
+  return Math.max(0, Math.floor((now.getTime() - t) / 86_400_000));
 }
 
 /** A device review is due when the number was never reviewed or not in the last 7 days. */

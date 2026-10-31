@@ -14,9 +14,8 @@ import { run } from "@/server/jobs/whatsapp-housekeeping";
 
 /**
  * WhatsApp housekeeping (§8 Mon 08:45): the review reminder to each office number's custodian (the
- * Partners when there is none), PCs not seen for 30 days to the Partners, and clients onboarded 2+
- * days ago with no Active group to their engagement partner; weekly dedupe keys; a failure in one
- * part doesn't stop the others.
+ * Partners when there is none), and clients onboarded 2+ days ago with no Active group to their
+ * engagement partner; weekly dedupe keys; one failed notice doesn't stop the others.
  */
 
 type Answer = { data?: unknown; error?: unknown };
@@ -58,12 +57,6 @@ function world(over: Partial<Record<string, Answer>> = {}) {
       ],
     },
     employees: { data: [{ id: E_CUSTODIAN, is_active: true, deleted_at: null }] },
-    desktop_devices: {
-      data: [
-        { id: "d1", device_name: "FRONTDESK-2", last_seen_at: "2026-09-20T05:00:00Z", created_at: "2026-06-01T00:00:00Z" },
-        { id: "d2", device_name: "AUDIT-PC", last_seen_at: "2026-10-25T05:00:00Z", created_at: "2026-06-01T00:00:00Z" },
-      ],
-    },
     client_whatsapp_groups: { data: [{ client_id: "c-has-group" }] },
     clients: {
       data: [
@@ -85,9 +78,9 @@ beforeEach(() => {
 });
 
 describe("WhatsApp housekeeping (§8)", () => {
-  it("reminds custodians, reports numbers without one, flags idle PCs and missing groups", async () => {
+  it("reminds custodians, reports numbers without one, and flags missing groups", async () => {
     const { counts } = await run(world(), NOW);
-    expect(counts).toEqual({ review_reminders: 1, no_custodian: 1, stale_pcs: 1, groups_missing: 3, failed: 0 });
+    expect(counts).toEqual({ review_reminders: 1, no_custodian: 1, groups_missing: 3, failed: 0 });
     const calls = vi.mocked(notify).mock.calls.map((c) => c[0]);
     const byKey = new Map(calls.map((c) => [c.dedupeKey, c]));
 
@@ -95,17 +88,13 @@ describe("WhatsApp housekeeping (§8)", () => {
     expect(review.to).toEqual({ employeeIds: [E_CUSTODIAN] });
     expect(review.title).toBe("Check the Staff office phone's linked devices");
     expect(review.linkUrl).toBe("/settings/whatsapp#numbers");
+    expect(review.body).toContain("WhatsApp → Settings → Linked devices");
+    expect(review.body).not.toContain("Linked PCs");
 
     const noCustodian = byKey.get("whatsapp_no_custodian:num-mgr:2026-W44")!;
     expect(noCustodian.to).toEqual({ roles: ["partner"] });
     // a Partner's own number isn't an office number: no reminder for it
     expect([...byKey.keys()].some((k) => k?.includes("num-p1"))).toBe(false);
-
-    const stale = byKey.get("whatsapp_stale_pcs:2026-W44")!;
-    expect(stale.to).toEqual({ roles: ["partner"] });
-    expect(stale.title).toBe("1 PC hasn't been seen for 30 days");
-    expect(stale.body).toContain("FRONTDESK-2 (35 days)");
-    expect(stale.body).not.toContain("AUDIT-PC");
 
     expect(byKey.get("whatsapp_group_missing:c-ep:2026-W44")).toMatchObject({
       to: { employeeIds: [E_PARTNER] },
@@ -127,22 +116,21 @@ describe("WhatsApp housekeeping (§8)", () => {
     expect(keys).not.toContain("whatsapp_devices_review:num-staff:2026-W44");
   });
 
-  it("keeps going when the PC check fails, and counts it", async () => {
-    const { counts } = await run(world({ desktop_devices: { error: new Error("down") } }), NOW);
-    expect(counts.failed).toBe(1);
-    expect(counts.groups_missing).toBe(3);
+  it("keeps going when one notice fails, and counts it", async () => {
+    vi.mocked(notify).mockRejectedValueOnce(new Error("down"));
+    const { counts } = await run(world(), NOW);
+    expect(counts).toEqual({ review_reminders: 0, no_custodian: 1, groups_missing: 3, failed: 1 });
   });
 
   it("sends nothing when everything is in order", async () => {
     const { counts } = await run(
       world({
         firm_whatsapp_numbers: { data: [] },
-        desktop_devices: { data: [] },
         clients: { data: [] },
       }),
       NOW,
     );
-    expect(counts).toEqual({ review_reminders: 0, no_custodian: 0, stale_pcs: 0, groups_missing: 0, failed: 0 });
+    expect(counts).toEqual({ review_reminders: 0, no_custodian: 0, groups_missing: 0, failed: 0 });
     expect(vi.mocked(notify)).not.toHaveBeenCalled();
   });
 });

@@ -29,13 +29,13 @@ import {
   UpdateMemberSchema,
 } from "@/lib/schemas/whatsapp";
 import { z } from "zod";
-import { getWhatsAppFirmSettings, listFirmNumbers, searchClientsForFile } from "@/lib/data/whatsapp";
+import { getWhatsAppFirmSettings, listFirmNumbers } from "@/lib/data/whatsapp";
 import { addTimelineEvent } from "@/server/timeline";
 import { log } from "@/lib/log";
 
 /**
  * Client WhatsApp groups (§7.25.1–§7.25.2): set up, the seven-step checklist, Mark created, close,
- * primary, members, Open chat outside TaxWise Desktop, and revealing the invite link.
+ * primary, members, Open chat, and revealing the invite link.
  *
  * Groups and members are written by Partners and Managers only (`roles`, and RLS, §4.6); Open chat
  * is any staff member who can open the client's WhatsApp (can_open_whatsapp, inside
@@ -180,7 +180,7 @@ export const updateWhatsAppGroup = defineAction({ name: "whatsapp.update_group",
   });
   if (group.name !== input.name && group.status !== "to_create") {
     ctx.after("Add to the client's timeline", () =>
-      addTimelineEvent({ clientId: group.client_id, eventType: "whatsapp_group_renamed", title: `WhatsApp group renamed to ${input.name}`, description: `Was ${group.name}. Rename the group in WhatsApp too, or TaxWise Desktop won't find it.` }),
+      addTimelineEvent({ clientId: group.client_id, eventType: "whatsapp_group_renamed", title: `WhatsApp group renamed to ${input.name}`, description: `Was ${group.name}. Rename the group in WhatsApp too, so the name Open chat copies finds it.` }),
     );
   }
   return ok({ updatedAt: data.updated_at });
@@ -362,15 +362,15 @@ export const setPrimaryWhatsAppGroup = defineAction({ name: "whatsapp.set_primar
 });
 
 // -------------------------------------------------------------------------------------------------
-// Open chat without TaxWise Desktop (§7.25.8) and the invite link
+// Open chat (§7.25.8) and the invite link
 // -------------------------------------------------------------------------------------------------
 
 /**
- * The server check behind Open chat from a page (§7.25.1, §7.25.8): a browser window, the phone app,
- * or TaxWise Desktop for a group other than the client's primary one. The same record_whatsapp_open
- * that /api/desktop/whatsapp/open uses (can_open_whatsapp; Employees in a browser or on a phone only
- * when a Partner allows WhatsApp in a browser window; only an Active group), which writes the audit
- * row and last opened. Answers the group's name to copy.
+ * The server check behind Open chat (§7.25.1, §7.25.8), in a browser window or the phone app:
+ * record_whatsapp_open (can_open_whatsapp; Employees only when a Partner allows WhatsApp in a
+ * browser window; only an Active group), which writes the audit row and last opened. Answers the
+ * group's name to copy. Its refusal for an Employee still names TaxWise Desktop (0181), so that one
+ * message is reworded here.
  */
 export const openWhatsAppChat = defineAction({ name: "whatsapp.open_chat", schema: OpenChatSchema, roles: STAFF }, async (input, ctx) => {
   const { data, error } = await ctx.supabase.rpc("record_whatsapp_open", {
@@ -382,7 +382,10 @@ export const openWhatsAppChat = defineAction({ name: "whatsapp.open_chat", schem
   });
   throwIfDbError(error);
   const r = data as { status: string; error?: string; group?: { name: string } };
-  if (r.status === "forbidden") return fail(r.error ?? "Not one of your clients.", { code: "forbidden" });
+  if (r.status === "forbidden") {
+    const browserOff = r.error?.includes("TaxWise Desktop") ? "Open chat is off for Employees: a Partner hasn't allowed WhatsApp in a browser window." : null;
+    return fail(browserOff ?? r.error ?? "Not one of your clients.", { code: "forbidden" });
+  }
   if (r.status !== "ok" || !r.group) return fail(r.error ?? "This client has no WhatsApp group yet.", { code: "blocked" });
   return ok({ groupName: r.group.name });
 });
@@ -495,14 +498,3 @@ export const removeNumberFromGroups = defineAction({ name: "whatsapp.remove_numb
   await ctx.audit({ event: "data_update", resourceType: "firm_whatsapp_number", resourceId: input.numberId, action: "whatsapp.remove_number_from_groups", details: { groups: input.groupIds.length, removed: count } });
   return ok({ removed: count });
 });
-
-// -------------------------------------------------------------------------------------------------
-// Files from WhatsApp (§7.25.6)
-// -------------------------------------------------------------------------------------------------
-
-const FileClientSearchSchema = z.object({ q: z.string().max(100).default("") });
-
-/** "Save to another client…": the clients this person can see (RLS), for the upload dialog's picker. */
-export const searchWhatsAppFileClients = defineAction({ name: "whatsapp.search_file_clients", schema: FileClientSearchSchema, roles: STAFF }, async (input, ctx) =>
-  ok(await searchClientsForFile(ctx.supabase, input.q)),
-);

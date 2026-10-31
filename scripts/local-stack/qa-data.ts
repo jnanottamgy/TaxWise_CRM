@@ -1034,7 +1034,7 @@ async function communication(ctx: Ctx) {
 }
 
 // =================================================================================================
-// 10. WhatsApp groups and the linked PCs
+// 10. WhatsApp groups
 // =================================================================================================
 
 async function whatsapp(ctx: Ctx) {
@@ -1066,11 +1066,6 @@ async function whatsapp(ctx: Ctx) {
   await ins(db, "client_whatsapp_groups", groups, "");
   await ins(db, "client_whatsapp_group_members", members, "");
   bump(ctx, "whatsapp_groups", groups.length + 3);
-  await q(db, "update public.desktop_devices set device_name = 'Front desk PC', os = 'Windows 11', app_version = '1.4.0', last_seen_at = now() - interval '6 minutes', last_user_id = $1", [uid("M1")]);
-  await ins(db, "desktop_devices", [
-    { device_key: "qa-device-partner-laptop", device_name: "Raghavendra's laptop", os: "macOS 15", app_version: "1.4.0", last_user_id: uid("P1"), last_seen_at: new Date(Date.now() - 3600_000).toISOString() },
-    { device_key: "qa-device-old-pc", device_name: "Old reception PC", os: "Windows 10", app_version: "1.2.1", last_user_id: uid("M2"), last_seen_at: ist(daysAgo(today, 40)), revoked_at: ist(daysAgo(today, 35)), revoked_by: uid("P1") },
-  ], "");
 }
 
 // =================================================================================================

@@ -169,7 +169,7 @@ export function SessionsCard({ sessions, now: serverNow }: { sessions: ProfileSe
         open={confirm}
         onOpenChange={setConfirm}
         title="Sign out your other sessions?"
-        description="Every other browser, phone and TaxWise Desktop signed in as you is signed out at once. You stay signed in here."
+        description="Every other browser and phone signed in as you is signed out at once. You stay signed in here."
         confirmLabel="Sign out others"
         onConfirm={async () => {
           const r = await signOutOtherSessions({})

@@ -97,7 +97,7 @@ quotations in every status (one revised; `quotation:sent` has a live `/q/<token>
 awaiting approval / sent / partially paid / paid / overdue / disputed with lines, receipts with TDS, a credit
 note, reminders and follow-ups, a retainer run with drafts, a 26AS import matched to receipts, document rows
 (no files) and document requests with items in every state, portal threads and other messages, inboxes,
-WhatsApp numbers, groups and linked PCs, registrations, DSCs (expiring and expired), UDINs, portal
+WhatsApp numbers and groups, registrations, DSCs (expiring and expired), UDINs, portal
 credentials sealed with `server/vault.ts`, engagement letters, the statutory audit of Beta Industries in
 Execution with sign-offs and materiality, quality records, a GSTR-2B reconciliation (from
 `tests/fixtures/gstr2b`), ITR computations (the app's engine), Schedule III statements, notices, the

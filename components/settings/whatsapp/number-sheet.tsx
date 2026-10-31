@@ -6,28 +6,26 @@ import { toast } from "sonner"
 import { useWatch } from "react-hook-form"
 import { FormSheet } from "@/components/app/form-dialog"
 import { FormAlert } from "@/components/app/form/form-alert"
-import { CheckboxGroupField, SelectField, SwitchField, TextField } from "@/components/app/form/fields"
-import { getDesktopBridge } from "@/components/shell/use-desktop"
+import { SelectField, SwitchField, TextField } from "@/components/app/form/fields"
 import { useActionForm } from "@/hooks/use-action-form"
 import { formatWhatsAppNumber, normalizeWhatsAppNumber } from "@/lib/domain/messaging"
-import { DESKTOP_ROLES, DESKTOP_ROLE_LABEL, WHATSAPP_NUMBER_KINDS, WHATSAPP_NUMBER_KIND_LABEL, type WhatsAppNumberKind } from "@/lib/domain/whatsapp"
+import { WHATSAPP_NUMBER_KINDS, WHATSAPP_NUMBER_KIND_LABEL, type WhatsAppNumberKind } from "@/lib/domain/whatsapp"
 import { FirmNumberSchema, type FirmNumberInput } from "@/lib/schemas/whatsapp"
 import type { FirmNumberRow, PersonOption } from "@/lib/data/whatsapp"
 import { saveFirmWhatsAppNumber } from "@/server/actions/whatsapp-settings"
 
 /** What each kind of number usually is (§5.13 defaults), applied when the kind is changed. */
-const KIND_DEFAULTS: Record<WhatsAppNumberKind, { usable_by: string[]; group_admin: boolean; shared: boolean }> = {
-  partner: { usable_by: ["partner"], group_admin: false, shared: false },
-  managers_office: { usable_by: ["partner", "manager"], group_admin: true, shared: true },
-  staff_office: { usable_by: ["partner", "manager", "employee"], group_admin: false, shared: true },
-  other: { usable_by: ["partner"], group_admin: false, shared: true },
+const KIND_DEFAULTS: Record<WhatsAppNumberKind, { group_admin: boolean; shared: boolean }> = {
+  partner: { group_admin: false, shared: false },
+  managers_office: { group_admin: true, shared: true },
+  staff_office: { group_admin: false, shared: true },
+  other: { group_admin: false, shared: true },
 }
 
 /**
  * Add or edit one of the firm's WhatsApp numbers (§5.13, §7.21): label, number (normalised as
  * WhatsApp needs it, §7.13.2), kind, the Partner whose number it is, the custodian who keeps the
- * phone, in every client group, admin, shared, who may use it in TaxWise Desktop, two-step
- * verification, and on/off. Partner only. Saving asks TaxWise Desktop to reload its numbers.
+ * phone, in every client group, admin, shared, two-step verification, and on/off. Partner only.
  */
 export function NumberSheet({
   open,
@@ -59,7 +57,6 @@ export function NumberSheet({
         in_every_client_group: number.in_every_client_group,
         group_admin: number.group_admin,
         shared: number.shared,
-        usable_by: number.usable_by as Array<(typeof DESKTOP_ROLES)[number]>,
         two_step_verification_on: number.two_step_verification_on,
         is_active: number.is_active,
       }
@@ -75,7 +72,6 @@ export function NumberSheet({
         in_every_client_group: false,
         group_admin: false,
         shared: true,
-        usable_by: ["partner"],
         two_step_verification_on: false,
         is_active: false,
       }
@@ -83,9 +79,6 @@ export function NumberSheet({
     defaultValues: defaults,
     onSuccess: (data, values) => {
       toast.success(data.changed === 0 ? "Nothing had changed, so nothing was saved." : `${values.label} saved`)
-      void getDesktopBridge()
-        ?.refreshContext()
-        .catch(() => undefined)
       onOpenChange(false)
       router.refresh()
     },
@@ -98,7 +91,6 @@ export function NumberSheet({
     if (previousKind.current === kind) return
     previousKind.current = kind
     const d = KIND_DEFAULTS[kind]
-    f.form.setValue("usable_by", d.usable_by as FirmNumberInput["usable_by"], { shouldDirty: true })
     f.form.setValue("group_admin", d.group_admin, { shouldDirty: true })
     f.form.setValue("shared", d.shared, { shouldDirty: true })
     if (kind !== "partner") f.form.setValue("employee_id", "", { shouldDirty: true })
@@ -140,7 +132,7 @@ export function NumberSheet({
               label="Partner"
               required
               options={partners.map((p) => ({ value: p.id, label: p.name }))}
-              helper="Only this Partner may use the number in TaxWise Desktop, and only on their own PC."
+              helper="Their name goes on the number's contact card. When they leave, the WhatsApp groups page lists the groups to remove it from."
             />
           ) : (
             <div className="hidden md:block" aria-hidden="true" />
@@ -161,22 +153,12 @@ export function NumberSheet({
           <SwitchField control={f.control} name="two_step_verification_on" label="Two-step verification on" description="WhatsApp → Settings → Account → Two-step verification (house rule 3)." />
         </div>
 
-        <CheckboxGroupField
-          control={f.control}
-          name="usable_by"
-          label="Who may use it in TaxWise Desktop"
-          required
-          columns={3}
-          options={DESKTOP_ROLES.map((r) => ({ value: r, label: DESKTOP_ROLE_LABEL[r], disabled: partner && r !== "partner" }))}
-          helper={partner ? "A Partner's own number is that Partner's alone." : "Employees use the Staff office; Managers the Managers' office, and the Staff office if you tick Managers here."}
-        />
-
         <div className="border-t border-border pt-4">
           <SwitchField
             control={f.control}
             name="is_active"
             label="Switched on"
-            description="Staff can use it in TaxWise Desktop and the setup checklist adds it to new groups. Needs the number."
+            description="Staff can pick it for a group's members, and the setup checklist adds it to new groups. Needs the number."
           />
         </div>
       </div>

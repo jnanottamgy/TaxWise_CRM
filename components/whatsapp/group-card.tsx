@@ -104,7 +104,7 @@ export function GroupCard({
     try {
       const r = await setPrimaryWhatsAppGroup({ groupId: group.id })
       if (!r.ok) return void toast.error(r.ref ? `${r.error} (Ref ${r.ref})` : r.error)
-      toast.success(`${group.name} is now the primary group. TaxWise Desktop opens it for this client.`)
+      toast.success(`${group.name} is now the primary group. It's listed first and shown on the client's overview.`)
       router.refresh()
     } catch {
       toast.error("We couldn't reach the server. Check your connection and try again.")
@@ -123,7 +123,7 @@ export function GroupCard({
             <CopyButton value={group.name} label="group name" />
             <StatusChip kind="whatsapp_group_status" value={group.status} variant="pill" />
             {group.is_primary && live ? (
-              <span className="inline-flex h-5 flex-none items-center rounded-full border border-border px-2 text-xs font-medium text-text-muted" title="TaxWise Desktop opens this group for the client">
+              <span className="inline-flex h-5 flex-none items-center rounded-full border border-border px-2 text-xs font-medium text-text-muted" title="The client's main group: listed first and shown on the client's overview">
                 Primary
               </span>
             ) : null}
@@ -133,7 +133,7 @@ export function GroupCard({
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:flex-none sm:justify-end">
           {group.status === "active" ? (
-            <OpenChatButton clientId={clientId} groupId={group.id} groupName={group.name} isPrimary={group.is_primary} browserAllowed={browserAllowed} />
+            <OpenChatButton clientId={clientId} groupId={group.id} groupName={group.name} browserAllowed={browserAllowed} />
           ) : null}
           {live ? (
             <Button type="button" variant="outline" size="sm" onClick={() => setShowChecklist((v) => !v)} aria-expanded={showChecklist} aria-controls={`checklist-panel-${group.id}`}>

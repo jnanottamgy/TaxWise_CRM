@@ -11,7 +11,6 @@ import { readWhatsAppSignaturePreference } from "@/lib/schemas/profile"
 import { getClientWhatsApp, type ClientWhatsApp } from "@/lib/data/whatsapp"
 import { GroupCard } from "@/components/whatsapp/group-card"
 import { AddGroupButton, StartGroupButton } from "@/components/whatsapp/start-group"
-import { DesktopBanner } from "@/components/whatsapp/desktop-banner"
 import { HouseRulesDisclosure } from "@/components/whatsapp/house-rules"
 
 /**
@@ -20,7 +19,8 @@ import { HouseRulesDisclosure } from "@/components/whatsapp/house-rules"
  * when it was last opened; Open chat, the setup checklist and Close group. Staff only, never in
  * the portal. Employees read groups through client_whatsapp_groups_public (no invite link) and only
  * for clients they can open (can_open_whatsapp: own, team, or a cover in force); Partners and
- * Managers set groups up. Never throws: a failed load is an ErrorBlock with its Ref.
+ * Managers set groups up. An Employee whose Open chat is off (§7.25.8) is told why. Never throws: a
+ * failed load is an ErrorBlock with its Ref.
  */
 export default async function ClientWhatsAppTab({ clientId, user, supabase }: ClientTabProps) {
   if (user.role === "client") return null
@@ -84,7 +84,12 @@ export default async function ClientWhatsAppTab({ clientId, user, supabase }: Cl
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      {live.some((g) => g.status === "active") ? <DesktopBanner downloadUrl={settings.downloadUrl} browserAllowed={browserAllowed} /> : null}
+      {!browserAllowed && live.some((g) => g.status === "active") ? (
+        <p className="flex items-start gap-2 rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-sm text-text md:px-5">
+          <MessageCircleIcon aria-hidden="true" className="mt-0.5 size-4 flex-none text-text-muted" />
+          <span>Open chat is off for Employees until a Partner allows WhatsApp in a browser window.</span>
+        </p>
+      ) : null}
 
       {live.length === 0 ? (
         <section aria-label="WhatsApp group" className="rounded-lg border border-border bg-surface">

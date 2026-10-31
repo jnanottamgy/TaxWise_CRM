@@ -244,8 +244,8 @@ function buildFingerprint(secrets: StackSecrets): string {
   const changed = (spawnSync("git", ["ls-files", "-m", "-o", "--exclude-standard"], { cwd: ROOT, encoding: "utf8" }).stdout ?? "")
     .split("\n")
     .filter(Boolean)
-    // Not part of the Next build: this harness, tests, docs, and TaxWise Desktop (its own package).
-    .filter((f) => !["scripts/local-stack/", "tests/", "docs/", "desktop/", ".claude/"].some((dir) => f.startsWith(dir)))
+    // Not part of the Next build: this harness, tests and docs.
+    .filter((f) => !["scripts/local-stack/", "tests/", "docs/", ".claude/"].some((dir) => f.startsWith(dir)))
     .sort();
   for (const f of changed) {
     const p = join(ROOT, f);

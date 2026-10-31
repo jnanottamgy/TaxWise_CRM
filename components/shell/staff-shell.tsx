@@ -279,8 +279,8 @@ export function StaffShell({
       {/* The navy binder (DESIGN.md §2): sidebar and top bar are one navy frame; the page is a sheet of
           paper inset in it. On phones the sheet is the whole screen under a navy top bar. */}
       <div className="flex min-h-dvh bg-frame">
-        {/* 768–1023px (tablets, the Desktop app beside WhatsApp): always the 64px rail, so the page keeps
-            its width. The saved collapsed/expanded choice applies from 1024px. */}
+        {/* 768–1023px (tablets, a browser window beside WhatsApp Web): always the 64px rail, so the page
+            keeps its width. The saved collapsed/expanded choice applies from 1024px. */}
         <aside aria-label="Sidebar" className="on-frame sticky top-0 hidden h-dvh w-16 flex-none overflow-hidden md:block lg:hidden">
           <Sidebar rail fixedRail />
         </aside>

@@ -258,7 +258,7 @@ export function SetupChecklist({
     group_settings: (
       <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-text">
         <li>
-          Edit group settings → <span className="font-medium">Only admins</span>. Nobody else can rename the group, which would stop TaxWise Desktop finding it.
+          Edit group settings → <span className="font-medium">Only admins</span>. Nobody else can rename the group, so it keeps the name the CRM has for it.
         </li>
         <li>
           Approve new participants → <span className="font-medium">On</span>.

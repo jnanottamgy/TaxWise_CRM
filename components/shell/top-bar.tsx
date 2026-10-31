@@ -3,8 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { toast } from "sonner";
-import { BellIcon, ChevronRightIcon, CircleHelpIcon, MenuIcon, MessageCircleIcon, SearchIcon, TimerIcon } from "lucide-react";
+import { BellIcon, ChevronRightIcon, CircleHelpIcon, MenuIcon, SearchIcon, TimerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Keys } from "@/components/app/shortcut-sheet";
@@ -13,18 +12,16 @@ import { findActiveNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { FySwitcher } from "./fy-switcher";
 import { useShell, useSlot } from "./shell-context";
-import { getDesktopBridge, useIsDesktopApp } from "./use-desktop";
 
 /**
  * The top bar (§3.3): where you are (breadcrumb slot), global search (⌘K), the FY switcher, the
- * WhatsApp toggle inside TaxWise Desktop (§7.25.1), the timer, the Inbox bell (§7.17) and Help.
- * On phones: the menu button, the page name, search, the bell and Help.
+ * timer, the Inbox bell (§7.17) and Help. On phones: the menu button, the page name, search, the
+ * bell and Help.
  */
 export function TopBar() {
   const { user, slots, setOpen, unreadCount } = useShell();
   const pathname = usePathname() ?? "/";
   const slotTitle = useSlot(slots, "title");
-  const desktopApp = useIsDesktopApp();
 
   const crumbs = React.useMemo<Crumb[]>(() => {
     if (slotTitle && slotTitle.length > 0) return slotTitle;
@@ -98,8 +95,6 @@ export function TopBar() {
 
       <FySwitcher className="hidden md:inline-flex" />
 
-      {desktopApp ? <WhatsAppToggle /> : null}
-
       <IconAction label="Timer" className="hidden md:inline-flex" onClick={() => setOpen("timer", true)}>
         <TimerIcon aria-hidden="true" />
       </IconAction>
@@ -117,13 +112,11 @@ function IconAction({
   label,
   className,
   onClick,
-  pressed,
   children,
 }: {
   label: string;
   className?: string;
   onClick: () => void;
-  pressed?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -134,7 +127,6 @@ function IconAction({
           size="icon"
           className={cn("flex-none text-text-muted hover:text-text", className)}
           aria-label={label}
-          aria-pressed={pressed}
           onClick={onClick}
         >
           {children}
@@ -168,31 +160,5 @@ function InboxBell({ count }: { count: number | null }) {
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
-  );
-}
-
-/** Shows or hides the WhatsApp panel inside TaxWise Desktop (§7.25.1). Never rendered in a browser. */
-function WhatsAppToggle() {
-  const [visible, setVisible] = React.useState<boolean | undefined>(undefined);
-  const [busy, setBusy] = React.useState(false);
-
-  const toggle = async () => {
-    const bridge = getDesktopBridge();
-    if (!bridge || busy) return;
-    setBusy(true);
-    try {
-      const result = await bridge.toggleWhatsApp();
-      setVisible(Boolean(result?.visible));
-    } catch {
-      toast.error("TaxWise Desktop didn't respond. Restart the app if WhatsApp stays hidden.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <IconAction label={visible ? "Hide WhatsApp" : "Show WhatsApp"} pressed={visible} onClick={toggle}>
-      <MessageCircleIcon aria-hidden="true" />
-    </IconAction>
   );
 }

@@ -28,16 +28,13 @@ vi.mock("@/server/actions/whatsapp-groups", () => {
     addWhatsAppMember: fn(),
     updateWhatsAppMember: fn(),
     removeNumberFromGroups: fn(),
-    searchWhatsAppFileClients: fn(),
   };
 });
 vi.mock("@/server/actions/whatsapp-settings", () => ({ saveWhatsAppSettings: vi.fn(), saveFirmWhatsAppNumber: vi.fn(), recordWhatsAppDevicesReview: vi.fn() }));
-vi.mock("@/server/actions/desktop-devices", () => ({ removeDesktopPc: vi.fn(), renameDesktopPc: vi.fn() }));
 
 import { GroupCard, type GroupCardGroup } from "@/components/whatsapp/group-card";
 import { RegisterTable } from "@/components/whatsapp/register-table";
 import { NumbersCard } from "@/components/settings/whatsapp/numbers-card";
-import { LinkedPcsCard } from "@/components/settings/whatsapp/linked-pcs-card";
 import { WhatsAppGeneralSummary } from "@/components/settings/whatsapp/general-summary";
 import { checklistProgress, parseChecklist } from "@/lib/domain/whatsapp";
 import type { FirmNumberRow, RegisterRow } from "@/lib/data/whatsapp";
@@ -55,7 +52,6 @@ function num(over: Partial<FirmNumberRow> & Pick<FirmNumberRow, "id" | "label" |
     in_every_client_group: true,
     group_admin: false,
     shared: false,
-    usable_by: ["partner"],
     two_step_verification_on: true,
     devices_reviewed_at: null,
     is_active: true,
@@ -68,8 +64,8 @@ function num(over: Partial<FirmNumberRow> & Pick<FirmNumberRow, "id" | "label" |
 
 const NUMBERS: FirmNumberRow[] = [
   num({ id: "n-p1", label: "CA Vinay H Karlagere (Partner)", kind: "partner", employee_id: P1, owner_name: "CA Vinay H Karlagere" }),
-  num({ id: "n-mgr", label: "Managers' office", kind: "managers_office", number: "919876500004", group_admin: true, shared: true, usable_by: ["partner", "manager"], custodian_employee_id: ME, custodian_name: "Anita Desai" }),
-  num({ id: "n-staff", label: "Staff office", kind: "staff_office", number: "919876500005", shared: true, usable_by: ["partner", "manager", "employee"] }),
+  num({ id: "n-mgr", label: "Managers' office", kind: "managers_office", number: "919876500004", group_admin: true, shared: true, custodian_employee_id: ME, custodian_name: "Anita Desai" }),
+  num({ id: "n-staff", label: "Staff office", kind: "staff_office", number: "919876500005", shared: true }),
   num({ id: "n-p3", label: "Partner 3", kind: "partner", number: null, is_active: false }),
 ];
 
@@ -182,7 +178,7 @@ describe("the WhatsApp groups register (§7.25.1)", () => {
 });
 
 describe("Settings → WhatsApp (§7.21)", () => {
-  it("lists the numbers with who may use them and the custodian", () => {
+  it("lists the numbers with their custodian and the linked-devices review", () => {
     const html = renderToStaticMarkup(
       React.createElement(NumbersCard, {
         numbers: NUMBERS,
@@ -191,32 +187,15 @@ describe("Settings → WhatsApp (§7.21)", () => {
         partners: [],
         staff: [],
         countryCode: "91",
-        links: [{ number_id: "n-staff", label: "Staff office", kind: "staff_office", active_links: 3, device_limit: 4, at_limit: false, over_limit: false }],
       }),
     );
     expect(html).toContain("Firm WhatsApp numbers");
     expect(html).toContain("CA Vinay H Karlagere&#x27;s own number");
-    expect(html).toContain("TaxWise Desktop: Partners, Managers, Employees");
-    expect(html).toContain("Linked PCs: 3 of 4");
     expect(html).toContain("Custodian: Anita Desai");
     expect(html).toContain("No number yet");
     expect(html).toContain("Record review");
-  });
-
-  it("lists linked PCs and flags one not seen for 30 days", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(LinkedPcsCard, {
-        canRemove: true,
-        devices: [
-          { id: "d1", device_name: "FRONTDESK-2", os: "Windows 10.0", app_version: "1.4.0", last_user_name: "Ravi Kumar", last_seen_at: new Date(Date.now() - 40 * 86_400_000).toISOString(), revoked_at: null, revoked_by_name: null, failing_checks: null, created_at: "2026-06-01T00:00:00Z", links: [{ link_id: "l1", number_id: "n-staff", label: "Staff office", kind: "staff_office", linked_at: "2026-06-01T00:00:00Z", linked_by_name: "Ravi Kumar" }] },
-          { id: "d2", device_name: "OLD-PC", os: null, app_version: null, last_user_name: null, last_seen_at: null, revoked_at: "2026-09-01T00:00:00Z", revoked_by_name: "CA Vinay H Karlagere", failing_checks: null, created_at: "2026-01-01T00:00:00Z", links: [] },
-        ],
-      }),
-    );
-    expect(html).toContain("FRONTDESK-2");
-    expect(html).toContain("Not seen for 40 days");
-    expect(html).toContain("Last used by Ravi Kumar");
-    expect(html).toContain("Removed");
+    expect(html).not.toContain("TaxWise Desktop");
+    expect(html).not.toContain("Linked PCs");
   });
 
   it("shows Managers and Employees the settings as facts", () => {
@@ -226,12 +205,8 @@ describe("Settings → WhatsApp (§7.21)", () => {
           whatsapp_country_code: "91",
           whatsapp_group_name_format: "TW · {client_code} · {short_name}",
           whatsapp_signature: "– {first_name}",
-          whatsapp_client_mode: true,
-          whatsapp_employee_notifications: false,
           whatsapp_employee_browser_window: false,
-          whatsapp_linked_device_limit: 4,
           whatsapp_house_rules: "1. Same firm numbers in every client group.",
-          desktop_download_url: null,
           updated_at: "2026-10-22T05:00:00Z",
           updated_by: null,
         },
@@ -239,7 +214,8 @@ describe("Settings → WhatsApp (§7.21)", () => {
     );
     expect(html).toContain("TW · TW-C-0142 · XYZ Traders");
     expect(html).toContain("Not allowed");
-    expect(html).toContain("4 PCs per number");
     expect(html).toContain("Same firm numbers in every client group.");
+    expect(html).not.toContain("TaxWise Desktop");
+    expect(html).not.toContain("Client mode");
   });
 });

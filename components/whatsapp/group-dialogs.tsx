@@ -114,7 +114,7 @@ export function MarkCreatedDialog({
           control={f.control}
           name="inviteLink"
           label="Invite link"
-          helper="Optional. WhatsApp → Group info → Invite via link. Only Partners and Managers see it; TaxWise Desktop can use it to open the group."
+          helper="Optional. WhatsApp → Group info → Invite via link. Only Partners and Managers see it."
           inputMode="url"
           autoComplete="off"
           spellCheck={false}
@@ -240,8 +240,8 @@ export function EditGroupDialog({
           maxLength={100}
           helper={
             status === "to_create"
-              ? `Keep the client code ${clientCode}: TaxWise Desktop finds the group by it.`
-              : `Rename the group in WhatsApp to exactly this too, or TaxWise Desktop won't find it. Keep the client code ${clientCode}.`
+              ? `Keep the client code ${clientCode}: it makes the group findable in WhatsApp search.`
+              : `Rename the group in WhatsApp to exactly this too, so the name Open chat copies finds it. Keep the client code ${clientCode}.`
           }
         />
         <TextField control={f.control} name="purpose" label="Purpose" maxLength={120} helper="For example: All work, or Statutory audit FY 2025-26." />

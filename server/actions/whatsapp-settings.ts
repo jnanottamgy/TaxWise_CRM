@@ -3,6 +3,7 @@
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
 import { ActionError, fail, ok } from "@/lib/result";
 import { formatDate, formatTime } from "@/lib/format";
+import type { WhatsAppNumberKind } from "@/lib/domain/whatsapp";
 import { FirmNumberSchema, NumberIdSchema, WhatsAppSettingsSchema } from "@/lib/schemas/whatsapp";
 import { WHATSAPP_SETTINGS_COLUMNS, getWhatsAppFirmSettings } from "@/lib/data/whatsapp";
 import { getNamesByProfile } from "@/lib/data/people";
@@ -14,7 +15,6 @@ import { getNamesByProfile } from "@/lib/data/people";
  *
  * Every save carries the row's `updated_at` as loaded and is refused with who changed it and when
  * if it moved (§13), writes only what changed, and audits a before/after summary (config_change).
- * The page asks TaxWise Desktop to reload its context after a save (docs/DESKTOP-API.md (c)).
  *
  * Recording a linked-devices review is the number's custodian's job (house rule 5) as well as a
  * Partner's, so that one action is open to staff; the database function checks who.
@@ -85,7 +85,7 @@ async function saveFirmSettings(ctx: ActionContext, section: string, loaded: str
   return { updated_at: (data as { updated_at: string }).updated_at, changed: changes.length };
 }
 
-/** Country code, name format, signature, client mode, Employee notifications, the browser window, the device limit, the installer link and the house rules. */
+/** Country code, name format, signature, the browser window for Employees and the house rules. */
 export const saveWhatsAppSettings = defineAction({ name: "settings.whatsapp", schema: WhatsAppSettingsSchema, roles: ["partner"] }, async (input, ctx) => {
   const { updated_at, ...patch } = input;
   return ok(await saveFirmSettings(ctx, "whatsapp", updated_at, patch));
@@ -100,10 +100,22 @@ const NUMBER_FIELDS = [
   "in_every_client_group",
   "group_admin",
   "shared",
-  "usable_by",
   "two_step_verification_on",
   "is_active",
 ] as const;
+
+/**
+ * firm_whatsapp_numbers.usable_by said who could open the number in TaxWise Desktop, which is gone.
+ * The column stays (not null, and the firm_whatsapp_numbers_guard trigger wants {partner} on a
+ * Partner's own number), so a new number gets its kind's §5.13 default and a number made a
+ * Partner's own gets {partner}.
+ */
+const USABLE_BY: Record<WhatsAppNumberKind, string[]> = {
+  partner: ["partner"],
+  managers_office: ["partner", "manager"],
+  staff_office: ["partner", "manager", "employee"],
+  other: ["partner"],
+};
 
 function maskNumber(field: string, v: unknown): unknown {
   if (field === "number" && typeof v === "string" && v.length > 4) return `••••${v.slice(-4)}`;
@@ -125,7 +137,11 @@ export const saveFirmWhatsAppNumber = defineAction({ name: "settings.whatsapp_nu
   const values: Record<string, unknown> = Object.fromEntries(NUMBER_FIELDS.map((f) => [f, input[f]]));
 
   if (!input.id) {
-    const { data, error } = await ctx.supabase.from("firm_whatsapp_numbers").insert(values as never).select("id, updated_at").single();
+    const { data, error } = await ctx.supabase
+      .from("firm_whatsapp_numbers")
+      .insert({ ...values, usable_by: USABLE_BY[input.kind] } as never)
+      .select("id, updated_at")
+      .single();
     const dup = uniqueMessage(error);
     if (dup) return fail(dup, { code: "conflict", fieldErrors: { [dup.includes("number") ? "number" : "label"]: [dup] } });
     throwIfDbError(error);
@@ -149,7 +165,7 @@ export const saveFirmWhatsAppNumber = defineAction({ name: "settings.whatsapp_nu
 
   const { data, error } = await ctx.supabase
     .from("firm_whatsapp_numbers")
-    .update(values as never)
+    .update((input.kind === "partner" ? { ...values, usable_by: USABLE_BY.partner } : values) as never)
     .eq("id", input.id)
     .eq("updated_at", row.updated_at)
     .select("updated_at")

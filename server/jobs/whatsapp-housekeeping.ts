@@ -3,17 +3,16 @@ import "server-only";
 import type { AdminSupabase } from "@/server/admin";
 import { istDateOf, todayIST } from "@/lib/domain/fy";
 import { formatDate } from "@/lib/format";
-import { daysSince, groupReminderDue, isDeviceStale, isoWeekKey, STALE_DEVICE_DAYS } from "@/lib/domain/whatsapp";
+import { groupReminderDue, isoWeekKey } from "@/lib/domain/whatsapp";
 import { notify } from "@/server/notify";
 import { log } from "@/lib/log";
 
 /**
- * WhatsApp housekeeping, Mondays 08:45 IST (§8, §7.25.7, §7.25.10, §9):
+ * WhatsApp housekeeping, Mondays 08:45 IST (§8, §7.25.10, §9):
  *   1. a linked-devices review reminder to each office number's custodian (house rule 5: check the
- *      phone's Linked devices list against Settings → Linked PCs and remove anything unknown);
- *      an office number with no active custodian is reported to the Partners instead;
- *   2. PCs not seen for 30 days → the Partners, flagged for unlinking;
- *   3. clients onboarded 2 or more days ago that still have no Active WhatsApp group → their
+ *      phone's Linked devices list and log out any browser or computer nobody recognises); an
+ *      office number with no active custodian is reported to the Partners instead;
+ *   2. clients onboarded 2 or more days ago that still have no Active WhatsApp group → their
  *      engagement partner (the owner when there is none, the Partners when neither is set).
  *
  * Idempotent: every notice carries a dedupe key for the ISO week (`…:2026-W43`), so a retried or
@@ -27,7 +26,7 @@ const PAGE = 1000;
 export async function run(admin: AdminSupabase, now: Date = new Date()): Promise<{ counts: Record<string, number> }> {
   const today = todayIST(now);
   const week = isoWeekKey(today);
-  const counts = { review_reminders: 0, no_custodian: 0, stale_pcs: 0, groups_missing: 0, failed: 0 };
+  const counts = { review_reminders: 0, no_custodian: 0, groups_missing: 0, failed: 0 };
 
   // 1. Linked-devices review reminders ------------------------------------------------------------
   const { data: numbers, error: numbersError } = await admin
@@ -51,7 +50,7 @@ export async function run(admin: AdminSupabase, now: Date = new Date()): Promise
           to: { employeeIds: [n.custodian_employee_id] },
           type: "info",
           title: `Check the ${n.label} phone's linked devices`,
-          body: `On the ${n.label} phone, open WhatsApp → Settings → Linked devices and compare the list with Settings → WhatsApp → Linked PCs. Log out anything you don't recognise, then record the review there. ${last}`,
+          body: `On the ${n.label} phone, open WhatsApp → Settings → Linked devices and log out any browser or computer you don't recognise, then record the review in Settings → WhatsApp. ${last}`,
           linkUrl: "/settings/whatsapp#numbers",
           entity: { type: "firm_whatsapp_number", id: n.id },
           dedupeKey: `whatsapp_devices_review:${n.id}:${week}`,
@@ -75,36 +74,7 @@ export async function run(admin: AdminSupabase, now: Date = new Date()): Promise
     }
   }
 
-  // 2. PCs not seen for 30 days ---------------------------------------------------------------------
-  try {
-    const { data: devices, error } = await admin.from("desktop_devices").select("id, device_name, last_seen_at, created_at").is("revoked_at", null).limit(PAGE);
-    if (error) throw error;
-    const stale = (devices ?? [])
-      .filter((d) => isDeviceStale(d, now))
-      .map((d) => ({ name: d.device_name, days: daysSince(d.last_seen_at ?? d.created_at, now) }))
-      .sort((a, b) => b.days - a.days);
-    if (stale.length) {
-      const list = stale
-        .slice(0, 10)
-        .map((d) => `${d.name} (${d.days} days)`)
-        .join(", ");
-      await notify({
-        to: { roles: ["partner"] },
-        type: "warning",
-        title: `${stale.length} ${stale.length === 1 ? "PC hasn't" : "PCs haven't"} been seen for ${STALE_DEVICE_DAYS} days`,
-        body: `${list}${stale.length > 10 ? ` and ${stale.length - 10} more` : ""}. Remove each one in Settings → WhatsApp → Linked PCs, then from the phones' Linked devices lists, so it doesn't use up WhatsApp's device limit.`,
-        linkUrl: "/settings/whatsapp#linked-pcs",
-        entity: null,
-        dedupeKey: `whatsapp_stale_pcs:${week}`,
-      });
-      counts.stale_pcs = stale.length;
-    }
-  } catch (err) {
-    counts.failed += 1;
-    log("error", "stale PC check failed", { source: "job:whatsapp-housekeeping", err });
-  }
-
-  // 3. Clients onboarded 2+ days ago with no Active group -------------------------------------------
+  // 2. Clients onboarded 2+ days ago with no Active group -------------------------------------------
   const withGroup = new Set<string>();
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await admin.from("client_whatsapp_groups").select("client_id").eq("status", "active").is("deleted_at", null).order("id").range(from, from + PAGE - 1);
