@@ -203,8 +203,12 @@ export function RecycleBinTable(props: {
             <span>{formatDate(r.deletedAt)}</span>
             {/* Below 2xl the "Deleted by" column is folded in here (who, in place of "3 days ago"), so
                 Restore stays in view at 1366. */}
-            <span className="text-xs text-text-muted 2xl:hidden">{r.deletedByName ?? formatTimeAgo(r.deletedAt)}</span>
-            <span className="hidden text-xs text-text-muted 2xl:inline">{formatTimeAgo(r.deletedAt)}</span>
+            <span className="text-xs text-text-muted 2xl:hidden" suppressHydrationWarning>
+              {r.deletedByName ?? formatTimeAgo(r.deletedAt)}
+            </span>
+            <span className="hidden text-xs text-text-muted 2xl:inline" suppressHydrationWarning>
+              {formatTimeAgo(r.deletedAt)}
+            </span>
           </span>
         ),
         mobileCell: (r) => <span title={formatDateTime(r.deletedAt)}>{formatDate(r.deletedAt)}</span>,

@@ -98,7 +98,7 @@ export function ClientThread(props: ClientThreadProps) {
           {props.seenBy.length ? (
             <>
               <EyeIcon aria-hidden="true" className="size-3.5" />
-              <span>
+              <span suppressHydrationWarning>
                 Seen by {props.seenBy.slice(0, 3).map((s) => `${s.name} (${formatTimeAgo(s.at, now)})`).join(", ")}
                 {props.seenBy.length > 3 ? ` and ${props.seenBy.length - 3} more` : ""}
               </span>

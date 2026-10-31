@@ -135,7 +135,7 @@ export function RegisterTable({
         ) : (
           <Muted>{EMPTY}</Muted>
         ),
-      mobileCell: (r) => (r.last_opened_at ? `Opened ${formatTimeAgo(r.last_opened_at, now)}` : null),
+      mobileCell: (r) => (r.last_opened_at ? <span suppressHydrationWarning>{`Opened ${formatTimeAgo(r.last_opened_at, now)}`}</span> : null),
     },
     {
       id: "created_on",

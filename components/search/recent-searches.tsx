@@ -73,7 +73,9 @@ export function RecentSearches({ searches }: { searches: RecentSearchView[] }) {
               >
                 <HistoryIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate text-base text-text">{s.query}</span>
-                <span className="flex-none text-sm text-text-muted">{formatTimeAgo(s.searchedAt)}</span>
+                <span className="flex-none text-sm text-text-muted" suppressHydrationWarning>
+                  {formatTimeAgo(s.searchedAt)}
+                </span>
               </Link>
               <button
                 type="button"

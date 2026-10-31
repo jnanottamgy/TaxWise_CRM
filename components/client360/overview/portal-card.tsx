@@ -88,7 +88,9 @@ export function PortalCard({
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <StatusChip label={state.label} tone={state.tone} meaning={state.meaning} variant="pill" />
-          <p className="text-sm text-text-muted">{state.line}</p>
+          <p className="text-sm text-text-muted" suppressHydrationWarning>
+            {state.line}
+          </p>
         </div>
         {canManage ? (
           <div className="flex flex-wrap gap-2">

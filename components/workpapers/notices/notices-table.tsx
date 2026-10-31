@@ -94,7 +94,7 @@ export function NoticesTable(props: {
         align: "right",
         hideBelow: "xl",
         cell: (r) => (
-          <span className="num text-text-muted" title={r.updated_by_name ? `By ${r.updated_by_name}` : undefined}>
+          <span className="num text-text-muted" title={r.updated_by_name ? `By ${r.updated_by_name}` : undefined} suppressHydrationWarning>
             {formatTimeAgo(r.updated_at)}
           </span>
         ),
