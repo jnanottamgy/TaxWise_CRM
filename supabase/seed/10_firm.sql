@@ -88,16 +88,16 @@ Thank you for your business.$terms$,
    - have a screen lock;
    - have two-step verification on.
 
-4. Link firm numbers only in TaxWise Desktop, on office PCs. A Partner links their own number only on their own PC.
+4. Sign firm numbers in to WhatsApp Web only on office PCs. A Partner's own number goes only on their own PC.
 
-5. Every week, the custodian checks the phone's Linked devices list against Settings → Linked PCs, and removes anything unknown. The app sends the reminder and records the review.
+5. Every week, the custodian checks the phone's Linked devices list (WhatsApp → Linked devices) and logs out anything that isn't an office PC. The app sends the reminder and records the review.
 
 6. Never discuss one client in another client's group. If it happens:
    - delete the message for everyone;
    - tell a Partner, who records the incident.
 
 7. People and engagements changing:
-   - When a Partner leaves, the WhatsApp groups page lists every group to remove their number from. Then remove their PCs.
+   - When a Partner leaves, the WhatsApp groups page lists every group to remove their number from. Then log their number out of every office PC (Linked devices).
    - When an engagement ends, post a closing message, then close the group in the app.$rules$
 )
 on conflict (id) do nothing;
