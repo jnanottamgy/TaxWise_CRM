@@ -29,6 +29,12 @@ export interface WhatsAppAttachment {
 
 const NO_NUMBER = "No WhatsApp number for this client. Add one in Contacts."
 
+/** "Divya Pai · Divya Pai" reads once: a contact named like the client isn't said twice. */
+export function recipientLabel(name: string): string {
+  const parts = name.split(" · ")
+  return parts.filter((p, i) => i === 0 || p.trim().toLowerCase() !== parts[i - 1].trim().toLowerCase()).join(" · ")
+}
+
 /**
  * Send on WhatsApp (§7.13.2): every message to a client goes out this way. The caller resolves the
  * number (normalizeWhatsAppNumber in lib/domain/messaging.ts) and the ready-made text (a template,
@@ -88,6 +94,7 @@ export function WhatsAppButton({
   className?: string
 }) {
   const [open, setOpen] = React.useState(false)
+  const shownName = recipientLabel(recipientName)
   const [text, setText] = React.useState(draft)
   const [templateId, setTemplateId] = React.useState<string | null>(null)
   const phone = useIsPhone()
@@ -136,7 +143,7 @@ export function WhatsAppButton({
         type="button"
         variant={buttonVariant}
         size={iconOnly ? (size === "sm" ? "icon-sm" : "icon") : size}
-        aria-label={iconOnly ? `${label} ${recipientName}` : undefined}
+        aria-label={iconOnly ? `${label} ${shownName}` : undefined}
         onClick={(e) => {
           e.stopPropagation()
           setText(draft)
@@ -171,7 +178,7 @@ export function WhatsAppButton({
       >
         <dl className="mb-4 grid grid-cols-[5.5rem_1fr] gap-y-1 text-base">
           <dt className="text-sm text-text-muted">To</dt>
-          <dd className="min-w-0 text-text">{recipientName}</dd>
+          <dd className="min-w-0 text-text">{shownName}</dd>
           <dt className="text-sm text-text-muted">Number</dt>
           <dd className="num text-text tabular-nums">{displayPhone(number)}</dd>
         </dl>

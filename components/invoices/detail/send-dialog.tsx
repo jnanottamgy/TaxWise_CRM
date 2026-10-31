@@ -37,31 +37,15 @@ const CHANNEL_TEXT: Record<SendChannel, { label: string; hint: string }> = {
   in_person: { label: "By hand", hint: "You give the client a printed copy. The invoice is issued; nothing is sent." },
 }
 
-export function SendInvoiceDialog({
-  mode,
-  invoice,
-  send,
-  onClose,
-}: {
-  mode: "issue" | "send"
-  invoice: DetailInvoice
-  send: SendContext
-  onClose: () => void
-}) {
+/**
+ * The WhatsApp hand-off of an issued invoice to one contact (§7.13.2): their number, the message
+ * (amount, due date, the portal "View & pay" link and the UPI pay link) with the invoice templates
+ * filled in, the PDF to attach, and the log of the hand-off. Used by this dialog and by the
+ * invoice's own WhatsApp button (invoice-actions.tsx).
+ */
+export function useInvoiceWhatsApp(invoice: DetailInvoice, send: SendContext, contact: SendRecipient | null, invoiceNumber: string | null) {
   const router = useRouter()
-  const primary = send.recipients.find((r) => r.primary) ?? send.recipients[0] ?? null
-  const [contactKey, setContactKey] = React.useState<string>(primary?.contactId ?? "")
-  const contact: SendRecipient | null = send.recipients.find((r) => (r.contactId ?? "") === contactKey) ?? primary
   const number = pickWhatsAppNumber(contact, send.client, { countryCode: send.countryCode })
-  const [channel, setChannel] = React.useState<SendChannel>(() => (mode === "issue" && !pickWhatsAppNumber(primary, send.client, { countryCode: send.countryCode }) ? "in_person" : "whatsapp"))
-  const [pending, setPending] = React.useState(false)
-  const [error, setError] = React.useState<FormError | null>(null)
-  /** After a successful issue: the number, for the message and the PDF. */
-  const [issuedAs, setIssuedAs] = React.useState<string | null>(null)
-  const contactId = React.useId()
-
-  const invoiceNumber = issuedAs ?? invoice.number
-  const issued = mode === "send" || issuedAs !== null
   const duePaise = invoice.outstandingPaise > 0 ? invoice.outstandingPaise : invoice.totalPaise
   let upiUrl: string | null = null
   if (send.upi && duePaise > 0 && invoiceNumber) {
@@ -107,11 +91,41 @@ export function SendInvoiceDialog({
   const pdfHref = `/api/pdf/invoice/${invoice.id}?download=1`
   const attachment = invoiceNumber ? { href: pdfHref, filename: pdfFileName(invoiceNumber, invoice.kind === "debit_note" ? "Debit note" : "Invoice") } : undefined
 
-  const logWhatsApp = async (info: { number: string; text: string; templateId: string | null }) => {
+  const onHandedOff = async (info: { number: string; text: string; templateId: string | null }) => {
     const r = await recordInvoiceHandoff({ invoiceId: invoice.id, channel: "whatsapp_handoff", contactId: contact?.contactId ?? null, recipient: info.number, body: info.text })
     if (!r.ok) throw new Error(r.error)
     router.refresh()
   }
+
+  return { recipientName: `${contact?.name ?? "Client"} · ${invoice.clientName}`, number: number?.digits ?? null, draft, templates, attachment, pdfHref, duePaise, onHandedOff }
+}
+
+export function SendInvoiceDialog({
+  mode,
+  invoice,
+  send,
+  onClose,
+}: {
+  mode: "issue" | "send"
+  invoice: DetailInvoice
+  send: SendContext
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const primary = send.recipients.find((r) => r.primary) ?? send.recipients[0] ?? null
+  const [contactKey, setContactKey] = React.useState<string>(primary?.contactId ?? "")
+  const contact: SendRecipient | null = send.recipients.find((r) => (r.contactId ?? "") === contactKey) ?? primary
+  const number = pickWhatsAppNumber(contact, send.client, { countryCode: send.countryCode })
+  const [channel, setChannel] = React.useState<SendChannel>(() => (mode === "issue" && !pickWhatsAppNumber(primary, send.client, { countryCode: send.countryCode }) ? "in_person" : "whatsapp"))
+  const [pending, setPending] = React.useState(false)
+  const [error, setError] = React.useState<FormError | null>(null)
+  /** After a successful issue: the number, for the message and the PDF. */
+  const [issuedAs, setIssuedAs] = React.useState<string | null>(null)
+  const contactId = React.useId()
+
+  const invoiceNumber = issuedAs ?? invoice.number
+  const issued = mode === "send" || issuedAs !== null
+  const wa = useInvoiceWhatsApp(invoice, send, contact, invoiceNumber)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -159,17 +173,17 @@ export function SendInvoiceDialog({
   const handoff = (
     <div className="flex flex-wrap items-center gap-2">
       <WhatsAppButton
-        recipientName={`${contact?.name ?? "Client"} · ${invoice.clientName}`}
-        number={number?.digits ?? null}
-        draft={draft}
-        templates={templates}
-        attachment={attachment}
+        recipientName={wa.recipientName}
+        number={wa.number}
+        draft={wa.draft}
+        templates={wa.templates}
+        attachment={wa.attachment}
         label="Send on WhatsApp"
         size="default"
-        onHandedOff={logWhatsApp}
+        onHandedOff={wa.onHandedOff}
       />
       <Button asChild variant="ghost">
-        <a href={pdfHref}>
+        <a href={wa.pdfHref}>
           <DownloadIcon aria-hidden="true" />
           Download PDF
         </a>
@@ -190,7 +204,7 @@ export function SendInvoiceDialog({
             "It has its number and is marked Sent. Send it to the client now:"
           ) : (
             <>
-              {invoice.clientName} · <Money value={fromPaise(duePaise)} /> {invoice.outstandingPaise > 0 && invoice.outstandingPaise !== invoice.totalPaise ? "still to pay" : ""}
+              {invoice.clientName} · <Money value={fromPaise(wa.duePaise)} /> {invoice.outstandingPaise > 0 && invoice.outstandingPaise !== invoice.totalPaise ? "still to pay" : ""}
             </>
           )
         }

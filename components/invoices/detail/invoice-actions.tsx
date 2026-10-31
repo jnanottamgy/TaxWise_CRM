@@ -27,7 +27,8 @@ import { formatINR } from "@/lib/domain/money"
 import { CancelReissueSchema, DebitNoteSchema, DisputeSchema, ReturnInvoiceSchema, WaiveSchema, type InvoiceActions } from "@/lib/schemas/invoices"
 import { approveInvoice, cancelAndReissue, createDebitNote, deleteInvoiceDraft, markDisputed, resolveDispute, returnInvoice, waiveInvoice } from "@/server/actions/invoices"
 import { ReasonDialog } from "@/components/invoices/detail/reason-dialog"
-import { SendInvoiceDialog } from "@/components/invoices/detail/send-dialog"
+import { SendInvoiceDialog, useInvoiceWhatsApp } from "@/components/invoices/detail/send-dialog"
+import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
 import { ReceiptDialog } from "@/components/invoices/detail/receipt-dialog"
 import { CreditNoteDialog } from "@/components/invoices/detail/credit-note-dialog"
 import { EInvoiceDialog } from "@/components/invoices/detail/e-invoice-dialog"
@@ -39,7 +40,9 @@ type DialogName = "issue" | "send" | "receipt" | "credit" | "einvoice" | "disput
 /**
  * The invoice's actions (§7.9.3), by its state and the viewer's role (invoiceActions): one primary
  * button for the next step (Approve · Issue and send · Edit draft · Record receipt · Send), the PDF,
- * and the rest under More. The database refuses anything not allowed; this only offers what is.
+ * WhatsApp for an issued invoice (straight to the preview, to the primary contact; Send again under
+ * More picks another), and the rest under More. The database refuses anything not allowed; this
+ * only offers what is.
  */
 export function InvoiceActionsBar({
   invoice,
@@ -68,6 +71,8 @@ export function InvoiceActionsBar({
   const issuedOpen = !unissued && !invoice.cancelled
 
   const primary: DialogName | "edit" | null = actions.approve ? "approve" : actions.issue ? "issue" : actions.edit ? "edit" : actions.recordReceipt ? "receipt" : actions.sendAgain ? "send" : null
+  const primaryContact = send.recipients.find((r) => r.primary) ?? send.recipients[0] ?? null
+  const wa = useInvoiceWhatsApp(invoice, send, primaryContact, invoice.number)
 
   const pdfLabel = unissued ? "Preview PDF" : "PDF"
   const more: Array<{ key: string; label: string; icon: React.ReactNode; onSelect: () => void; danger?: boolean; hint?: string; disabled?: boolean }> = []
@@ -96,6 +101,19 @@ export function InvoiceActionsBar({
             {pdfLabel}
           </a>
         </Button>
+        {actions.sendAgain && primary !== "send" && invoice.number ? (
+          <WhatsAppButton
+            recipientName={wa.recipientName}
+            number={wa.number}
+            draft={wa.draft}
+            templates={wa.templates}
+            attachment={wa.attachment}
+            label="WhatsApp"
+            variant="outline"
+            size="default"
+            onHandedOff={wa.onHandedOff}
+          />
+        ) : null}
         {more.length ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
