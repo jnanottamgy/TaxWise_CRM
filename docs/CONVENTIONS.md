@@ -26,7 +26,7 @@ app/
   (staff)/…            the firm's app (sidebar shell, app/(staff)/layout.tsx)
   (portal)/portal/…    client portal (lighter shell)
   q/[token]/           public quotation page (no login)
-  api/cron/[job], api/pdf/…, api/files/…, api/desktop/…, api/webhooks/resend, api/presence/heartbeat, api/health
+  api/cron/tick (the scheduler's check), api/cron/[job], api/pdf/…, api/files/…, api/presence/heartbeat, api/health
 components/ui/         shadcn primitives (owned by the UI kit)
 components/app/        TaxWise patterns: StatusChip, EmptyState, DataTable, Money, DateText, CopyButton,
                        PageHeader, FilterBar, FormDialog (sticky footer), Wizard, KpiStrip, …
@@ -36,11 +36,11 @@ lib/schemas/<module>.ts  zod schemas shared by forms (client) and actions (serve
 lib/data/<module>.ts   typed READ functions (server-only), run under the caller's RLS
 server/actions/<module>.ts  "use server" mutations, each wrapped in defineAction (lib/action.ts)
 server/admin.ts        the ONLY service-role usage
-server/jobs/<job>.ts   scheduled job bodies (called from app/api/cron/[job])
-server/email/, server/pdf/  email and PDF rendering (server-only)
+server/jobs/<job>.ts   scheduled job bodies; schedule.ts (when), due.ts (what is due), runner.ts (run + job_runs)
+server/pdf/            PDF rendering (server-only)
 supabase/migrations/NNNN_name.sql · supabase/seed.sql (only §16 content)
 tests/unit/ · tests/db/ · tests/e2e/
-desktop/               TaxWise Desktop (Electron), separate package
+netlify/functions/     the scheduler (Netlify scheduled function, every 15 minutes)
 ```
 
 ## 2. Routes (fixed; the sidebar links to these)
@@ -54,7 +54,7 @@ Staff (`app/(staff)/…`):
 `/invoices` · `/invoices/new` · `/invoices/[id]` · `/payments` · `/fee-realisation` · `/revenue` · `/tds-credits` · `/retainer-drafts`
 `/people[/id]` · `/performance` · `/leave`
 `/registers` (`?tab=vault|registrations|dsc|udin|filings`) · `/engagement-letters` · `/quality` · `/audits[/id]` · `/templates/jobs` · `/templates/messages`
-`/reports[/slug]` · `/audit-log` · `/recycle-bin` · `/settings/<section>` (`firm|bank|numbering|billing|working-hours|reminders|email|whatsapp|law|templates|data|diagnostics`)
+`/reports[/slug]` · `/audit-log` · `/recycle-bin` · `/settings/<section>` (`firm|bank|numbering|billing|working-hours|reminders|whatsapp|law|templates|data|diagnostics`)
 
 Portal: `/portal` · `/portal/deadlines` · `/portal/compliance` · `/portal/documents` · `/portal/invoices` · `/portal/messages` · `/portal/help` · `/portal/welcome` (first sign-in: privacy notice).
 Public: `/q/[token]`. Auth: `/login` `/forgot-password` `/reset-password` `/set-password` `/setup` `/no-access`.
@@ -67,7 +67,7 @@ Navigation config lives in `lib/nav.ts` (per role, §4.2). Feature agents never 
    `getSession()` (`lib/auth/current-user.ts`). Never the admin client for reads a user could make.
 2. **Writes**: Server Actions in `server/actions/*`, each `defineAction({ name, schema, roles }, handler)`
    from `lib/action.ts`. Handlers return `ok(data)` / `fail(msg)` or throw `ActionError`. DB errors go
-   through `throwIfDbError`. Side effects (email, notifications, timeline, generation) go in
+   through `throwIfDbError`. Side effects (notifications, timeline, generation) go in
    `ctx.after(label, fn, warning)` so they can never fail the save (§0.1 rule 5). Mutations call
    `ctx.audit({...})` (§0.1 rule 12).
 3. **Role checks read `profiles.role`** (via `getSession`) — never `user_metadata`, never trust a role

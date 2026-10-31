@@ -6,6 +6,7 @@ import { log, logUnexpected } from "@/lib/log";
 import { fetchAll, loadComplianceEngine } from "@/server/compliance/engine";
 import { generateForClient, loadClientCalendarFacts } from "@/server/compliance/generate";
 import { firmCoverageGaps } from "@/server/compliance/coverage-gaps";
+import { UNLIMITED, outOfTime, type JobContext, type JobResult } from "@/server/jobs/context";
 import { notify } from "@/server/notify";
 
 /**
@@ -15,16 +16,26 @@ import { notify } from "@/server/notify";
  * gaps to Partners and Managers. Clients that are inactive or in the recycle bin are skipped. A
  * client that fails is logged with its Ref and the run continues (§8). Running it twice plans
  * nothing new and notifies once (the dedupe key names the month).
+ *
+ * Clients go in id order. When the call's time budget runs out (server/jobs/context.ts) it stops
+ * after the client in hand and returns that client's id as `next`; the next call carries on after
+ * it, and the coverage-gap report goes out once, from the call that reaches the end.
  */
-export async function run(admin: AdminSupabase, now: Date = new Date()): Promise<{ counts: Record<string, number> }> {
+export async function run(admin: AdminSupabase, now: Date = new Date(), ctx: JobContext = UNLIMITED): Promise<JobResult> {
   const today = todayIST(now);
   const engine = await loadComplianceEngine(admin, today);
-  const clients = await fetchAll((a, b) =>
-    admin.from("clients").select("id").is("deleted_at", null).neq("status", "inactive").order("created_at").range(a, b),
-  );
+  const after = ctx.cursor && /^[0-9a-f-]{36}$/i.test(ctx.cursor) ? ctx.cursor : null;
+  const clients = await fetchAll((a, b) => {
+    const q = admin.from("clients").select("id").is("deleted_at", null).neq("status", "inactive");
+    return (after ? q.gt("id", after) : q).order("id").range(a, b);
+  });
 
   const counts = { clients: 0, created: 0, updated: 0, locked: 0, retired: 0, failed: 0, gaps: 0, gapClients: 0, skippedRules: engine.skipped.length };
+  let done = 0;
   for (const c of clients) {
+    // At least one client per call, so a continuation always moves on.
+    if (done > 0 && outOfTime(ctx)) return { counts, next: clients[done - 1].id };
+    done++;
     try {
       const facts = await loadClientCalendarFacts(admin, c.id, { system: true });
       if (!facts) continue;

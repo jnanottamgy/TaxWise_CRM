@@ -3,11 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getGoToItems, getNav, getNewActions } from "@/lib/nav";
 import { APP_ROLES, homePathFor } from "@/lib/auth/roles";
-import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
+import { JOB_SCHEDULE, SCHEDULED_JOBS } from "@/server/jobs/schedule";
+import { parseCron } from "@/lib/domain/cron";
 
 /**
  * Wave A integration: the sidebar, the command palette's Go to list and the "+ New" menu reach real
- * pages for every module built so far, and every scheduled job body is registered with Vercel Cron.
+ * pages for every module built so far, and every scheduled job body is on the schedule.
  */
 
 const ROOT = join(__dirname, "..", "..");
@@ -77,19 +78,21 @@ describe("wave A navigation", () => {
 });
 
 describe("scheduled jobs", () => {
-  const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as { crons: Array<{ path: string; schedule: string }> };
-  const scheduled = vercel.crons.map((c) => pathOf(c.path).replace(/^\/api\/cron\//, ""));
+  const scheduled = JOB_SCHEDULE.map((e) => e.job);
 
-  it("every job has a Vercel Cron entry, and every entry names a job", () => {
+  it("every job has a schedule entry, and every entry names a job", () => {
     expect([...new Set(scheduled)].sort()).toEqual(Object.keys(SCHEDULED_JOBS).sort());
   });
 
-  it("each entry is a five-field UTC cron expression", () => {
-    for (const c of vercel.crons) expect(c.schedule.trim().split(/\s+/), c.path).toHaveLength(5);
+  it("each entry is a five-field UTC cron expression the scheduler can read", () => {
+    for (const e of JOB_SCHEDULE) {
+      expect(e.cron.trim().split(/\s+/), e.job).toHaveLength(5);
+      expect(() => parseCron(e.cron), e.job).not.toThrow();
+    }
   });
 
   it("the daily times match §8 in IST (UTC + 5:30)", () => {
-    const at = (job: string) => vercel.crons.filter((c) => pathOf(c.path) === `/api/cron/${job}`).map((c) => c.schedule);
+    const at = (job: string) => JOB_SCHEDULE.filter((e) => e.job === job).map((e) => e.cron);
     expect(at("workforce-sweep")).toEqual(["45 18 * * *"]); // 00:15 IST
     expect(at("escalation")).toEqual(["30 2 * * *"]); // 08:00 IST
     expect(at("compliance-top-up")).toEqual(["0 3 1 * *"]); // 08:30 IST on the 1st

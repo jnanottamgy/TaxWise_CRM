@@ -5,6 +5,7 @@ import { istDateOf, todayIST } from "@/lib/domain/fy";
 import { formatDate } from "@/lib/format";
 import { logUnexpected } from "@/lib/log";
 import { dueRuns, firstRunOnOrAfter, planRun, readRecurringConfig, runInstant, type RecurringFrequency, RECURRING_FREQUENCIES } from "@/lib/schemas/job-templates";
+import { UNLIMITED, outOfTime, type JobContext, type JobResult } from "@/server/jobs/context";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 
@@ -20,6 +21,10 @@ import { addTimelineEvent } from "@/server/timeline";
  * get no new work (§3.6) but still move on to the next date. A disabled assignee leaves the task
  * unassigned for a Manager to pick up. One automation failing is logged with its Ref and the run
  * carries on (§8).
+ *
+ * On a busy day (the 1st, with every monthly return due) the run can outlast one call: when the
+ * call's time budget runs out (server/jobs/context.ts) it stops between automations and returns
+ * `next`; the next call picks up the automations still due, since each one done has moved on.
  */
 
 type AutomationRow = {
@@ -39,7 +44,7 @@ async function canTakeWork(admin: AdminSupabase, employeeId: string | null): Pro
   return data === true;
 }
 
-export async function run(admin: AdminSupabase, now: Date = new Date()): Promise<{ counts: Record<string, number> }> {
+export async function run(admin: AdminSupabase, now: Date = new Date(), ctx: JobContext = UNLIMITED): Promise<JobResult> {
   const today = todayIST(now);
   const counts = { automations: 0, created: 0, existing: 0, skippedPeriods: 0, clientPaused: 0, unassigned: 0, invalid: 0, failed: 0 };
 
@@ -64,6 +69,8 @@ export async function run(admin: AdminSupabase, now: Date = new Date()): Promise
   };
 
   for (const a of (data ?? []) as unknown as AutomationRow[]) {
+    // At least one automation per call, so a continuation always moves on.
+    if (counts.automations > 0 && outOfTime(ctx)) return { counts, next: "more" };
     counts.automations++;
     try {
       const config = readRecurringConfig(a.config);

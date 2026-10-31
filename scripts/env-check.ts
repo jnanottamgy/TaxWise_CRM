@@ -7,7 +7,7 @@
  * - Flags example values copied from .env.example and left in place (an error in production and
  *   staging, a warning elsewhere).
  * - The required set depends on APP_ENV: development and test need only what the app can't start
- *   without; staging and production need everything the firm relies on (email, cron, the vault).
+ *   without; staging and production need everything the firm relies on (the scheduler, the vault).
  * - Never prints a value: only the variable's name and what is wrong with it.
  *
  * Loads .env, .env.local and .env.<mode>.local like Next.js does (pass --no-dotenv to check only the
@@ -96,17 +96,6 @@ function emailAddress(value: string): string | null {
   return EMAIL_RE.test(value.trim()) ? null : "must be an email address, like info@twchartered.com";
 }
 
-/** `Name <address>` or a bare address. */
-function emailSender(value: string): string | null {
-  const v = value.trim();
-  const m = /^(.*)<([^<>]+)>$/.exec(v);
-  if (m) {
-    if (!m[1].trim()) return 'needs a display name before the address, like "TaxWise Consultants <noreply@twchartered.com>"';
-    return EMAIL_RE.test(m[2].trim()) ? null : "has an invalid address inside < >";
-  }
-  return EMAIL_RE.test(v) ? null : 'must be "Name <address>" or an address';
-}
-
 /** Decodes a JWT's payload without verifying it (only to catch a key pasted into the wrong place). */
 export function jwtRole(token: string): string | null {
   const parts = token.split(".");
@@ -167,10 +156,6 @@ function minLength(n: number, what: string) {
   return (value: string): string | null => (value.length >= n ? null : `must be at least ${n} characters (${what})`);
 }
 
-function prefixed(prefix: string, what: string) {
-  return (value: string): string | null => (value.startsWith(prefix) ? null : `must start with ${prefix} (${what})`);
-}
-
 // -------------------------------------------------------------------------------------------------
 // The variables (§17). Keep in step with .env.example (a unit test checks both lists match).
 // -------------------------------------------------------------------------------------------------
@@ -185,7 +170,7 @@ export const VARIABLES: readonly VariableSpec[] = [
   },
   {
     name: "NEXT_PUBLIC_APP_URL",
-    breaks: "Links in emails, WhatsApp drafts and the client portal point at http://localhost:3000.",
+    breaks: "Links in WhatsApp messages, documents and the client portal point at http://localhost:3000.",
     requiredIn: DEPLOYED,
     recommendedIn: LOCAL,
     validate: httpUrl({ httpsWhenDeployed: true, noLocalhostWhenDeployed: true, noTrailingPath: true }),
@@ -248,32 +233,6 @@ export const VARIABLES: readonly VariableSpec[] = [
     validate: minLength(32, "generate with: openssl rand -hex 32"),
   },
   {
-    name: "RESEND_API_KEY",
-    breaks: "No email is sent: invites, reminders, invoices and the Partner digest stay unsent (the app says so on each record).",
-    requiredIn: DEPLOYED,
-    recommendedIn: LOCAL,
-    validate: prefixed("re_", "a Resend API key"),
-  },
-  {
-    name: "RESEND_WEBHOOK_SECRET",
-    breaks: "Bounces and delivery events from Resend are refused, so failed emails aren't marked on their records.",
-    requiredIn: ["production"],
-    recommendedIn: ["staging"],
-    validate: prefixed("whsec_", "the Resend webhook signing secret"),
-  },
-  {
-    name: "EMAIL_FROM",
-    breaks: "Emails fall back to TaxWise Consultants <noreply@twchartered.com>.",
-    requiredIn: DEPLOYED,
-    validate: emailSender,
-  },
-  {
-    name: "EMAIL_REPLY_TO",
-    breaks: "Replies fall back to info@twchartered.com.",
-    requiredIn: DEPLOYED,
-    validate: emailAddress,
-  },
-  {
     name: "FIRST_PARTNER_EMAIL",
     breaks: "Bootstrap only: without it, whoever opens /setup first while no users exist becomes the first Partner.",
     requiredIn: [],
@@ -281,14 +240,8 @@ export const VARIABLES: readonly VariableSpec[] = [
     validate: emailAddress,
   },
   {
-    name: "NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL",
-    breaks: "Settings → WhatsApp has no Download TaxWise Desktop link.",
-    requiredIn: [],
-    validate: httpUrl({ httpsWhenDeployed: true }),
-  },
-  {
     name: "APP_BUILD_ID",
-    breaks: "Optional: /api/health reports the package version only (plus the commit on Vercel, which sets VERCEL_GIT_COMMIT_SHA itself).",
+    breaks: "Optional: /api/health reports the package version only (plus the commit on Netlify, which sets COMMIT_REF during the build).",
     requiredIn: [],
     validate: (v) => (/^[0-9a-zA-Z._-]{1,64}$/.test(v) ? null : "must be 1 to 64 letters, digits, dots, dashes or underscores"),
   },
@@ -316,12 +269,7 @@ export const EXAMPLE_VALUES: Readonly<Record<string, string>> = {
   CREDENTIAL_VAULT_KEY_VERSION: "v1",
   CREDENTIAL_VAULT_PREVIOUS_KEYS: "",
   CRON_SECRET: "replace-with-a-long-random-string",
-  RESEND_API_KEY: "re_your_resend_api_key",
-  RESEND_WEBHOOK_SECRET: "whsec_your_resend_webhook_secret",
-  EMAIL_FROM: "TaxWise Consultants <noreply@twchartered.com>",
-  EMAIL_REPLY_TO: "info@twchartered.com",
   FIRST_PARTNER_EMAIL: "",
-  NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL: "",
   APP_BUILD_ID: "",
   SENTRY_DSN: "",
 };
@@ -331,8 +279,6 @@ const EXAMPLE_VALUES_THAT_ARE_REAL = new Set([
   "APP_ENV",
   "NEXT_PUBLIC_APP_URL", // localhost is right for development; the URL check refuses it when deployed
   "CREDENTIAL_VAULT_KEY_VERSION",
-  "EMAIL_FROM",
-  "EMAIL_REPLY_TO",
 ]);
 
 /** Placeholder wording that means "not filled in", wherever it appears. */
@@ -400,11 +346,12 @@ export function checkEnv(env: Env): EnvReport {
   if (appEnv === "production") {
     const supa = parseUrl(env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "");
     const app = parseUrl(env.NEXT_PUBLIC_APP_URL?.trim() ?? "");
-    if (app && /(^|\.)vercel\.app$/.test(app.hostname)) {
+    const host = app ? /(^|\.)((netlify|vercel)\.app)$/.exec(app.hostname) : null;
+    if (host) {
       warnings.push({
         name: "NEXT_PUBLIC_APP_URL",
         level: "warning",
-        message: "is a vercel.app address. The live firm uses the production domain only (§18.2).",
+        message: `is a ${host[2]} address. The live firm uses its own domain only (§18.2).`,
       });
     }
     if (supa && /staging/i.test(supa.hostname)) {

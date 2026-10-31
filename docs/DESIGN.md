@@ -143,7 +143,7 @@ ring (`ring-ring`), keyboard-complete; `⌘K` search, `N` new, `G C/T/I`, `?` sh
 
 Test at **1366×768**, **768×1024** and **390×844** (§0.1 rule 4), plus dark mode. Sidebar 260px
 (collapsible to a 64px rail) from 1024px; always the 64px rail from 768 to 1023px (tablets, and the
-Desktop app beside WhatsApp); a drawer below 768px. Employees get the bottom tab bar (Today · Tasks ·
+CRM's half of the screen when WhatsApp Web sits beside it); a drawer below 768px. Employees get the bottom tab bar (Today · Tasks ·
 Timer · Clients · More). No horizontal page scroll ever; wide tables scroll inside their own frame with
 the first column fixed, or become card lists. Cards that share a row share a bottom edge (stretch the
 last card and pin its "View all"), or keep their own height when stretching would leave a hole.

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { getGoToItems, getNav, getNewActions } from "@/lib/nav";
 import { APP_ROLES } from "@/lib/auth/roles";
 import { isPublicPath, pathAllowedForRole } from "@/lib/supabase/proxy";
-import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
+import { JOB_SCHEDULE, SCHEDULED_JOBS } from "@/server/jobs/schedule";
 import { parseTableParams } from "@/components/app/data-table/params";
 import { INVOICE_LIST_FILTERS, INVOICE_LIST_SORTABLE, listFinancialYear } from "@/lib/schemas/invoices";
 import { QUOTATION_FILTERS, QUOTATION_SORTABLE } from "@/lib/schemas/quotations";
@@ -13,7 +13,7 @@ import { whatsAppCommandLabel } from "@/components/shell/search-contract";
 /**
  * Wave B integration: the sidebar, Go to and "+ New" reach real pages for leads, quotations,
  * invoices, collections, messaging, the portal and WhatsApp; every new job body is scheduled at its
- * §8 time (IST − 5:30 in vercel.json); the public quotation page and its PDF need no session.
+ * §8 time (IST − 5:30 in JOB_SCHEDULE); the public quotation page and its PDF need no session.
  */
 
 const ROOT = join(__dirname, "..", "..");
@@ -119,8 +119,7 @@ describe("dashboard links (§7.2) open the filtered list behind each tile", () =
 });
 
 describe("wave B scheduled jobs (§8)", () => {
-  const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as { crons: Array<{ path: string; schedule: string }> };
-  const at = (job: string) => vercel.crons.filter((c) => pathOf(c.path) === `/api/cron/${job}`).map((c) => c.schedule);
+  const at = (job: string) => JOB_SCHEDULE.filter((e) => e.job === job).map((e) => e.cron);
 
   it("every wave B job body is scheduled", () => {
     for (const job of ["quotations", "lead-follow-ups", "receivables-sweep", "retainer-billing", "invoice-reminders", "team-health", "whatsapp-housekeeping", "access-review", "new-fy"]) {

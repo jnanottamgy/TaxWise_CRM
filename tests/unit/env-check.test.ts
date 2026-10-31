@@ -25,10 +25,6 @@ function production(overrides: Record<string, string | undefined> = {}): Record<
     CREDENTIAL_VAULT_KEY: VAULT_KEY,
     CREDENTIAL_VAULT_KEY_VERSION: "v1",
     CRON_SECRET: "9d2c7a1e4b8f3d6c0a5e2b7f1c4d8a3e",
-    RESEND_API_KEY: "re_Ab12Cd34Ef56Gh78",
-    RESEND_WEBHOOK_SECRET: "whsec_Zx98Yw76Vu54",
-    EMAIL_FROM: "TaxWise Consultants <noreply@twchartered.com>",
-    EMAIL_REPLY_TO: "info@twchartered.com",
     FIRST_PARTNER_EMAIL: "partner@twchartered.com",
     ...overrides,
   };
@@ -68,27 +64,33 @@ describe("env-check: a complete production environment", () => {
   it("never prints a value", () => {
     const env = production();
     const text = formatReport(checkEnv(env)).join("\n");
-    for (const name of ["CREDENTIAL_VAULT_KEY", "SUPABASE_SERVICE_ROLE_KEY", "CRON_SECRET", "RESEND_API_KEY", "DATABASE_URL"]) {
+    for (const name of ["CREDENTIAL_VAULT_KEY", "SUPABASE_SERVICE_ROLE_KEY", "CRON_SECRET", "DATABASE_URL"]) {
       expect(text).not.toContain(env[name] as string);
     }
   });
 });
 
 describe("env-check: required set depends on APP_ENV", () => {
-  it("production needs the vault key, cron secret, Resend and the webhook secret", () => {
-    for (const name of ["CREDENTIAL_VAULT_KEY", "CRON_SECRET", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "EMAIL_FROM", "NEXT_PUBLIC_APP_URL"]) {
+  it("production needs the vault key, the cron secret and the app URL", () => {
+    for (const name of ["CREDENTIAL_VAULT_KEY", "CRON_SECRET", "NEXT_PUBLIC_APP_URL"]) {
       const r = checkEnv(production({ [name]: undefined }));
       expect(r.ok, name).toBe(false);
       expect(names(r.errors), name).toContain(name);
     }
   });
 
-  it("staging needs the vault key but only recommends the webhook secret", () => {
-    const staging = production({ APP_ENV: "staging", RESEND_WEBHOOK_SECRET: undefined });
+  it("staging needs the vault key and the cron secret but only recommends the first Partner's email", () => {
+    const staging = production({ APP_ENV: "staging", FIRST_PARTNER_EMAIL: undefined });
     const r = checkEnv(staging);
     expect(r.ok).toBe(true);
-    expect(names(r.warnings)).toContain("RESEND_WEBHOOK_SECRET");
+    expect(names(r.warnings)).toContain("FIRST_PARTNER_EMAIL");
     expect(checkEnv({ ...staging, CREDENTIAL_VAULT_KEY: undefined }).ok).toBe(false);
+    expect(checkEnv({ ...staging, CRON_SECRET: undefined }).ok).toBe(false);
+  });
+
+  it("asks for no email service or desktop app settings", () => {
+    const known = VARIABLES.map((v) => v.name);
+    for (const gone of ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "EMAIL_FROM", "EMAIL_REPLY_TO", "NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL"]) expect(known).not.toContain(gone);
   });
 
   it("development needs only Supabase", () => {
@@ -100,7 +102,7 @@ describe("env-check: required set depends on APP_ENV", () => {
     const r = checkEnv(dev);
     expect(r.appEnv).toBe("development");
     expect(r.ok).toBe(true);
-    expect(names(r.warnings)).toEqual(expect.arrayContaining(["CREDENTIAL_VAULT_KEY", "RESEND_API_KEY"]));
+    expect(names(r.warnings)).toEqual(expect.arrayContaining(["CREDENTIAL_VAULT_KEY", "APP_ENV"]));
     expect(checkEnv({ ...dev, NEXT_PUBLIC_SUPABASE_URL: undefined }).ok).toBe(false);
   });
 
@@ -155,13 +157,8 @@ describe("env-check: malformed values", () => {
     expect(checkEnv(production({ SUPABASE_SERVICE_ROLE_KEY: "sb_secret_abc123" })).ok).toBe(true);
   });
 
-  it("checks key prefixes, email formats, the cron secret length and connection strings", () => {
-    expect(names(checkEnv(production({ RESEND_API_KEY: "sk_live_123" })).errors)).toContain("RESEND_API_KEY");
-    expect(names(checkEnv(production({ RESEND_WEBHOOK_SECRET: "abc" })).errors)).toContain("RESEND_WEBHOOK_SECRET");
-    expect(names(checkEnv(production({ EMAIL_FROM: "TaxWise <not-an-email>" })).errors)).toContain("EMAIL_FROM");
-    expect(names(checkEnv(production({ EMAIL_FROM: "<noreply@twchartered.com>" })).errors)).toContain("EMAIL_FROM");
-    expect(checkEnv(production({ EMAIL_FROM: "noreply@twchartered.com" })).ok).toBe(true);
-    expect(names(checkEnv(production({ EMAIL_REPLY_TO: "info at twchartered" })).errors)).toContain("EMAIL_REPLY_TO");
+  it("checks the email format, the cron secret length and connection strings", () => {
+    expect(names(checkEnv(production({ FIRST_PARTNER_EMAIL: "partner at twchartered" })).errors)).toContain("FIRST_PARTNER_EMAIL");
     expect(names(checkEnv(production({ CRON_SECRET: "short" })).errors)).toContain("CRON_SECRET");
     expect(names(checkEnv(production({ DIRECT_URL: "mysql://x" })).errors)).toContain("DIRECT_URL");
   });
@@ -176,9 +173,9 @@ describe("env-check: malformed values", () => {
 
 describe("env-check: example values left in place", () => {
   it("are errors in production", () => {
-    const r = checkEnv(production({ CRON_SECRET: EXAMPLE_VALUES.CRON_SECRET, RESEND_API_KEY: EXAMPLE_VALUES.RESEND_API_KEY }));
+    const r = checkEnv(production({ CRON_SECRET: EXAMPLE_VALUES.CRON_SECRET, CREDENTIAL_VAULT_KEY: EXAMPLE_VALUES.CREDENTIAL_VAULT_KEY }));
     expect(r.ok).toBe(false);
-    expect(names(r.errors)).toEqual(expect.arrayContaining(["CRON_SECRET", "RESEND_API_KEY"]));
+    expect(names(r.errors)).toEqual(expect.arrayContaining(["CRON_SECRET", "CREDENTIAL_VAULT_KEY"]));
     expect(r.errors.find((e) => e.name === "CRON_SECRET")?.message).toMatch(/example value/);
   });
 
@@ -196,8 +193,7 @@ describe("env-check: example values left in place", () => {
   it("recognise placeholder wording and leave the firm's real defaults alone", () => {
     expect(looksLikeExample("NEXT_PUBLIC_SUPABASE_URL", "https://your-project-ref.supabase.co")).toBe(true);
     expect(looksLikeExample("CRON_SECRET", "changeme-please")).toBe(true);
-    expect(looksLikeExample("EMAIL_FROM", EXAMPLE_VALUES.EMAIL_FROM)).toBe(false);
-    expect(looksLikeExample("EMAIL_REPLY_TO", EXAMPLE_VALUES.EMAIL_REPLY_TO)).toBe(false);
+    expect(looksLikeExample("CREDENTIAL_VAULT_KEY_VERSION", EXAMPLE_VALUES.CREDENTIAL_VAULT_KEY_VERSION)).toBe(false);
     expect(looksLikeExample("CRON_SECRET", "9d2c7a1e4b8f3d6c0a5e2b7f1c4d8a3e")).toBe(false);
   });
 });
@@ -207,10 +203,13 @@ describe("env-check: production sanity", () => {
     expect(checkEnv(production({ NEXT_PUBLIC_SUPABASE_URL: "https://taxwise-staging.supabase.co" })).ok).toBe(false);
   });
 
-  it("warns about a vercel.app address in production", () => {
-    const r = checkEnv(production({ NEXT_PUBLIC_APP_URL: "https://taxwise.vercel.app" }));
-    expect(r.ok).toBe(true);
-    expect(names(r.warnings)).toContain("NEXT_PUBLIC_APP_URL");
+  it("warns about a netlify.app (or vercel.app) address in production, and not on staging", () => {
+    for (const url of ["https://taxwise-crm.netlify.app", "https://taxwise.vercel.app"]) {
+      const r = checkEnv(production({ NEXT_PUBLIC_APP_URL: url }));
+      expect(r.ok, url).toBe(true);
+      expect(r.warnings.find((w) => w.name === "NEXT_PUBLIC_APP_URL")?.message, url).toMatch(/its own domain/);
+    }
+    expect(names(checkEnv(production({ APP_ENV: "staging", NEXT_PUBLIC_APP_URL: "https://taxwise-crm.netlify.app" })).warnings)).not.toContain("NEXT_PUBLIC_APP_URL");
   });
 });
 

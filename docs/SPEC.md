@@ -1,6 +1,9 @@
 # TaxWise Consultants — Practice OS
 ### Powered by J-TACS · Complete build specification (single-firm edition)
 
+> **Changed since this specification was written:** no TaxWise Desktop app (§7.25), no email (WhatsApp is the only
+> channel to clients), and hosting on Netlify instead of Vercel. See README → "Changes from the original specification".
+
 > **How to use this prompt (for the person pasting it — delete this box before pasting if you like)**
 > - **Claude Code / Cursor / Windsurf:** paste the whole file. Tell it to build in the order given in §18 and to stop after each phase so you can check.
 > - **Lovable / Bolt / v0 (message-length limits):** use the 9 part files instead (`TaxWise-build-prompt-parts.zip`). Paste parts 1–5 first (foundation, roles, database, Indian law). Then paste parts 6–9 one at a time, building each before pasting the next.

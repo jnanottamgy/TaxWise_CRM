@@ -23,15 +23,16 @@ import { run as retainerBilling } from "@/server/jobs/retainer-billing";
 import { run as teamHealth } from "@/server/jobs/team-health";
 import { run as whatsappHousekeeping } from "@/server/jobs/whatsapp-housekeeping";
 import { run as workforceSweep } from "@/server/jobs/workforce-sweep";
+import type { JobContext, JobResult } from "@/server/jobs/context";
 import type { ScheduledJobName } from "@/server/jobs/schedule";
 
 /**
  * The scheduled jobs' bodies (§8), by the name app/api/cron/[job] is called with and job_runs
- * records (the names and times: server/jobs/schedule.ts; vercel.json holds the same schedule in
- * UTC, IST − 5:30). Every job is idempotent and returns `{ counts }` (a `failed` count marks a
- * partial run).
+ * records (the names and times: server/jobs/schedule.ts). Every job is idempotent and returns
+ * `{ counts }` (a `failed` count marks a partial run). A job that may outlast one request takes the
+ * context's deadline and returns `next` to be continued (server/jobs/context.ts); the rest ignore it.
  */
-export type JobRun = (admin: AdminSupabase, now: Date) => Promise<{ counts: Record<string, number> }>;
+export type JobRun = (admin: AdminSupabase, now: Date, ctx: JobContext) => Promise<JobResult>;
 
 /** Every name in SCHEDULED_JOBS (server/jobs/schedule.ts) has its body here, and nothing else. */
 export const JOBS: Record<ScheduledJobName, JobRun> = {

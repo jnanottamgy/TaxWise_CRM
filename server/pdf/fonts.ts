@@ -10,8 +10,8 @@ import { INTER_700_TTF_BASE64 } from "@/server/pdf/fonts/inter-700";
  * Inter for PDFs (§3.2 "PDFs use Inter as well").
  *
  * The fonts are bundled as base64 TrueType inside the server code (server/pdf/fonts/*.ts), so they
- * load the same on a laptop and on Vercel without reading files from disk (nothing to trace into
- * the serverless bundle, nothing to fetch). They are static instances of Inter 4.1 (400, 500, 600,
+ * load the same on a laptop and on the host's serverless functions without reading files from disk
+ * (nothing to trace into the bundle, nothing to fetch). They are static instances of Inter 4.1 (400, 500, 600,
  * 700) subset to Latin, Latin Extended-A, punctuation and ₹ by server/pdf/fonts/subset-inter.py,
  * with tabular figures frozen in, so amounts line up in PDF columns. SIL Open Font License 1.1
  * (server/pdf/fonts/OFL.txt).

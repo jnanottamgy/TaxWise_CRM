@@ -7,13 +7,13 @@ import pkg from "@/package.json";
  * session (lib/supabase/proxy.ts, MACHINE_PREFIXES). For the full picture, a Partner opens
  * Settings → Diagnostics.
  *
- * `version` is the package version, plus the short commit when the platform provides one
- * (VERCEL_GIT_COMMIT_SHA) or the build sets APP_BUILD_ID.
+ * `version` is the package version, plus the short commit: APP_BUILD_ID when set, else the commit
+ * Netlify built (COMMIT_REF, carried into the build by next.config.ts).
  */
 export const dynamic = "force-dynamic";
 
 function buildVersion(): string {
-  const build = (process.env.APP_BUILD_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "").trim();
+  const build = (process.env.APP_BUILD_ID || process.env.COMMIT_REF || "").trim();
   const short = /^[0-9a-zA-Z._-]{1,64}$/.test(build) ? build.slice(0, 12) : "";
   return short ? `${pkg.version}+${short}` : pkg.version;
 }

@@ -1,0 +1,21 @@
+# Netlify builds the app from GitHub on every push and serves it (README → Hosting on Netlify).
+# Netlify detects Next.js and runs it with its Next.js adapter: pages, server actions and API routes
+# become Netlify Functions, proxy.ts runs before each request, and static files go to the CDN.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # The production build type-checks the whole app; give it room.
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+# The live site refuses to build with a missing or example value in its settings (npm run env:check
+# lists what to fix, never the values themselves). Deploy previews and branch deploys skip the check.
+[context.production]
+  command = "npm run env:check && npm run build"
+
+[functions]
+  # The scheduler (netlify/functions/scheduler.mts) runs every 15 minutes on the live site.
+  directory = "netlify/functions"

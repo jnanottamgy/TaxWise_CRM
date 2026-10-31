@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}));
 
 import { getGoToItems, getNav, getNewActions } from "@/lib/nav";
 import { APP_ROLES } from "@/lib/auth/roles";
-import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
+import { JOB_SCHEDULE, SCHEDULED_JOBS } from "@/server/jobs/schedule";
 import { applyTablePatch, parseTableParams, RESERVED_PARAMS } from "@/components/app/data-table/params";
 import { CLIENT_LIST_FILTERS, flagOptionsFor } from "@/lib/schemas/clients";
 import { PEOPLE_FILTERS, PEOPLE_SORTABLE } from "@/lib/data/people";
@@ -96,8 +96,7 @@ describe("wave C pages", () => {
 });
 
 describe("wave C scheduled jobs (§8)", () => {
-  const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as { crons: Array<{ path: string; schedule: string }> };
-  const at = (job: string) => vercel.crons.filter((c) => pathOf(c.path) === `/api/cron/${job}`).map((c) => c.schedule);
+  const at = (job: string) => JOB_SCHEDULE.filter((e) => e.job === job).map((e) => e.cron);
   const registry = readFileSync(join(ROOT, "server", "jobs", "registry.ts"), "utf8");
 
   it("registers, notices and practice reminders run daily with the 09:00 IST reminders, after them", () => {

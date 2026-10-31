@@ -4548,6 +4548,7 @@ export type Database = {
           finished_at: string | null
           id: string
           name: string
+          resume_cursor: string | null
           started_at: string
           status: string
           updated_at: string
@@ -4559,6 +4560,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           name: string
+          resume_cursor?: string | null
           started_at?: string
           status?: string
           updated_at?: string
@@ -4570,6 +4572,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           name?: string
+          resume_cursor?: string | null
           started_at?: string
           status?: string
           updated_at?: string
