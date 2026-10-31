@@ -576,7 +576,6 @@ export const saveReminders = defineAction(
       invoice_reminder_after_days: input.invoice_reminder_after_days,
       document_request_reminder_every_days: input.document_request_reminder_every_days,
       quotation_follow_up_days: input.quotation_follow_up_days,
-      digest_enabled: input.digest_enabled,
       client_notify_channels: input.client_notify_channels,
     });
     return ok({ updated_at, changed: changes.length });

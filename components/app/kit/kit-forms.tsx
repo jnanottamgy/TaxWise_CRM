@@ -109,7 +109,7 @@ async function kitSaveClient(input: KitClientInput): Promise<ActionResult<{ id: 
   }
   const saved = ok({ id: "kit-new", code: "TW-C-0058" })
   if (input.name.toLowerCase().includes("warn")) {
-    return { ...saved, warnings: ["The welcome email didn't go through. Please send it by hand. (Ref 3HF8WQ2L)"] }
+    return { ...saved, warnings: ["The portal invite wasn't created. Invite them from the Overview tab. (Ref 3HF8WQ2L)"] }
   }
   return saved
 }
@@ -151,8 +151,8 @@ function ClientFields({ control, compact = false }: { control: ReturnType<typeof
           <SwitchField
             control={control}
             name="send_welcome"
-            label="Send the welcome email"
-            description="Invites the primary contact to the client portal."
+            label="Send a welcome message on WhatsApp"
+            description="Gets the welcome ready for the primary contact, with the portal link."
             className="md:col-span-2"
           />
         </>
@@ -287,11 +287,11 @@ function KitDialogs() {
         <ConfirmDialog
           trigger={<Button variant="outline">Send quotation</Button>}
           title="Send quotation TW/Q/26-27/0031 to Sharma Traders?"
-          description="Rakesh Sharma gets an email with a link to the quotation. The link works for 30 days, and you'll see when it's opened."
+          description="WhatsApp opens with the covering note for Rakesh Sharma, and the quotation PDF downloads to attach. The link works for 30 days, and you'll see when it's opened."
           confirmLabel="Send to client"
           onConfirm={async () => {
             await new Promise((r) => setTimeout(r, 700))
-            toast.success("Quotation sent to rakesh@sharmatraders.in")
+            toast.success("WhatsApp is open with the message. Press Send there.")
           }}
         />
         <ConfirmDialog
@@ -416,7 +416,7 @@ function KitWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
         { id: "identity", title: "Identity", description: "Name, PAN and entity type", valid: stepValid[0] },
         { id: "team", title: "Team", description: "Who looks after them, and since when", valid: stepValid[1] },
         { id: "services", title: "Services and fees", description: "What we do and what we charge", valid: stepValid[2] },
-        { id: "review", title: "Review", description: "Notes and the welcome email", valid: stepValid[3] },
+        { id: "review", title: "Review", description: "Notes and the welcome message", valid: stepValid[3] },
       ]}
       current={step}
       onStepChange={setStep}
@@ -448,7 +448,7 @@ function KitWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
       ) : (
         <div className="flex flex-col gap-4">
           <TextareaField control={w.control} name="notes" label="Notes" />
-          <SwitchField control={w.control} name="send_welcome" label="Send the welcome email" description="Invites the primary contact to the client portal." />
+          <SwitchField control={w.control} name="send_welcome" label="Send a welcome message on WhatsApp" description="Gets the welcome ready for the primary contact, with the portal link." />
         </div>
       )}
     </WizardDialog>

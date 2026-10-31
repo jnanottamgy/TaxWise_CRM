@@ -17,8 +17,6 @@ import { log } from "@/lib/log";
 export const RATE_LIMITS = {
   /** §13: 5 sign-in attempts per 15 minutes per email + IP. */
   login: { limit: 5, windowSeconds: 15 * 60 },
-  /** §13: 3 password-reset emails per hour per email. */
-  passwordReset: { limit: 3, windowSeconds: 60 * 60 },
   /** Authenticator codes per person, against guessing (not in §13's list; same spirit). */
   mfaVerify: { limit: 10, windowSeconds: 15 * 60 },
   /** First-run set-up attempts per IP. */

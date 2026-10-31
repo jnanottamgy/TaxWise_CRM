@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ChevronDownIcon, ClipboardListIcon, SendIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/app/empty-state"
-import { EmailSetupBanner } from "@/components/settings/email/email-setup-banner"
 import type { RequestRow, RequestContext } from "@/lib/data/document-requests"
 import type { DocumentOption } from "@/lib/data/documents"
 import type { HandoffMessaging } from "@/components/documents/requests/request-handoff"
@@ -24,9 +23,7 @@ export function RequestsView({
   documents,
   messaging,
   portalBase,
-  emailReady,
   canManage,
-  canSetUpEmail,
   today,
   focusRequestId,
   openCreate = false,
@@ -37,9 +34,7 @@ export function RequestsView({
   documents: DocumentOption[]
   messaging: HandoffMessaging
   portalBase: string
-  emailReady: boolean
   canManage: boolean
-  canSetUpEmail: boolean
   today: string
   focusRequestId: string | null
   /** Reached with `?request=new` (Client 360's "Request documents"): the dialog opens at once. */
@@ -71,7 +66,6 @@ export function RequestsView({
     documents,
     messaging,
     portalBase,
-    emailReady,
     canManage,
     today,
   }
@@ -94,8 +88,6 @@ export function RequestsView({
           Request documents
         </Button>
       </div>
-
-      {!emailReady ? <EmailSetupBanner canSetUp={canSetUpEmail} /> : null}
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface">
@@ -146,7 +138,6 @@ export function RequestsView({
           client={context.client}
           contacts={context.contacts}
           defaultEveryDays={context.defaultEveryDays}
-          emailReady={emailReady}
           messaging={messaging}
         />
       ) : null}

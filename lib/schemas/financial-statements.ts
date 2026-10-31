@@ -21,6 +21,7 @@ import {
   type TbField,
 } from "@/lib/domain/schedule3";
 import { paiseToDecimalString, parseAmount, type Paise } from "@/lib/domain/money";
+import { pdfFileName } from "@/lib/format";
 import type { EntityType } from "@/lib/domain/enums";
 import type { StatusTone } from "@/lib/status";
 
@@ -353,6 +354,11 @@ export function statementsAgree(stored: Statements | null, rebuilt: Statements):
 /** The previous financial year, for the comparatives. */
 export function comparativeYear(fy: FinancialYear): FinancialYear {
   return previousFinancialYear(fy);
+}
+
+/** The PDF's file name: "Financial statements TW-C-0042-FY-2026-27.pdf". */
+export function financialStatementsFileName(clientCode: string, fy: string): string {
+  return pdfFileName(`${clientCode} FY ${fy}`, "Financial statements");
 }
 
 // =================================================================================================

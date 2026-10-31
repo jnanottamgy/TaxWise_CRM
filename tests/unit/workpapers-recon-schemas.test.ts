@@ -203,13 +203,11 @@ describe("supplier follow-up (§7.8.1)", () => {
     expect(lines[2]).toContain("MT/250");
   });
 
-  it("signs the email draft and keeps WhatsApp short", () => {
-    const common = { contactName: "Ritu", periodText: "September 2026", missingItems: "Mehta Traders", senderName: "A. Rao", firmName: "TaxWise Consultants" };
-    const email = defaultSupplierFollowUp({ ...common, channel: "email" });
-    const wa = defaultSupplierFollowUp({ ...common, channel: "whatsapp" });
-    expect(email.startsWith("Dear Ritu,")).toBe(true);
-    expect(email.endsWith("TaxWise Consultants")).toBe(true);
+  it("keeps the WhatsApp draft short, with the period and the list", () => {
+    const wa = defaultSupplierFollowUp({ contactName: "Ritu", periodText: "September 2026", missingItems: "Mehta Traders" });
     expect(wa.startsWith("Hi Ritu,")).toBe(true);
+    expect(wa).toContain("Mehta Traders");
+    expect(defaultSupplierFollowUp({ contactName: null, periodText: "September 2026", missingItems: "x" }).startsWith("Hi,")).toBe(true);
     expect(wa).not.toContain("Warm regards");
     expect(wa).toContain("September 2026");
   });

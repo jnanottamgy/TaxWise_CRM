@@ -49,10 +49,10 @@ function href(sp: SearchParamsInput, patch: Record<string, string | null>): stri
 
 /**
  * Messages (§7.13.1; nav "Messages"): "Which clients are waiting on a reply from us?" One
- * conversation per client across email, WhatsApp and Gmail hand-offs, the portal and calls, unread
+ * conversation per client across WhatsApp hand-offs, the portal and calls, unread
  * first. Employees see only their own clients (and clients they cover), and never a message about
  * money (RLS). Choosing a conversation opens it beside the list, where you can reply on the portal,
- * hand off to WhatsApp or Gmail, or log a call; "Bulk reminders" builds a WhatsApp queue (§7.13.2).
+ * hand off to WhatsApp, or log a call; "Bulk reminders" builds a WhatsApp queue (§7.13.2).
  */
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { user, supabase } = await requireStaff()
@@ -87,13 +87,13 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   return (
     <div className="flex min-w-0 flex-col">
       <PageGuide title="Messages">
-        <p>One conversation per client: emails, WhatsApp and Gmail hand-offs, portal messages, and the calls and notes your team logs. Clients with portal messages nobody has read come first.</p>
-        <p className="mt-2">A WhatsApp or Gmail message is recorded as handed off: the app opens WhatsApp or Gmail with the draft and you press Send there. Portal replies go straight to the client&apos;s portal.</p>
+        <p>One conversation per client: WhatsApp hand-offs, portal messages, and the calls and notes your team logs. Clients with portal messages nobody has read come first.</p>
+        <p className="mt-2">A WhatsApp message is recorded as handed off: the app opens WhatsApp with the draft and you press Send there. Portal replies go straight to the client&apos;s portal.</p>
         <p className="mt-2">Bulk reminders drafts a WhatsApp message for every client in a list (data awaited, returns due soon, pending documents) and walks you through them one by one.</p>
       </PageGuide>
       <PageHeader
         title="Messages"
-        description={user.role === "employee" ? "Conversations with your clients, across every channel." : "Conversations with clients across email, WhatsApp, Gmail, the portal and calls."}
+        description={user.role === "employee" ? "Conversations with your clients, across every channel." : "Conversations with clients across WhatsApp, the portal and calls."}
         actions={<BulkReminderBuilder templates={builderTemplates} canFilterMine={canFilterMine} />}
       />
       <FilterBar
@@ -172,7 +172,6 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                   name: selected.client.display_name,
                   code: selected.client.client_code,
                   onPortal: selected.client.on_portal,
-                  email: selected.client.email,
                   phone: selected.client.phone,
                   whatsapp: selected.client.whatsapp,
                 }}

@@ -363,7 +363,7 @@ export type ImportPeopleInput = z.input<typeof ImportPeopleSchema>;
 export const IMPORT_TEMPLATE_CSV = `${IMPORT_COLUMNS.join(",")}\nRavi Kumar,ravi.kumar@twchartered.com,98765 43210,GST,Senior associate,employee,2026-06-01\n`;
 
 // -------------------------------------------------------------------------------------------------
-// "Login created" (§4.5 point 2): the share message and the invite email
+// "Login created" (§4.5 points 2–3): the message that shares a login on WhatsApp (no email is sent)
 // -------------------------------------------------------------------------------------------------
 
 export type LoginShare = { fullName: string; email: string; temporaryPassword: string; loginUrl: string; firmName: string };
@@ -372,39 +372,17 @@ function firstWord(name: string): string {
   return name.trim().split(/\s+/)[0] ?? "";
 }
 
-/** The pre-drafted WhatsApp message: the login link, email and temporary password. */
-export function loginShareMessage(s: LoginShare): string {
+/** The pre-drafted WhatsApp message: the login link, email and temporary password, for a new login or a reset. */
+export function loginShareMessage(s: LoginShare, kind: "invite" | "reset" = "invite"): string {
   return [
-    `Hi ${firstWord(s.fullName)}, your ${s.firmName} login is ready.`,
-    "",
-    `Sign in: ${s.loginUrl}`,
-    `Email: ${s.email}`,
-    `Temporary password: ${s.temporaryPassword}`,
-    "",
-    "You'll set your own password when you first sign in.",
-  ].join("\n");
-}
-
-/** The staff invite email (§10 item 1), as subject and plain text. */
-export function loginInviteEmail(s: LoginShare, kind: "invite" | "reset"): { subject: string; text: string } {
-  const subject =
-    kind === "invite" ? `${s.firmName} | Your login to the practice app` : `${s.firmName} | Your password has been reset`;
-  const opening =
-    kind === "invite"
-      ? `Hi ${firstWord(s.fullName)},\n\nA login has been created for you on ${s.firmName}'s practice app.`
-      : `Hi ${firstWord(s.fullName)},\n\nYour password on ${s.firmName}'s practice app has been reset.`;
-  const text = [
-    opening,
+    kind === "invite" ? `Hi ${firstWord(s.fullName)}, your ${s.firmName} login is ready.` : `Hi ${firstWord(s.fullName)}, your ${s.firmName} password has been reset.`,
     "",
     `Sign in: ${s.loginUrl}`,
     `Email: ${s.email}`,
     `Temporary password: ${s.temporaryPassword}`,
     "",
     "You'll set your own password when you first sign in. Partners and Managers also set up two-step sign-in with an authenticator app.",
-    "",
-    "If you didn't expect this email, tell a Partner.",
   ].join("\n");
-  return { subject, text };
 }
 
 // -------------------------------------------------------------------------------------------------

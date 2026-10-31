@@ -29,23 +29,19 @@ export type DetailInvoice = {
 export type SendRecipient = {
   contactId: string | null
   name: string
-  email: string | null
   phone: string | null
   whatsapp: string | null
   primary: boolean
-  bounced: boolean
 }
 
-export type SendTemplate = { id: string; name: string; body: string; subject: string | null; channel: string }
+export type SendTemplate = { id: string; name: string; body: string; channel: string }
 
+/** Everything a WhatsApp send from the invoice page needs: who, the number, the links, the templates. */
 export type SendContext = {
-  emailReady: boolean
-  canSetUpEmail: boolean
   recipients: SendRecipient[]
-  client: { email: string | null; phone: string | null; whatsapp: string | null }
+  client: { phone: string | null; whatsapp: string | null }
   portalUrl: string
   upi: { id: string; payee: string } | null
-  bank: { accountName: string | null; accountNumber: string | null; ifsc: string | null; bankName: string | null } | null
   firmName: string
   firmPhone: string | null
   countryCode: string
@@ -64,7 +60,6 @@ export type ReceiptContext = {
   tdsRows: StatutoryParameterRow[]
   clientHasTan: boolean
   defaultDepositedTo: string
-  defaultEmail: string | null
   today: string
 }
 

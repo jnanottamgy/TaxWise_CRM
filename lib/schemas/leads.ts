@@ -229,9 +229,8 @@ export type LeadNoteInput = z.input<typeof LeadNoteSchema>;
 
 export const LeadHandoffSchema = z.object({
   leadId: z.uuid({ error: "That lead isn't valid." }),
-  channel: z.enum(["whatsapp_handoff", "gmail_handoff"]),
+  channel: z.enum(["whatsapp_handoff"]),
   recipient: z.string().trim().min(1, { error: "There's no recipient." }).max(320),
-  subject: z.string().trim().max(300).default(""),
   body: z.string().trim().min(1, { error: "The message is empty." }).max(10_000, { error: "The message is too long to log." }),
 });
 export type LeadHandoffInput = z.input<typeof LeadHandoffSchema>;

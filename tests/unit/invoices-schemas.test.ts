@@ -340,10 +340,9 @@ describe("Export of the current view (§3.4, §11)", () => {
   });
 });
 
-describe("Hand-off drafts (§7.13.2, §7.13.3)", () => {
+describe("The WhatsApp message with the invoice (§7.13.2)", () => {
   const input = {
     contactName: "Rakesh Sharma",
-    clientName: "Sharma Traders",
     invoiceNumber: "TW/26-27/0042",
     periodLabel: "Sep 2026",
     totalPaise: 1_180_000,
@@ -352,33 +351,26 @@ describe("Hand-off drafts (§7.13.2, §7.13.3)", () => {
     portalUrl: "https://app.twchartered.com/portal/invoices/abc",
     upiUrl: "upi://pay?pa=taxwise@icici&pn=TaxWise&am=11800.00&cu=INR",
     firmName: "TaxWise Consultants",
-    senderName: "Asha Rao",
-    bank: { accountName: "TaxWise Consultants", accountNumber: "001234567890", ifsc: "ICIC0000001", bankName: "ICICI Bank" },
   };
 
-  it("puts the amount, due date, portal link and UPI link in the WhatsApp draft", () => {
+  it("puts the amount, due date, portal link and UPI link in the draft", () => {
     const s = invoiceShareText(input);
-    expect(s.whatsapp).toContain("Hi Rakesh");
-    expect(s.whatsapp).toContain("₹11,800.00");
-    expect(s.whatsapp).toContain("06 Nov 2026");
-    expect(s.whatsapp).toContain(input.portalUrl);
-    expect(s.whatsapp).toContain(input.upiUrl);
+    expect(s).toContain("Hi Rakesh");
+    expect(s).toContain("invoice TW/26-27/0042 for Sep 2026");
+    expect(s).toContain("₹11,800.00");
+    expect(s).toContain("06 Nov 2026");
+    expect(s).toContain(input.portalUrl);
+    expect(s).toContain(input.upiUrl);
   });
 
-  it("writes the Gmail subject the §10 way, with the bank details and no UPI link", () => {
-    const s = invoiceShareText({ ...input, duePaise: 580_000 });
-    expect(s.subject).toBe("TaxWise Consultants | Invoice TW/26-27/0042 for Sep 2026");
-    expect(s.emailBody).toContain("Dear Rakesh,");
-    expect(s.emailBody).toContain("₹5,800.00 still to pay");
-    expect(s.emailBody).toContain("IFSC: ICIC0000001");
-    expect(s.emailBody).not.toContain("upi://");
+  it("says what is still to pay on a part-paid invoice", () => {
+    expect(invoiceShareText({ ...input, duePaise: 580_000 })).toContain("₹5,800.00 still to pay");
   });
 
   it("greets without a name and leaves out what isn't there", () => {
-    const s = invoiceShareText({ ...input, contactName: null, upiUrl: null, bank: null, periodLabel: null });
-    expect(s.whatsapp.startsWith("Hello,")).toBe(true);
-    expect(s.whatsapp).not.toContain("UPI");
-    expect(s.emailBody).not.toContain("Bank transfer");
-    expect(s.subject).toBe("TaxWise Consultants | Invoice TW/26-27/0042");
+    const s = invoiceShareText({ ...input, contactName: null, upiUrl: null, periodLabel: null });
+    expect(s.startsWith("Hello,")).toBe(true);
+    expect(s).not.toContain("UPI");
+    expect(s).not.toContain(" for Sep 2026");
   });
 });

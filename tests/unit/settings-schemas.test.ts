@@ -381,8 +381,7 @@ describe("RemindersSchema", () => {
     invoice_reminder_after_days: "15, 1, 7, 7",
     document_request_reminder_every_days: "3",
     quotation_follow_up_days: "",
-    digest_enabled: true,
-    client_notify_channels: ["whatsapp", "email"],
+    client_notify_channels: ["whatsapp", "portal"],
   };
 
   it("reads day lists typed with commas into sorted unique days", () => {
@@ -401,11 +400,18 @@ describe("RemindersSchema", () => {
   });
 
   it("keeps the new-client notify channels in a fixed order and needs at least one", () => {
-    const r = RemindersSchema.safeParse({ ...base, client_notify_channels: ["portal", "email", "email"] });
+    const r = RemindersSchema.safeParse({ ...base, client_notify_channels: ["portal", "whatsapp", "whatsapp"] });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data.client_notify_channels).toEqual(["email", "portal"]);
+    if (r.success) expect(r.data.client_notify_channels).toEqual(["whatsapp", "portal"]);
     expect(errorPaths(RemindersSchema.safeParse({ ...base, client_notify_channels: [] }))).toContain("client_notify_channels");
     expect(errorPaths(RemindersSchema.safeParse({ ...base, client_notify_channels: ["sms"] }))).toContain("client_notify_channels");
+  });
+
+  it("offers no email: the app sends none, so there is no email channel and no digest switch", () => {
+    expect(errorPaths(RemindersSchema.safeParse({ ...base, client_notify_channels: ["email"] }))).toContain("client_notify_channels");
+    const r = RemindersSchema.safeParse({ ...base, digest_enabled: true });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data).not.toHaveProperty("digest_enabled");
   });
 });
 

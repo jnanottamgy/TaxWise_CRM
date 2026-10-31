@@ -130,5 +130,5 @@ export function CreditNotePdf({ firm, logo, doc, signerName }: { firm: FirmProfi
 export async function buildCreditNotePdf(input: { firm: FirmProfile; doc: CreditNoteDocument; signerName: string | null }): Promise<{ bytes: Buffer; fileName: string }> {
   const logo = await loadFirmLogo(input.firm).catch(() => null);
   const bytes = await renderPdf(<CreditNotePdf firm={input.firm} logo={logo} doc={input.doc} signerName={input.signerName} />);
-  return { bytes, fileName: pdfFileName(input.doc.credit_note_number, "Credit-note") };
+  return { bytes, fileName: pdfFileName(input.doc.credit_note_number, "Credit note") };
 }

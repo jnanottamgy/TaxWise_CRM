@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ clientI
     const firm = await getFirmProfile(supabase);
     const logo = await loadFirmLogo(firm).catch(() => null);
     const bytes = await renderPdf(createElement(ComplianceReportPdf, { firm, logo, data, range: range.data, today, preparedBy: user.fullName }) as never);
-    const name = pdfFileName(`${data.client.client_code} ${range.data.from} to ${range.data.to}`, "Compliance-report");
+    const name = pdfFileName(`${data.client.client_code} ${range.data.from} to ${range.data.to}`, "Compliance report");
     return new NextResponse(new Uint8Array(bytes), { status: 200, headers: pdfResponseHeaders(name, { download: p.get("download") === "1" }) });
   } catch (err) {
     const ref = logUnexpected(err, { source: "api:pdf:compliance-report", userId });

@@ -33,8 +33,9 @@ import { TemplatePreview } from "@/components/templates/template-preview"
 import { VariablePicker } from "@/components/templates/variable-picker"
 
 /**
- * The message template editor (§7.13.4): Name* · Type* · Channel · Subject (email) · Body*, with
- * variables inserted from the picker at the cursor, and a live preview with the sample client.
+ * The message template editor (§7.13.4): Name* · Type* · Channel (WhatsApp or Any; an old Email
+ * template keeps its channel and subject) · Body*, with variables inserted from the picker at the
+ * cursor, and a live preview with the sample client. The app sends no email.
  * Unknown variables are refused on save, naming the field and the variable (validateTemplate; the
  * database checks again). Edits carry the template's updated_at (§13).
  */
@@ -106,7 +107,7 @@ export function TemplateDialog({
   }
 
   const insert = (name: TemplateVariable) => {
-    const target: Field = channel === "whatsapp" ? "body" : lastFocus.current
+    const target: Field = channel === "email" ? lastFocus.current : "body"
     const current = String(f.form.getValues(target) ?? "")
     const sel = selection.current[target]
     const next = insertVariable(current, name, sel?.start ?? current.length, sel?.end ?? current.length)
@@ -121,7 +122,7 @@ export function TemplateDialog({
   }
 
   const types = templateTypesFor(ctx.role)
-  const used = usedVariables(body, channel === "whatsapp" ? null : subject)
+  const used = usedVariables(body, channel === "email" ? subject : null)
   const bodyId = fieldDomId(f.control, "body")
 
   return (
@@ -159,18 +160,18 @@ export function TemplateDialog({
               control={f.control}
               name="channel"
               label="Channel"
-              options={TEMPLATE_CHANNELS.map((c) => ({ value: c, label: TEMPLATE_CHANNEL_LABELS[c] }))}
-              helper={channel === "whatsapp" ? "WhatsApp drafts have no subject." : channel === "email" ? "Offered for emails and Gmail drafts." : "Offered everywhere: email, WhatsApp and portal."}
+              options={TEMPLATE_CHANNELS.filter((c) => c !== "email" || template?.channel === "email").map((c) => ({ value: c, label: TEMPLATE_CHANNEL_LABELS[c] }))}
+              helper={channel === "whatsapp" ? "Offered for WhatsApp drafts." : channel === "email" ? "The app sends no email: this is only offered for portal messages. Choose WhatsApp or Any." : "Offered for WhatsApp drafts and portal messages."}
             />
           </div>
-          {channel !== "whatsapp" ? (
+          {channel === "email" ? (
             <TextField
               control={f.control}
               name="subject"
               label="Subject"
               maxLength={300}
               placeholder="{{firm_name}} | Documents pending for {{period}}"
-              helper="Used for emails. Variables work here too."
+              helper="Kept from when the app sent email; not used now."
               onFocus={(e) => remember("subject", e.currentTarget)}
               onSelect={(e) => remember("subject", e.currentTarget)}
               onKeyUp={(e) => remember("subject", e.currentTarget)}
@@ -182,7 +183,7 @@ export function TemplateDialog({
             label="Message"
             required
             error={bodyField.fieldState.error?.message ?? null}
-            helper="Write it as you'd say it. Line breaks are kept on WhatsApp and in email."
+            helper="Write it as you'd say it. Line breaks are kept on WhatsApp and in the portal."
             labelAction={<VariablePicker groups={variableGroupsFor(ctx.role)} onPick={insert} />}
           >
             {(aria) => (

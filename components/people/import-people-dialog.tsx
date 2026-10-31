@@ -295,7 +295,7 @@ export function ImportPeopleDialog({ actorRole, existingEmails }: { actorRole: A
               </p>
             ) : null}
             <p className="text-sm text-text-muted">
-              Issuing logins creates a temporary password for each person and emails their invite. You&apos;ll see the passwords once, with WhatsApp and Gmail buttons to share them.
+              Issuing logins creates a temporary password for each person. You&apos;ll see the passwords once, with a WhatsApp button to share each one; nothing is emailed.
             </p>
           </div>
         )}

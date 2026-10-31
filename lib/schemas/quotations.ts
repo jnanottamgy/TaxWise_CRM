@@ -163,7 +163,7 @@ const QuotationFields = z.object({
   client_email: z
     .string()
     .trim()
-    .min(1, { error: "Enter the email address the quotation goes to." })
+    .min(1, { error: "Enter the client's email address." })
     .max(254)
     .refine((v) => z.email().safeParse(v).success, { error: "Enter a valid email address, like name@company.in." }),
   client_phone: z
@@ -408,7 +408,6 @@ export type QuotationActionInput = {
   totalPaise: Paise;
   limitPaise: Paise | null;
   lineCount: number;
-  hasEmail: boolean;
   convertedClientId: string | null;
   clientId: string | null;
   deleted: boolean;
@@ -444,7 +443,6 @@ export function quotationActions(q: QuotationActionInput, viewerRole: AppRole): 
   if (draft || q.status === "approved") {
     if (q.lineCount === 0) sendBlockedReason = "Add at least one line before sending it.";
     else if (lapsed) sendBlockedReason = "The valid-until date has passed. Move it to a later date first.";
-    else if (!q.hasEmail) sendBlockedReason = "Add the client's email address first.";
     else if (draft && needsApproval) sendBlockedReason = "Over the quotation approval limit: submit it for a Partner's approval first.";
   }
   const canSendNow = live && (draft || q.status === "approved") && sendBlockedReason === null;
@@ -547,7 +545,7 @@ export function dueFollowUp(rows: readonly FollowUpRow[], now: Date): { due: Fol
   return { due: latest, skip: due.slice(0, -1) };
 }
 
-/** The follow-up email the spec's §10.6 template knows (3, 7 or 14); other configured days use the nearest shorter tone. */
+/** The follow-up tone (3, 7 or 14, §7.5.3); other configured days use the nearest shorter tone. */
 export function followUpTone(day: number): 3 | 7 | 14 {
   if (day >= 14) return 14;
   if (day >= 7) return 7;
@@ -556,30 +554,30 @@ export function followUpTone(day: number): 3 | 7 | 14 {
 
 export type ChipInfo = { label: string; tone: "success" | "warning" | "danger" | "info" | "muted" | "neutral"; meaning: string };
 
-/** A follow-up's status as the quotation page shows it: Scheduled, Due, Emailed, Handed off, Skipped, Failed. */
+/** A follow-up's status as the quotation page shows it: Scheduled, Due, Handed off, Skipped (and Emailed / Failed on older ones). */
 export function followUpStatusInfo(row: { status: string; scheduled_at: string }, now: Date, open: boolean): ChipInfo {
   switch (row.status) {
     case "sent":
-      return { label: "Emailed", tone: "info", meaning: "Emailed to the client by the app (it shows in the sends below)." };
+      return { label: "Emailed", tone: "info", meaning: "Emailed to the client (an older follow-up, from before the firm moved to WhatsApp only)." };
     case "handed_off":
-      return { label: "Handed off", tone: "info", meaning: "Opened in WhatsApp or Gmail by someone here. The app can't confirm it was sent." };
+      return { label: "Handed off", tone: "info", meaning: "Opened in WhatsApp by someone here. The app can't confirm it was sent." };
     case "skipped":
       return { label: "Skipped", tone: "muted", meaning: "Not needed: the quotation was answered, expired or revised, or a later follow-up replaced it." };
     case "failed":
       return open
-        ? { label: "Failed", tone: "danger", meaning: "The email didn't go through. Hand it off by WhatsApp or Gmail, or try the email again." }
-        : { label: "Failed", tone: "muted", meaning: "The email didn't go through; the quotation is no longer open." };
+        ? { label: "Failed", tone: "danger", meaning: "An older email that didn't go through. Send it on WhatsApp instead." }
+        : { label: "Failed", tone: "muted", meaning: "An older email that didn't go through; the quotation is no longer open." };
     default: {
       if (!open) return { label: "Not sent", tone: "muted", meaning: "The quotation is no longer open, so this follow-up won't go." };
       const due = Date.parse(row.scheduled_at) <= now.getTime();
       return due
-        ? { label: "Due", tone: "warning", meaning: "Due now. The daily run at 2:30 pm emails it; when email can't go, it is yours to hand off." }
-        : { label: "Scheduled", tone: "muted", meaning: "Goes out by email on its day at 2:30 pm, if the quotation is still open." };
+        ? { label: "Due", tone: "warning", meaning: "Due now: send it on WhatsApp, the message is ready. The author is told in the Inbox." }
+        : { label: "Scheduled", tone: "muted", meaning: "Falls due on its day, if the quotation is still open. The author is then told to send it on WhatsApp." };
     }
   }
 }
 
-/** A send's status (quotation_email_logs) as the page shows it; hand-offs are never "delivered" (§7.13.1). */
+/** A send's status (quotation_email_logs) as the page shows it; hand-offs are never "delivered" (§7.13.1). Email ones are older sends. */
 export function sendStatusInfo(channel: string, status: string): ChipInfo {
   if (channel === "internal_note") return { label: "Link copied", tone: "muted", meaning: "The link was copied to share by hand. The app can't see where it went." };
   if (channel === "whatsapp_handoff" || channel === "gmail_handoff") {
@@ -591,11 +589,11 @@ export function sendStatusInfo(channel: string, status: string): ChipInfo {
     case "opened":
       return { label: "Opened", tone: "success", meaning: "Opened: the client opened the email (where their mail app lets us tell)." };
     case "bounced":
-      return { label: "Bounced", tone: "danger", meaning: "Bounced: the address didn't accept it. Check the email address, or hand it off by WhatsApp." };
+      return { label: "Bounced", tone: "danger", meaning: "Bounced: the address didn't accept it. Send it on WhatsApp instead." };
     case "failed":
-      return { label: "Failed", tone: "danger", meaning: "Failed: it didn't reach the client. Send it from your own mailbox or WhatsApp instead." };
+      return { label: "Failed", tone: "danger", meaning: "Failed: it didn't reach the client. Send it on WhatsApp instead." };
     case "sent":
-      return { label: "Sent", tone: "info", meaning: "Sent: Resend accepted it; it changes to Delivered when the client's mail server takes it." };
+      return { label: "Sent", tone: "info", meaning: "Sent: the email was accepted for delivery." };
     default:
       return { label: status.replace(/_/g, " "), tone: "neutral", meaning: "" };
   }
@@ -632,11 +630,12 @@ export function emailTypeLabel(t: string): string {
   return m ? `Follow-up, day ${m[1]}` : t.replace(/_/g, " ");
 }
 
+/** How each send went out. Email and Gmail are older sends; new ones are WhatsApp or a copied link. */
 export const CHANNEL_SEND_LABELS: Record<string, string> = {
-  email: "Email",
-  gmail_handoff: "Gmail",
   whatsapp_handoff: "WhatsApp",
   internal_note: "Link copied",
+  email: "Email",
+  gmail_handoff: "Gmail",
 };
 
 // =================================================================================================
@@ -660,29 +659,11 @@ export const ApprovalDecisionSchema = z
   });
 export type ApprovalDecisionInput = z.input<typeof ApprovalDecisionSchema>;
 
-export const SendQuotationEmailSchema = z.object({
-  id: z.uuid({ error: "That quotation isn't valid." }),
-  updatedAt: z.string().min(1),
-  to: z
-    .string()
-    .trim()
-    .min(1, { error: "Enter the email address." })
-    .refine((v) => z.email().safeParse(v).success, { error: "Enter a valid email address." }),
-  cc: z
-    .string()
-    .trim()
-    .max(500)
-    .default("")
-    .refine((v) => v === "" || v.split(/[,;]\s*/).every((a) => z.email().safeParse(a.trim()).success), { error: "Separate several addresses with commas, each a valid email." }),
-  coveringNote: z.string().trim().max(4000, { error: "Keep the note under 4,000 characters." }).default(""),
-});
-export type SendQuotationEmailInput = z.input<typeof SendQuotationEmailSchema>;
-
 export const QuotationHandoffSchema = z.object({
   id: z.uuid({ error: "That quotation isn't valid." }),
   /** Null for a follow-up (the quotation is already sent). */
   updatedAt: z.union([z.string(), z.null()]).optional().transform((v) => (v ? v : null)),
-  channel: z.enum(["whatsapp_handoff", "gmail_handoff", "internal_note"]),
+  channel: z.enum(["whatsapp_handoff", "internal_note"]),
   recipient: z.string().trim().max(320).default(""),
   subject: z.string().trim().max(300).default(""),
   body: z.string().trim().max(10_000).default(""),
@@ -690,11 +671,6 @@ export const QuotationHandoffSchema = z.object({
   followUpDay: z.union([z.number().int().min(1).max(365), z.null()]).optional().transform((v) => v ?? null),
 });
 export type QuotationHandoffInput = z.input<typeof QuotationHandoffSchema>;
-
-export const FollowUpEmailSchema = z.object({
-  id: z.uuid({ error: "That quotation isn't valid." }),
-  day: z.number().int().min(1).max(365),
-});
 
 // =================================================================================================
 // The list
@@ -708,7 +684,7 @@ export type QuotationFlag = (typeof QUOTATION_FLAGS)[number];
 
 export const QUOTATION_FLAG_LABELS: Record<QuotationFlag, string> = {
   mine: "Prepared by me",
-  needs_handoff: "Follow-up to hand off",
+  needs_handoff: "Follow-up to send",
   lapsed: "Past valid-until",
   converted: "Converted to a client",
   not_converted: "Accepted, not yet a client",

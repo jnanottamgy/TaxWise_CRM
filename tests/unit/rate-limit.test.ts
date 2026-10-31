@@ -12,7 +12,8 @@ const { checkRateLimit, interpretRateLimitResult, rateLimitKey, RATE_LIMITS } = 
 describe("RATE_LIMITS (§13)", () => {
   it("has the spec's numbers", () => {
     expect(RATE_LIMITS.login).toEqual({ limit: 5, windowSeconds: 900 });
-    expect(RATE_LIMITS.passwordReset).toEqual({ limit: 3, windowSeconds: 3600 });
+    // No password-reset emails: a Partner or Manager resets a forgotten password.
+    expect(RATE_LIMITS).not.toHaveProperty("passwordReset");
   });
 });
 

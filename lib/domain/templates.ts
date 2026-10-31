@@ -3,8 +3,7 @@
  *
  * The variables are a fixed list, inserted from a picker; a template that uses anything else is
  * rejected on save, and the save names the offending variables. Rendering is plain text (WhatsApp
- * drafts, Gmail bodies, the text part of emails): no HTML escaping here; the email renderer escapes
- * when it builds HTML.
+ * drafts, portal messages): no HTML escaping here; React escapes it on screen.
  *
  * Pure and client-safe.
  */

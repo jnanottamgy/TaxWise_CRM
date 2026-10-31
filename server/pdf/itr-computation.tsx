@@ -213,6 +213,6 @@ export function ItrComputationPdf({ firm, logo, data }: { firm: FirmProfile; log
 export async function buildItrPdf(firm: FirmProfile, data: ItrPdfData): Promise<{ bytes: Buffer; fileName: string }> {
   const logo = await loadFirmLogo(firm).catch(() => null);
   const bytes = await renderPdf(<ItrComputationPdf firm={firm} logo={logo} data={data} />);
-  const fileName = pdfFileName(`${data.client.code} ${data.result.yearLabel}`, "ITR-computation");
+  const fileName = pdfFileName(`${data.client.code} ${data.result.yearLabel}`, "ITR computation");
   return { bytes, fileName };
 }

@@ -49,8 +49,5 @@ export function pdfText(value: string | number | null | undefined): string {
   return s === "" ? EMPTY : s;
 }
 
-/** A file name for a PDF of a numbered document: "TW/26-27/0042" → "TW-26-27-0042.pdf". */
-export function pdfFileName(documentNumber: string, prefix?: string): string {
-  const safe = documentNumber.replace(/[^A-Za-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `${prefix ? `${prefix}-` : ""}${safe || "document"}.pdf`;
-}
+/** A file name for a PDF of a numbered document: ("TW/26-27/0042", "Invoice") → "Invoice TW-26-27-0042.pdf" (lib/format.ts). */
+export { pdfFileName } from "@/lib/format";

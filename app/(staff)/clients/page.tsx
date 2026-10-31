@@ -147,7 +147,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             ? "Select clients to assign an owner, add them to a group, change their status or export them. Changing the status to On hold or Inactive pauses reminders to the client and automatic invoicing."
             : "You see the clients you own, are on the team of, or are covering while a colleague is away. Fees and invoices are not shown here."}
         </p>
-        <p className="mt-2">The WhatsApp and email buttons open WhatsApp or Gmail with a draft; you press Send there, and the app records it as handed off.</p>
+        <p className="mt-2">The WhatsApp button opens WhatsApp with a draft; you press Send there, and the app records it as handed off.</p>
       </PageGuide>
       <PageHeader
         title={canManage ? "Clients" : "My clients"}

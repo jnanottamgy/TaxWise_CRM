@@ -68,7 +68,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
     <div className="flex min-w-0 flex-col">
       <PageGuide title="Quotations">
         <p>A quotation starts as a Draft and saves itself as you type. A Manager&apos;s quotation over the quotation approval limit goes to a Partner first; Partners approve, approve and send, or return it with comments.</p>
-        <p className="mt-2">Send it by email (with a View quotation link and the PDF), or open it in Gmail or WhatsApp, or copy the link. The client accepts by typing their name, or declines with a reason. Follow-ups go on day 3, 7 and 14 while it is open; after its valid-until date it expires. To change a quotation that has gone out, revise it: the old link then stops taking responses.</p>
+        <p className="mt-2">Send it on WhatsApp: the message has the View quotation link, and the PDF downloads to attach. Or copy the link. The client accepts by typing their name, or declines with a reason. While it is open, the app reminds you on day 3, 7 and 14 to follow up on WhatsApp; after its valid-until date it expires. To change a quotation that has gone out, revise it: the old link then stops taking responses.</p>
       </PageGuide>
       <GrowthSubnav
         active="quotations"

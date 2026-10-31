@@ -37,8 +37,8 @@ const CRUMBS = [{ label: "Invoices & payments", href: "/portal/invoices" }]
 
 /**
  * One invoice in the client portal (§7.22 "Invoices: list, PDF download, receipts" and the Pay
- * dialog): "What is this bill for, and how do I pay it?". The link in the invoice email, payment
- * reminders and WhatsApp / Gmail hand-offs lands here ("View & pay"). It shows the invoice as
+ * dialog): "What is this bill for, and how do I pay it?". The link in the invoice and payment
+ * reminder messages on WhatsApp lands here ("View & pay"). It shows the invoice as
  * billed (lines with SAC and GST rate, the tax split, the total in words), what has been received,
  * TDS deducted and credit notes, what is still due, the receipts, and Pay (UPI QR, deep link, bank
  * details and "I've paid") while something is due. A reported payment never marks the invoice

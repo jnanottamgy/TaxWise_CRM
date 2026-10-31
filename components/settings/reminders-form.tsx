@@ -6,7 +6,7 @@ import { formatDate, formatDateShort } from "@/lib/format"
 import { RemindersSchema, type RemindersInput } from "@/lib/schemas/settings"
 import { saveReminders } from "@/server/actions/settings"
 import type { FirmSettingsRow, LastChange } from "@/lib/data/settings"
-import { CheckboxGroupField, SwitchField, TextField } from "@/components/app/form/fields"
+import { CheckboxGroupField, TextField } from "@/components/app/form/fields"
 import { NOTIFY_CHANNELS, NOTIFY_CHANNEL_LABELS } from "@/lib/schemas/onboarding"
 import { SettingsCard, SettingPreview, Wide } from "@/components/settings/settings-card"
 import { SettingsForm, useSettingsForm } from "@/components/settings/settings-form"
@@ -27,9 +27,9 @@ function whole(text: unknown): number | null {
 
 /**
  * Settings → Reminders (§7.21, §8): how early deadlines are flagged, when invoice and document
- * reminders go out, quotation follow-ups, how new clients are notified (§7.3.2 step 5) and the
- * Partner digest. Each preview works the schedule
- * out from today, so the Partner sees the dates the jobs will use.
+ * reminders fall due (each is put in front of someone to send on WhatsApp), quotation follow-ups,
+ * and how new clients are notified (§7.3.2 step 5). Each preview works the schedule out from today,
+ * so the Partner sees the dates the jobs will use.
  */
 export function RemindersForm({ row, lastChange, today }: { row: FirmSettingsRow; lastChange: LastChange; today: string }) {
   const defaults: RemindersInput = {
@@ -39,7 +39,6 @@ export function RemindersForm({ row, lastChange, today }: { row: FirmSettingsRow
     invoice_reminder_after_days: (row.invoice_reminder_after_days ?? []).join(", "),
     document_request_reminder_every_days: String(row.document_request_reminder_every_days),
     quotation_follow_up_days: (row.quotation_follow_up_days ?? []).join(", "),
-    digest_enabled: row.digest_enabled,
     client_notify_channels: NOTIFY_CHANNELS.filter((c) => (row.client_notify_channels ?? []).includes(c)),
   }
   const f = useSettingsForm(RemindersSchema, saveReminders, defaults, { savedMessage: "Reminders saved" })
@@ -115,20 +114,9 @@ export function RemindersForm({ row, lastChange, today }: { row: FirmSettingsRow
             name="client_notify_channels"
             label="Notify the client by"
             required
-            columns={3}
+            columns={2}
             helper="The onboarding wizard starts with these ticked. WhatsApp opens a prepared message for staff to send; it is never sent automatically."
             options={NOTIFY_CHANNELS.map((c) => ({ value: c, label: NOTIFY_CHANNEL_LABELS[c] }))}
-          />
-        </Wide>
-      </SettingsCard>
-
-      <SettingsCard title="Partner digest" columns={1}>
-        <Wide>
-          <SwitchField
-            control={f.control}
-            name="digest_enabled"
-            label="Email Partners a daily digest at 08:00"
-            description="Today's deadlines, approvals waiting, overdue receivables and unassigned work. Each Partner can still turn it off in their notification preferences."
           />
         </Wide>
       </SettingsCard>

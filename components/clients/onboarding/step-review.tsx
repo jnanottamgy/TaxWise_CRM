@@ -40,13 +40,13 @@ import type { PreviewState } from "@/components/clients/onboarding/use-deadline-
 const CHANNEL_OPTIONS = NOTIFY_CHANNELS.map((c) => ({
   value: c,
   label: NOTIFY_CHANNEL_LABELS[c],
-  description: c === "whatsapp" ? "Drafted for the team to send from WhatsApp." : c === "portal" ? "Needs the portal invite." : "Needs the client's email address.",
+  description: c === "whatsapp" ? "Drafted for the team to send from WhatsApp." : "Needs the portal invite.",
 }))
 
 /**
  * Step 5, Compliance setup and review (§7.3.2): reminder lead time, how the client is notified,
- * the 12-month deadline preview with the source of each date, the portal invite and welcome email,
- * and a summary of every step with Edit links back to it.
+ * the 12-month deadline preview with the source of each date, the portal invite and the welcome
+ * message on WhatsApp, and a summary of every step with Edit links back to it.
  */
 export function StepReview({
   control,
@@ -103,9 +103,8 @@ export function StepReview({
           <SwitchField
             control={control}
             name="send_welcome"
-            label="Send the welcome email"
-            description={hasEmail ? "Introduces the owner and the services. Sent after the client is created." : "Needs the client's email address (step 1)."}
-            disabled={!hasEmail && !values.send_welcome}
+            label="Send a welcome message on WhatsApp"
+            description="Introduces the owner and the services. Ready to send on the next screen, once the client is created."
             className="md:col-span-2"
           />
         </div>
@@ -238,7 +237,7 @@ function Summary({
     { term: "Reminders", value: `${values.reminder_days || "7"} days before each due date` },
     { term: "Notify by", value: (values.notify_channels ?? []).map((c) => NOTIFY_CHANNEL_LABELS[c]).join(", ") || "Nobody (reminders to the team only)" },
     { term: "Portal invite", value: values.invite_portal ? "Yes, now" : "Not now" },
-    { term: "Welcome email", value: values.send_welcome && values.email ? `Yes, to ${values.email}` : "No" },
+    { term: "Welcome message", value: values.send_welcome ? "Yes, on WhatsApp" : "No" },
   ]
 
   return (

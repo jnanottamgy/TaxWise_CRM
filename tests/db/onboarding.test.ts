@@ -78,7 +78,7 @@ async function engine(s: Session) {
 function wizard(over: Partial<OnboardingValues> = {}): OnboardingData {
   const services = over.services ?? [newServiceEntry("gst", "monthly"), newServiceEntry("income_tax", "monthly", { agreed_fee: "3500" })];
   const v: OnboardingValues = {
-    ...emptyOnboardingValues({ clientCode: "TW-C-0001", reminderDays: 7, notifyChannels: ["email"] }),
+    ...emptyOnboardingValues({ clientCode: "TW-C-0001", reminderDays: 7, notifyChannels: ["whatsapp"] }),
     display_name: "Kaveri Steel Works",
     legal_name: "Kaveri Steel Works Private Limited",
     entity_type: "pvt_ltd",

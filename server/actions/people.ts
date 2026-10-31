@@ -22,7 +22,6 @@ import {
   assignableRoles,
   canManagePerson,
   checkImportRows,
-  loginInviteEmail,
   manageRefusal,
   type LoginStatus,
   type StaffRole,
@@ -39,7 +38,6 @@ import {
   setLoginBanned,
   writeAppRole,
 } from "@/server/people-admin";
-import { sendEmail } from "@/server/email/send";
 import { notify } from "@/server/notify";
 import { logActivity } from "@/server/activity";
 
@@ -103,13 +101,10 @@ function loginUrl(): string {
   return `${env.appUrl().replace(/\/$/, "")}/login`;
 }
 
-export interface InviteOutcome {
-  status: "sent" | "not_configured" | "failed";
-  /** The provider's reason when it didn't go (§4.5 point 2). */
-  error?: string;
-}
-
-/** What the "Login created" dialog shows (§4.5 point 2). The password is shown once. */
+/**
+ * What the "Login created" dialog shows (§4.5 point 2), also after a password reset (point 3). The
+ * password is shown once; the person shares the login on WhatsApp from there (nothing is emailed).
+ */
 export interface LoginHandout {
   employeeId: string;
   fullName: string;
@@ -119,36 +114,10 @@ export interface LoginHandout {
   whatsapp: string | null;
   loginUrl: string;
   firmName: string;
-  invite: InviteOutcome;
   kind: "invite" | "reset";
 }
 
-async function emailLogin(
-  ctx: ActionContext,
-  p: { employeeId: string; userId: string; fullName: string; email: string; password: string; firm: string; kind: "invite" | "reset" },
-): Promise<InviteOutcome> {
-  const { subject, text } = loginInviteEmail(
-    { fullName: p.fullName, email: p.email, temporaryPassword: p.password, loginUrl: loginUrl(), firmName: p.firm },
-    p.kind,
-  );
-  try {
-    const result = await sendEmail({
-      to: p.email,
-      subject,
-      text,
-      kind: "staff_invite",
-      related: { type: "employee", id: p.employeeId },
-      idempotencyKey: `${p.kind === "invite" ? "staff-invite" : "staff-reset"}:${p.userId}:${crypto.randomUUID()}`,
-    });
-    if (result.status === "sent") return { status: "sent" };
-    return { status: result.status, error: result.error ?? (result.status === "not_configured" ? "The firm's email domain isn't verified yet (Settings → Email)." : undefined) };
-  } catch (err) {
-    log("error", "invite email failed", { source: `action:people.${p.kind}`, userId: ctx.user.id, err });
-    return { status: "failed", error: "The email service didn't answer." };
-  }
-}
-
-function handout(person: { id: string; full_name: string; email: string; whatsapp: string | null; phone: string | null }, password: string, firm: string, invite: InviteOutcome, kind: "invite" | "reset"): LoginHandout {
+function handout(person: { id: string; full_name: string; email: string; whatsapp: string | null; phone: string | null }, password: string, firm: string, kind: "invite" | "reset"): LoginHandout {
   return {
     employeeId: person.id,
     fullName: person.full_name,
@@ -157,7 +126,6 @@ function handout(person: { id: string; full_name: string; email: string; whatsap
     whatsapp: normalizeWhatsAppNumber(person.whatsapp) ?? normalizeWhatsAppNumber(person.phone),
     loginUrl: loginUrl(),
     firmName: firm,
-    invite,
     kind,
   };
 }
@@ -229,19 +197,18 @@ export const addTeamMember = defineAction(
     }
 
     const firm = await firmName(ctx);
-    const invite = await emailLogin(ctx, { employeeId, userId: login.userId, fullName: input.full_name, email: input.email, password: login.temporaryPassword, firm, kind: "invite" });
 
     await ctx.audit({
       event: "user_create",
       resourceType: "employee",
       resourceId: employeeId,
-      details: { role: input.role, email: input.email, vault_access: ctx.user.role === "partner" ? input.vault_access : false, invite: invite.status },
+      details: { role: input.role, email: input.email, vault_access: ctx.user.role === "partner" ? input.vault_access : false },
     });
     ctx.after("Record the new team member", () =>
       logActivity({ entityType: "employee", entityId: employeeId, action: "created", description: `${input.full_name} joined as ${ROLE_LABEL[input.role]}; login issued.` }),
     );
 
-    return ok(handout({ id: employeeId, full_name: input.full_name, email: input.email, whatsapp: input.whatsapp, phone: input.phone }, login.temporaryPassword, firm, invite, "invite"));
+    return ok(handout({ id: employeeId, full_name: input.full_name, email: input.email, whatsapp: input.whatsapp, phone: input.phone }, login.temporaryPassword, firm, "invite"));
   },
 );
 
@@ -254,9 +221,8 @@ async function issueOne(ctx: ActionContext, id: string, firm: string): Promise<L
   if (person.profile_id) throw new ActionError(`${person.full_name} already has a login.`, { code: "conflict" });
   if (person.login_status === "disabled") throw new ActionError(`${person.full_name} is disabled. Enable them first.`, { code: "blocked" });
   const login = await createStaffLogin({ employeeId: person.id, email: person.email, fullName: person.full_name, phone: person.phone, role: person.role });
-  const invite = await emailLogin(ctx, { employeeId: person.id, userId: login.userId, fullName: person.full_name, email: person.email, password: login.temporaryPassword, firm, kind: "invite" });
-  await ctx.audit({ event: "user_create", resourceType: "employee", resourceId: person.id, details: { role: person.role, email: person.email, invite: invite.status } });
-  return handout(person, login.temporaryPassword, firm, invite, "invite");
+  await ctx.audit({ event: "user_create", resourceType: "employee", resourceId: person.id, details: { role: person.role, email: person.email } });
+  return handout(person, login.temporaryPassword, firm, "invite");
 }
 
 export const issueLogin = defineAction(
@@ -304,12 +270,11 @@ export const resetPassword = defineAction(
 
     const password = await resetStaffPassword(person.profile_id, person.role);
     const firm = await firmName(ctx);
-    const invite = await emailLogin(ctx, { employeeId: person.id, userId: person.profile_id, fullName: person.full_name, email: person.email, password, firm, kind: "reset" });
-    await ctx.audit({ event: "password_change", resourceType: "employee", resourceId: person.id, details: { target_user: person.profile_id, by: "reset", invite: invite.status } });
+    await ctx.audit({ event: "password_change", resourceType: "employee", resourceId: person.id, details: { target_user: person.profile_id, by: "reset" } });
     ctx.after("Record the password reset", () =>
       logActivity({ entityType: "employee", entityId: person.id, action: "password_reset", description: `${person.full_name}'s password was reset to a temporary one.` }),
     );
-    return ok(handout(person, password, firm, invite, "reset"));
+    return ok(handout(person, password, firm, "reset"));
   },
 );
 

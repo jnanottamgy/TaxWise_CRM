@@ -10,24 +10,20 @@ import type { IssueTarget } from "@/lib/data/collections"
 import { prepareRetainerIssue } from "@/server/actions/retainer"
 import { issueInvoice } from "@/server/actions/invoices"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FormDialog } from "@/components/app/form-dialog"
 import { FormAlert } from "@/components/app/form/form-alert"
 import type { FormError } from "@/hooks/use-action-form"
-import { EmailSetupBanner } from "@/components/settings/email/email-setup-banner"
 
 /**
  * "Issue selected" / "Issue all" for retainer drafts (§7.9.6). Shows what will happen first: how
- * many, for how much, who gets each by email (the client's billing contact) and which have no
- * email address, or the email-setup banner when email can't go (§7.13.5); a Manager's drafts held
- * for a Partner stay in the queue. Then each draft is issued through the invoices module's
- * issueInvoice, one at a time (each takes its number from the locked series), and the result of
- * every one is listed, with a link to send it by WhatsApp or Gmail from its invoice when it
- * didn't go by email.
+ * many, for how much; a Manager's drafts held for a Partner stay in the queue. Then each draft is
+ * issued through the invoices module's issueInvoice, one at a time (each takes its number from the
+ * locked series), and the result of every one is listed, with a link to its invoice, where Send on
+ * WhatsApp has the message and the PDF ready.
  */
 
-type Outcome = { invoiceId: string; clientName: string; periodLabel: string; status: "emailed" | "issued" | "failed" | "held"; number?: string; message: string }
+type Outcome = { invoiceId: string; clientName: string; periodLabel: string; status: "issued" | "failed" | "held"; number?: string; message: string }
 
 export function RetainerIssueDialog({
   open,
@@ -45,9 +41,8 @@ export function RetainerIssueDialog({
   role: "partner" | "manager"
 }) {
   const router = useRouter()
-  const [plan, setPlan] = React.useState<{ emailReady: boolean; targets: IssueTarget[] } | null>(null)
+  const [plan, setPlan] = React.useState<{ targets: IssueTarget[] } | null>(null)
   const [error, setError] = React.useState<FormError | null>(null)
-  const [byEmail, setByEmail] = React.useState(true)
   const [running, setRunning] = React.useState(false)
   const [progress, setProgress] = React.useState(0)
   const [outcomes, setOutcomes] = React.useState<Outcome[] | null>(null)
@@ -65,8 +60,7 @@ export function RetainerIssueDialog({
           setError({ message: r.error, ref: r.ref })
           return
         }
-        setPlan({ emailReady: r.data.emailReady, targets: r.data.targets })
-        setByEmail(r.data.emailReady)
+        setPlan({ targets: r.data.targets })
       })
       .catch(() => {
         if (!cancelled) setError({ message: "We couldn't reach the server. Check your connection and try again." })
@@ -78,7 +72,6 @@ export function RetainerIssueDialog({
 
   const issuable = plan ? plan.targets.filter((t) => role === "partner" || !t.held) : []
   const held = plan ? plan.targets.filter((t) => role !== "partner" && t.held) : []
-  const withEmail = issuable.filter((t) => t.email)
   const total = issuable.reduce((s, t) => s + t.totalPaise, 0)
 
   const run = async () => {
@@ -89,21 +82,12 @@ export function RetainerIssueDialog({
     for (const t of issuable) {
       i++
       setProgress(i)
-      const email = byEmail && plan.emailReady && t.email ? t.email : null
       try {
-        const r = await issueInvoice({
-          invoiceId: t.invoiceId,
-          updatedAt: t.updatedAt,
-          channel: email ? "email" : t.email ? "gmail" : "whatsapp",
-          email: email ? { to: [email.to], cc: "", contactId: email.contactId, note: "", nonce: `retainer-${t.invoiceId}` } : null,
-        })
+        const r = await issueInvoice({ invoiceId: t.invoiceId, updatedAt: t.updatedAt, channel: "whatsapp" })
         if (!r.ok) {
           out.push({ invoiceId: t.invoiceId, clientName: t.clientName, periodLabel: t.periodLabel, status: "failed", message: r.ref ? `${r.error} (Ref ${r.ref})` : r.error })
-        } else if (email && r.data.email?.status === "sent") {
-          out.push({ invoiceId: t.invoiceId, clientName: t.clientName, periodLabel: t.periodLabel, status: "emailed", number: r.data.invoiceNumber, message: `Issued as ${r.data.invoiceNumber} and emailed to ${email.name || email.to}.` })
         } else {
-          const why = email ? (r.data.email?.error ? ` The email didn't go: ${r.data.email.error}` : " The email didn't go.") : ""
-          out.push({ invoiceId: t.invoiceId, clientName: t.clientName, periodLabel: t.periodLabel, status: "issued", number: r.data.invoiceNumber, message: `Issued as ${r.data.invoiceNumber}.${why} Send it from the invoice by WhatsApp or Gmail.` })
+          out.push({ invoiceId: t.invoiceId, clientName: t.clientName, periodLabel: t.periodLabel, status: "issued", number: r.data.invoiceNumber, message: `Issued as ${r.data.invoiceNumber}. Send it on WhatsApp from the invoice.` })
         }
       } catch {
         out.push({ invoiceId: t.invoiceId, clientName: t.clientName, periodLabel: t.periodLabel, status: "failed", message: "We couldn't reach the server for this one. It is still a draft; try again." })
@@ -120,7 +104,6 @@ export function RetainerIssueDialog({
   }
 
   if (outcomes) {
-    const emailed = outcomes.filter((o) => o.status === "emailed").length
     const issued = outcomes.filter((o) => o.status === "issued").length
     const failed = outcomes.filter((o) => o.status === "failed").length
     return (
@@ -128,8 +111,8 @@ export function RetainerIssueDialog({
         open={open}
         onOpenChange={(o) => (!o ? close() : undefined)}
         size="md"
-        title={failed ? `${emailed + issued} issued, ${failed} not` : `${emailed + issued} issued`}
-        description={emailed ? `${emailed} went by email.` : "Send each one from its invoice."}
+        title={failed ? `${issued} issued, ${failed} not` : `${issued} issued`}
+        description="Send each one on WhatsApp from its invoice: the message and the PDF are ready there."
         footer={
           <div className="ml-auto">
             <Button type="button" onClick={close}>
@@ -140,21 +123,19 @@ export function RetainerIssueDialog({
       >
         <ul className="flex flex-col divide-y divide-border rounded-md border border-border" aria-label="What happened to each draft">
           {outcomes.map((o) => {
-            const Icon = o.status === "emailed" ? CheckCircle2Icon : o.status === "failed" ? CircleAlertIcon : TriangleAlertIcon
+            const Icon = o.status === "issued" ? CheckCircle2Icon : o.status === "failed" ? CircleAlertIcon : TriangleAlertIcon
             return (
               <li key={o.invoiceId} className="flex items-start gap-2.5 px-3 py-2.5">
-                <Icon aria-hidden="true" className={cn("mt-0.5 size-4 flex-none", o.status === "emailed" ? "text-success-text" : o.status === "failed" ? "text-danger-text" : "text-warning-text")} />
+                <Icon aria-hidden="true" className={cn("mt-0.5 size-4 flex-none", o.status === "issued" ? "text-success-text" : o.status === "failed" ? "text-danger-text" : "text-warning-text")} />
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="text-base text-text">
                     {o.clientName} <span className="text-text-muted">· {o.periodLabel}</span>
                   </p>
                   <p className="text-text-muted">{o.message}</p>
                 </div>
-                {o.status !== "emailed" ? (
-                  <Link href={`/invoices/${o.invoiceId}`} className="flex-none rounded-sm text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-                    Open
-                  </Link>
-                ) : null}
+                <Link href={`/invoices/${o.invoiceId}`} className="flex-none rounded-sm text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                  Open
+                </Link>
               </li>
             )
           })}
@@ -201,26 +182,7 @@ export function RetainerIssueDialog({
             <p className="text-base text-text">
               {issuable.length} {issuable.length === 1 ? "draft" : "drafts"} for <span className="num font-medium">{formatINR(total)}</span> in all, incl. GST.
             </p>
-            {plan.emailReady ? (
-              <div className="flex flex-col gap-2">
-                <label className="flex items-start gap-2.5 text-base text-text">
-                  <Checkbox checked={byEmail} onCheckedChange={(v) => setByEmail(v === true)} disabled={running} className="mt-0.5" />
-                  <span>
-                    Email each to the client&apos;s billing contact, with the PDF and the portal link
-                    <span className="block text-sm text-text-muted">
-                      {withEmail.length === issuable.length
-                        ? "Every client has an email address."
-                        : `${issuable.length - withEmail.length} ${issuable.length - withEmail.length === 1 ? "client has" : "clients have"} no email address: ${issuable.length - withEmail.length === 1 ? "it is" : "they are"} issued, and you send ${issuable.length - withEmail.length === 1 ? "it" : "them"} from the invoice by WhatsApp or Gmail.`}
-                    </span>
-                  </span>
-                </label>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <EmailSetupBanner canSetUp={role === "partner"} />
-                <p className="text-sm text-text-muted">They are issued now; send each from its invoice by WhatsApp or Gmail.</p>
-              </div>
-            )}
+            <p className="text-sm text-text-muted">They are issued now; then send each one on WhatsApp from its invoice, with the PDF.</p>
             {held.length ? (
               <p className="text-sm text-warning-text">
                 {held.length} {held.length === 1 ? "draft is" : "drafts are"} over the invoice approval limit and {held.length === 1 ? "stays" : "stay"} in the queue for a Partner.
@@ -231,10 +193,7 @@ export function RetainerIssueDialog({
                 <li key={t.invoiceId} className="flex items-baseline justify-between gap-3 px-3 py-2 text-sm">
                   <span className="min-w-0">
                     <span className="block truncate text-base text-text">{t.clientName}</span>
-                    <span className="block truncate text-text-muted">
-                      {t.periodLabel}
-                      {byEmail && plan.emailReady ? (t.email ? ` · ${t.email.to}` : " · no email address") : ""}
-                    </span>
+                    <span className="block truncate text-text-muted">{t.periodLabel}</span>
                   </span>
                   <span className="num flex-none text-text tabular-nums">{formatINR(t.totalPaise)}</span>
                 </li>

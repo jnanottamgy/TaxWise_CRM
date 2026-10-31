@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { KeyRoundIcon, MailPlusIcon, ShieldOffIcon, UndoIcon } from "lucide-react"
+import { KeyRoundIcon, UserPlusIcon, ShieldOffIcon, UndoIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionCard } from "@/components/app/section-card"
 import { StatusChip } from "@/components/app/status-chip"
@@ -25,7 +25,8 @@ type Dialog = "invite" | "resend" | "revoke" | null
  * last seen)"). Partners and Managers invite (a login with role client, linked only through
  * clients.portal_user_id), send a new temporary password, revoke (unlink and ban) or restore a
  * revoked login; everyone else sees the state. After an invite or resend the login details are
- * shown once with WhatsApp and Gmail hand-offs (like a staff login, §4.5).
+ * shown once with Share on WhatsApp (like a staff login, §4.5); nothing is emailed. Resend is also
+ * how a client who forgot their password gets back in.
  */
 export function PortalCard({
   clientId,
@@ -63,12 +64,12 @@ export function PortalCard({
       : {
           label: "Invite pending",
           tone: "warning",
-          meaning: "Invite pending: a login exists but the client hasn't signed in yet. Resend it if they can't find the email.",
+          meaning: "Invite pending: a login exists but the client hasn't signed in yet. Resend it if they lost the WhatsApp message.",
           line: invitedAt ? `Invited ${formatDate(invitedAt)}; not signed in yet` : "Not signed in yet",
         }
     : revokedAt
       ? { label: "Revoked", tone: "muted", meaning: "Revoked: the login is blocked and unlinked from this client.", line: `Revoked ${formatDate(revokedAt)}${revokedBy ? ` by ${revokedBy}` : ""}` }
-      : { label: "Not invited", tone: "muted", meaning: "Not invited: the client has no portal login yet.", line: inviteEmail ? `The invite goes to ${inviteEmail.email} (${inviteEmail.label.toLowerCase()}).` : "Add an email address for the client or a contact to invite them." }
+      : { label: "Not invited", tone: "muted", meaning: "Not invited: the client has no portal login yet.", line: inviteEmail ? `They sign in with ${inviteEmail.email} (${inviteEmail.label.toLowerCase()}).` : "Add an email address for the client or a contact to invite them: it is what they sign in with." }
 
   const run = async (fn: () => Promise<{ ok: true; data: PortalHandout; warnings?: string[] } | { ok: false; error: string; ref?: string }>) => {
     const r = await fn()
@@ -103,15 +104,15 @@ export function PortalCard({
                 </Button>
               </>
             ) : inviteDisabled ? (
-              <Explain content={<p>Add an email address for {clientName} or one of its contacts first: the invite is sent by email.</p>}>
+              <Explain content={<p>Add an email address for {clientName} or one of its contacts first: it is what they sign in with.</p>}>
                 <Button type="button" variant="outline" size="sm" aria-disabled="true" className="cursor-not-allowed text-text-muted hover:bg-surface hover:text-text-muted">
-                  <MailPlusIcon aria-hidden="true" />
+                  <UserPlusIcon aria-hidden="true" />
                   Invite to portal
                 </Button>
               </Explain>
             ) : (
               <Button type="button" variant="outline" size="sm" onClick={() => setDialog("invite")}>
-                {canRestore ? <UndoIcon aria-hidden="true" /> : <MailPlusIcon aria-hidden="true" />}
+                {canRestore ? <UndoIcon aria-hidden="true" /> : <UserPlusIcon aria-hidden="true" />}
                 {canRestore ? "Restore access" : "Invite to portal"}
               </Button>
             )}
@@ -127,8 +128,8 @@ export function PortalCard({
             title={canRestore ? `Restore ${clientName}'s portal access?` : `Invite ${clientName} to the portal?`}
             description={
               canRestore
-                ? "Their earlier login is unblocked and linked to this client again, with a new temporary password they must change at first sign-in. The details are emailed, and shown to you once so you can share them on WhatsApp or Gmail."
-                : `A portal login is created for ${inviteEmail?.email ?? "the client's email"} with a temporary password they must change at first sign-in. The invite is emailed, and the details are shown to you once so you can share them on WhatsApp or Gmail.`
+                ? "Their earlier login is unblocked and linked to this client again, with a new temporary password they must change at first sign-in. The details are shown to you once, to share on WhatsApp."
+                : `A portal login is created for ${inviteEmail?.email ?? "the client's email"} with a temporary password they must change at first sign-in. The details are shown to you once, to share on WhatsApp.`
             }
             confirmLabel={canRestore ? "Restore access" : "Create login and invite"}
             onConfirm={() => run(() => invitePortal({ clientId, updatedAt }))}
@@ -137,7 +138,7 @@ export function PortalCard({
             open={dialog === "resend"}
             onOpenChange={close}
             title={lastSeenAt ? "Reset the portal password?" : "Send the invite again?"}
-            description="A new temporary password replaces the old one, which stops working at once, and the client is signed out everywhere. It is emailed again and shown to you once."
+            description="A new temporary password replaces the old one, which stops working at once, and the client is signed out everywhere. It is shown to you once, to share on WhatsApp."
             confirmLabel={lastSeenAt ? "Reset password" : "Resend invite"}
             onConfirm={() => run(() => resendPortalInvite({ clientId, updatedAt }))}
           />

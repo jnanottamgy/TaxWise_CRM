@@ -291,7 +291,7 @@ export function ApprovalPanel() {
           <Button variant="outline" onClick={() => open("approve")}>
             Approve
           </Button>
-          <Button onClick={() => open("approve_send")} disabled={!data.email}>
+          <Button onClick={() => open("approve_send")}>
             <SendIcon aria-hidden="true" />
             Approve &amp; send
           </Button>

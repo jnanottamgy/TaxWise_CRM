@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/current-user";
 import type { AppRole } from "@/lib/auth/roles";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient, type AdminSupabase } from "@/server/admin";
-import { isMoneySideKind } from "@/server/email/policy";
+import { isMoneySideKind } from "@/lib/handoff";
 import { log } from "@/lib/log";
 
 /**

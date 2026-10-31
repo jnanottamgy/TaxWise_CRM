@@ -4,6 +4,7 @@ import {
   checkReceiptAmounts,
   paiseOf,
   receiptPayload,
+  receiptShareText,
   referenceLabel,
   storedTdsSection,
   tdsQuarterLabel,
@@ -63,12 +64,26 @@ describe("Record receipt (§7.9.4, §6.5)", () => {
     expect(tdsQuarterLabel("2026-04-01")).toBe("Q1 2026-27");
   });
 
-  it("asks for the section when TDS was deducted, and an address when the receipt is emailed", () => {
-    const r = RecordReceiptSchema.safeParse({ invoiceId: INVOICE, paymentDate: "2026-10-22", amountReceived: "10620", tdsAmount: "1180", method: "upi", emailReceipt: true, emailTo: "nope" });
+  it("asks for the section when TDS was deducted", () => {
+    const r = RecordReceiptSchema.safeParse({ invoiceId: INVOICE, paymentDate: "2026-10-22", amountReceived: "10620", tdsAmount: "1180", method: "upi" });
     expect(r.success).toBe(false);
     const paths = r.success ? [] : r.error.issues.map((i) => i.path.join("."));
-    expect(paths).toEqual(expect.arrayContaining(["tdsSection", "emailTo"]));
+    expect(paths).toEqual(["tdsSection"]);
     expect(RecordReceiptSchema.safeParse({ invoiceId: INVOICE, paymentDate: "2026-10-22", amountReceived: "100", method: "" }).success).toBe(false);
+  });
+
+  it("writes the WhatsApp message that goes with the receipt PDF", () => {
+    const base = { contactName: "Rakesh Sharma", receiptNumber: "TW-R/26-27/0007", invoiceNumber: "TW/26-27/0042", paymentDate: "22 Oct 2026", amount: "₹10,620.00", tds: null, balance: null, firmName: "TaxWise Consultants" };
+    const paid = receiptShareText(base);
+    expect(paid).toContain("Hi Rakesh, thank you for your payment of ₹10,620.00 received on 22 Oct 2026 against invoice TW/26-27/0042.");
+    expect(paid).toContain("Please find receipt TW-R/26-27/0007 from TaxWise Consultants attached.");
+    expect(paid).toContain("fully paid");
+    expect(paid).not.toContain("Form 16A");
+    const part = receiptShareText({ ...base, contactName: null, tds: "₹1,180.00", balance: "₹2,000.00" });
+    expect(part.startsWith("Hello, thank you")).toBe(true);
+    expect(part).toContain("(and TDS of ₹1,180.00)");
+    expect(part).toContain("₹2,000.00 is still to pay on the invoice.");
+    expect(part).toContain("Form 16A");
   });
 
   it("sends decimals to record_receipt and no section without TDS", () => {

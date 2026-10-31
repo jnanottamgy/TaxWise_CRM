@@ -6,7 +6,7 @@ import { requireManagerOrPartner } from "@/lib/auth/guards"
 import { getSession } from "@/lib/auth/current-user"
 import { logUnexpected } from "@/lib/log"
 import { env } from "@/lib/env"
-import { formatDate, formatDateTime, formatNumber } from "@/lib/format"
+import { formatDate, formatDateTime, formatNumber, pdfFileName } from "@/lib/format"
 import { todayIST } from "@/lib/domain/fy"
 import { formatINR, toPaise, toPaiseOrNull } from "@/lib/domain/money"
 import { applySignature, firstNameOf, normalizeWhatsAppNumber } from "@/lib/domain/messaging"
@@ -22,10 +22,9 @@ import {
 } from "@/lib/schemas/quotations"
 import { getQuotationDetail, getQuotationTemplates, quotationDraft, toDocumentFirm, toQuotationDocument, type QuotationDetail } from "@/lib/data/quotations"
 import { getMessagingContext } from "@/lib/data/clients"
+import { whatsAppTemplateOptions } from "@/lib/schemas/message-templates"
 import { readParam } from "@/components/app/data-table/params"
 import { getFirmProfile } from "@/server/firm"
-import { getEmailReadiness } from "@/server/email/readiness"
-import { emailFirm, quotationFollowUpEmail } from "@/server/email/templates"
 import { PageHeader } from "@/components/app/page-header"
 import { SectionCard } from "@/components/app/section-card"
 import { DefinitionList } from "@/components/app/definition-list"
@@ -76,8 +75,9 @@ function Banner({ tone, icon, children }: { tone: "success" | "warning" | "dange
 
 /**
  * One quotation (§7.5.2–§7.5.3): the document as the client sees it (same layout as the PDF), what
- * happens next (edit, submit for approval, approve / approve & send / return, send by email or hand
- * it off, revise, create the client), the tracking (sent, first and last viewed, views, the answer),
+ * happens next (edit, submit for approval, approve / approve & send / return, send it on WhatsApp
+ * with the PDF or copy the link, revise, create the client), the tracking (sent, first and last
+ * viewed, views, the answer),
  * the day 3 / 7 / 14 follow-ups, every send, and the history. Partners and Managers only (§4.1).
  */
 export default async function QuotationPage({ params, searchParams }: Params) {
@@ -108,11 +108,10 @@ export default async function QuotationPage({ params, searchParams }: Params) {
 
   const now = new Date()
   const today = todayIST(now)
-  let side: { firm: Awaited<ReturnType<typeof getFirmProfile>>; email: { ready: boolean }; templates: Awaited<ReturnType<typeof getQuotationTemplates>>; messaging: Awaited<ReturnType<typeof getMessagingContext>> | null; limit: number | null; followUpDays: number[] }
+  let side: { firm: Awaited<ReturnType<typeof getFirmProfile>>; templates: Awaited<ReturnType<typeof getQuotationTemplates>>; messaging: Awaited<ReturnType<typeof getMessagingContext>> | null; limit: number | null; followUpDays: number[] }
   try {
-    const [firm, email, templates, messaging, settings] = await Promise.all([
+    const [firm, templates, messaging, settings] = await Promise.all([
       getFirmProfile(supabase),
-      getEmailReadiness(supabase),
       getQuotationTemplates(supabase),
       getMessagingContext(supabase, user).catch(() => null),
       supabase.from("firm_settings").select("quotation_approval_limit, quotation_follow_up_days").eq("id", 1).maybeSingle(),
@@ -120,7 +119,6 @@ export default async function QuotationPage({ params, searchParams }: Params) {
     if (settings.error) throw settings.error
     side = {
       firm,
-      email,
       templates,
       messaging,
       limit: toPaiseOrNull(settings.data?.quotation_approval_limit ?? null),
@@ -152,7 +150,6 @@ export default async function QuotationPage({ params, searchParams }: Params) {
       totalPaise,
       limitPaise: side.limit,
       lineCount: detail.items.length,
-      hasEmail: Boolean(q.client_email),
       convertedClientId: q.converted_client_id,
       clientId: q.client_id,
       deleted: Boolean(q.deleted_at),
@@ -168,7 +165,7 @@ export default async function QuotationPage({ params, searchParams }: Params) {
   const whatsappNumber = normalizeWhatsAppNumber(rawNumber, { countryCode })
   const sign = (text: string) => (m?.addSignature ? applySignature(text, m.signatureFormat, firstNameOf(user.fullName)) : text)
   const amount = formatINR(totalPaise)
-  const drafts = quotationDraft(side.templates, {
+  const templateValues = {
     contact_name: firstNameOf(q.client_name) || q.client_name,
     client_name: who,
     client_code: detail.client?.client_code ?? null,
@@ -177,23 +174,10 @@ export default async function QuotationPage({ params, searchParams }: Params) {
     firm_name: side.firm.firmName,
     firm_phone: side.firm.phone,
     sender_name: user.fullName,
-  })
+  }
+  const draft = quotationDraft(side.templates, templateValues)
   const open = (q.status === "sent" || q.status === "viewed") && displayStatus !== "expired"
-  const mailFirm = emailFirm(side.firm)
   const followUps: FollowUpView[] = detail.followUps.map((f) => {
-    const mail = quotationFollowUpEmail(
-      {
-        day: f.follow_up_day >= 14 ? 14 : f.follow_up_day >= 7 ? 7 : 3,
-        recipientName: q.client_name,
-        quotationNumber: q.quotation_number,
-        totalPaise,
-        validUntil: q.valid_until,
-        viewUrl: link,
-        sentOn: q.sent_at ?? today,
-        senderName: user.fullName,
-      },
-      mailFirm,
-    )
     return {
       id: f.id,
       day: f.follow_up_day,
@@ -213,8 +197,6 @@ export default async function QuotationPage({ params, searchParams }: Params) {
           firmPhone: side.firm.phone,
         }),
       ),
-      emailSubject: mail.subject,
-      emailBody: mail.text,
     }
   })
 
@@ -226,14 +208,13 @@ export default async function QuotationPage({ params, searchParams }: Params) {
     updatedAt: q.updated_at,
     recipientName: q.client_name,
     who,
-    email: String(q.client_email ?? ""),
     link,
     pdfHref,
+    attachment: { href: `${pdfHref}?download=1`, filename: pdfFileName(q.quotation_number, "Quotation") },
     actions,
     viewerRole: user.role === "partner" ? "partner" : "manager",
-    emailReady: side.email.ready,
     whatsappNumber,
-    drafts: { whatsapp: sign(drafts.whatsapp), emailSubject: drafts.emailSubject, emailBody: drafts.emailBody },
+    drafts: { whatsapp: sign(draft), templates: whatsAppTemplateOptions(side.templates, templateValues, { sign }) },
     createClientHref: actions.createClient ? `/clients/new?fromQuotation=${q.id}` : null,
     approval: q.status === "pending_approval" ? { requestedAt: q.approval_requested_at, requestedByName: q.approval_requested_by_name } : null,
     totalLabel: amount,
@@ -242,14 +223,15 @@ export default async function QuotationPage({ params, searchParams }: Params) {
 
   const crumbs = [{ label: "Quotations", href: "/quotations" }, { label: q.quotation_number }]
   const convertedTo = detail.convertedClient ?? (q.status === "accepted" && detail.client ? detail.client : null)
-  const lastSendFailed = detail.emails.find((e) => e.channel === "email")?.status === "failed"
+  // An older email send that failed, with nothing sent since (new sends are WhatsApp hand-offs).
+  const lastSendFailed = detail.emails[0]?.channel === "email" && detail.emails[0].status === "failed"
 
   return (
     <div className="flex min-w-0 flex-col">
       <ShellTitle crumbs={crumbs} />
       <PageGuide title="A quotation">
         <p>The document here is what the client sees on their link and in the PDF. A Draft is edited and then sent; over the approval limit, a Manager submits it and a Partner approves or returns it.</p>
-        <p className="mt-2">Send it by email (the PDF is attached), or hand it off by Gmail or WhatsApp, or copy the link. Views are tracked; follow-ups go on day 3, 7 and 14 while it is open. Once it has gone out it is never edited: revise it, and the old link says it has been replaced.</p>
+        <p className="mt-2">Send it on WhatsApp (the message has the link, and the PDF downloads to attach), or copy the link. Views are tracked; follow-ups fall due on day 3, 7 and 14 while it is open, and you&apos;re told in the Inbox to send each one on WhatsApp. Once it has gone out it is never edited: revise it, and the old link says it has been replaced.</p>
         <p className="mt-2">When the client accepts, the lead moves to Won and Create client opens onboarding filled in from the quotation.</p>
       </PageGuide>
       <GrowthSubnav active="quotations" />
@@ -339,7 +321,7 @@ export default async function QuotationPage({ params, searchParams }: Params) {
         ) : null}
         {lastSendFailed && open ? (
           <Banner tone="danger" icon={<CircleAlertIcon className="text-danger-text" />}>
-            The last email didn&apos;t reach {q.client_name}. Resend it, or hand it off by WhatsApp or Gmail.
+            The last email didn&apos;t reach {q.client_name}. Send it on WhatsApp instead.
           </Banner>
         ) : null}
 
@@ -361,20 +343,17 @@ export default async function QuotationPage({ params, searchParams }: Params) {
               />
             </SectionCard>
 
-            <SectionCard id="follow-ups" title="Follow-ups" description={side.email.ready ? "Emailed at 2:30 pm on each day" : "Email isn't set up: hand each one off"} flush>
+            <SectionCard id="follow-ups" title="Follow-ups" description="Sent on WhatsApp: the author is told on each day" flush>
               <FollowUpsPanel
                 quotationId={q.id}
                 rows={followUps}
                 open={open}
-                emailReady={side.email.ready}
                 highlightDay={highlightDay}
                 whatsappNumber={whatsappNumber}
-                email={String(q.client_email ?? "")}
                 who={who}
-                recipientName={q.client_name}
-                pdfHref={pdfHref}
                 plannedDays={side.followUpDays}
                 now={now.toISOString()}
+                templates={controls.drafts.templates}
               />
             </SectionCard>
 
@@ -449,7 +428,7 @@ export default async function QuotationPage({ params, searchParams }: Params) {
                   })}
                 </ul>
               ) : (
-                <p className="px-4 pb-4 text-sm text-text-muted md:px-5">Not sent yet. Every email and hand-off shows here.</p>
+                <p className="px-4 pb-4 text-sm text-text-muted md:px-5">Not sent yet. Every WhatsApp hand-off and copied link shows here.</p>
               )}
             </SectionCard>
 

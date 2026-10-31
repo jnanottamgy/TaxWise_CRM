@@ -61,7 +61,7 @@ export function LogoUploader({
       const done = await confirmLogo({ path: req.data.path, updated_at: updatedAt })
       if (!done.ok) throw new Error(done.error)
       for (const w of done.warnings ?? []) toast.warning(w, { duration: 12_000 })
-      toast.success("Logo saved. It now prints on invoices, quotations and emails.")
+      toast.success("Logo saved. It now prints on invoices and quotations.")
       onSaved({ updated_at: done.data.updated_at, logoUrl: done.data.logoUrl })
     } catch (err) {
       setError(err instanceof Error ? err.message : "The logo couldn't be saved. Try again.")
@@ -138,7 +138,7 @@ export function LogoUploader({
         open={confirmRemove}
         onOpenChange={setConfirmRemove}
         title="Remove the logo?"
-        description="Invoices, quotations, emails and the portal will show the firm's name in type instead. You can upload a logo again at any time."
+        description="Invoices, quotations and the portal will show the firm's name in type instead. You can upload a logo again at any time."
         confirmLabel="Remove logo"
         destructive
         onConfirm={remove}

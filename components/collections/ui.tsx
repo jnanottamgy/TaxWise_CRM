@@ -42,9 +42,9 @@ export function PromiseChip({ status }: { status: "open" | "kept" | "missed" }) 
 }
 
 const REMINDER_INFO: Record<string, { label: string; tone: "success" | "info" | "warning" | "danger" | "muted"; meaning: string }> = {
-  sent: { label: "Emailed", tone: "info", meaning: "Emailed: Resend accepted it. Delivery and opens show on the client's Communication tab." },
-  handoff_pending: { label: "To send", tone: "warning", meaning: "To send: email couldn't go, so it waits for someone to send it by WhatsApp or Gmail. The drafts are ready." },
-  handed_off: { label: "Handed off", tone: "info", meaning: "Handed off: WhatsApp or Gmail opened with the reminder filled in. The app can't see whether it was sent." },
+  sent: { label: "Emailed", tone: "info", meaning: "Emailed: an older reminder that went by email." },
+  handoff_pending: { label: "To send", tone: "warning", meaning: "To send: it's due, and waits for someone to send it on WhatsApp. The message and the PDF are ready." },
+  handed_off: { label: "Handed off", tone: "info", meaning: "Handed off: WhatsApp opened with the reminder filled in. The app can't see whether it was sent." },
   dismissed: { label: "Not sent", tone: "muted", meaning: "Not sent: someone decided it wasn't needed, and said why." },
   failed: { label: "Failed", tone: "danger", meaning: "Failed: it didn't reach the client." },
   skipped: { label: "Skipped", tone: "muted", meaning: "Skipped: not needed when its day came." },

@@ -5,6 +5,7 @@ import {
   TEMPLATE_VARIABLE_GROUPS,
   extractVariables,
   isTemplateVariable,
+  renderTemplate,
   validateTemplate,
   type TemplateValues,
   type TemplateVariable,
@@ -70,15 +71,37 @@ export function isTemplateChannel(v: unknown): v is TemplateChannel {
   return typeof v === "string" && (TEMPLATE_CHANNELS as readonly string[]).includes(v);
 }
 
-/** Where a draft is going, and which templates fit it: a WhatsApp or portal text, or an email. */
-export type TemplateUse = "whatsapp" | "email" | "portal";
+/** Where a draft is going: a WhatsApp or a portal text (the app sends no email). */
+export type TemplateUse = "whatsapp" | "portal";
 
-/** True when a template's channel fits a use: Any fits everything; Email templates aren't offered for WhatsApp. */
+/**
+ * True when a template's channel fits a use: Any fits everything; an old Email template is offered
+ * for portal messages but never for WhatsApp.
+ */
 export function channelFits(channel: string, use: TemplateUse): boolean {
   if (channel === "any") return true;
   if (use === "whatsapp") return channel === "whatsapp";
-  if (use === "email") return channel === "email";
   return channel === "whatsapp" || channel === "email";
+}
+
+/**
+ * The firm's templates offered beside a WhatsApp draft (§7.13.4): the WhatsApp and Any ones (only
+ * those of `types`, when given), each filled in for this recipient. A variable the screen can't fill
+ * stays as [period] for the person to complete; `sign` ends each with the sender's signature.
+ *
+ *   templates={whatsAppTemplateOptions(m.templates, { client_name, contact_name, firm_name }, { types: ["custom"], sign })}
+ */
+export function whatsAppTemplateOptions(
+  templates: ReadonlyArray<{ id: string; name: string; type?: string | null; channel: string; body: string }>,
+  values: TemplateValues,
+  opts: { types?: readonly string[]; sign?: (text: string) => string } = {},
+): Array<{ id: string; name: string; body: string }> {
+  return templates
+    .filter((t) => channelFits(t.channel, "whatsapp") && (!opts.types || opts.types.includes(t.type ?? "")))
+    .map((t) => {
+      const body = renderTemplate(t.body, values, { missing: "mark" });
+      return { id: t.id, name: t.name, body: opts.sign ? opts.sign(body) : body };
+    });
 }
 
 // -------------------------------------------------------------------------------------------------

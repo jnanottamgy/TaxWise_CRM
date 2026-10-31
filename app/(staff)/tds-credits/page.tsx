@@ -52,7 +52,7 @@ async function attempt<T>(source: string, userId: string, load: () => Promise<T>
  * it?" Every receipt with TDS in the selected FY, Expected → Reflected (26AS / AIS, Form 168 under
  * the 2025 Act) → Claimed; marked by hand or by importing the statement, which matches lines by the
  * deductor's TAN and amount. The Mismatches view lists credits that should show by now and don't
- * (with WhatsApp / Gmail drafts asking the client to correct their TDS statement) and statement
+ * (with WhatsApp drafts asking the client to correct their TDS statement) and statement
  * lines that didn't match. Partners and Managers only (§4.1).
  */
 export default async function TdsCreditsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -223,7 +223,6 @@ async function loadCorrectionGroups(supabase: ServerSupabase, user: Parameters<t
     const client = clients.get(clientId)
     const clientName = client?.name ?? items[0].client_name
     const contact = client ? pickContactForService(client.contacts) : null
-    const email = contact?.email && !contact.bounced ? contact.email : (client?.email ?? null)
     const whatsapp = client ? pickWhatsAppNumber(contact, client, { countryCode: messaging.countryCode }) : null
     const draft = tdsCorrectionDraft({
       contactName: contact?.name ?? null,
@@ -238,7 +237,6 @@ async function loadCorrectionGroups(supabase: ServerSupabase, user: Parameters<t
       clientName,
       contactId: contact?.id ?? null,
       contactName: contact?.name ?? null,
-      email,
       whatsappNumber: whatsapp?.digits ?? null,
       items: items.map((i) => ({
         receiptId: i.id,
@@ -252,7 +250,6 @@ async function loadCorrectionGroups(supabase: ServerSupabase, user: Parameters<t
         tdsPaise: toPaise(i.tds_amount),
       })),
       totalPaise: items.reduce((sum, i) => sum + toPaise(i.tds_amount), 0),
-      subject: draft.subject,
       body: draft.body,
     })
   }

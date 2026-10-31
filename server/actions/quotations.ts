@@ -1,31 +1,24 @@
 "use server";
 
-import { createElement } from "react";
 import { z } from "zod";
 import { defineAction, throwIfDbError } from "@/lib/action";
 import { ActionError, fail, ok, type ActionResult } from "@/lib/result";
-import { env } from "@/lib/env";
 import { formatDate, formatTime } from "@/lib/format";
 import { todayIST } from "@/lib/domain/fy";
 import { formatINR, toPaise, toPaiseOrNull } from "@/lib/domain/money";
 import { quotationNeedsApproval } from "@/lib/domain/approvals";
 import { isAppRole, type AppRole } from "@/lib/auth/roles";
-import type { EmailSendOutcome } from "@/lib/handoff";
 import {
   ApprovalDecisionSchema,
   CHANNEL_SEND_LABELS,
   QUOTATION_FILTERS,
   QUOTATION_SORTABLE,
-  FollowUpEmailSchema,
   QuotationDraftSchema,
   QuotationHandoffSchema,
   QuotationRefSchema,
-  SendQuotationEmailSchema,
-  followUpTone,
   type QuotationDraftData,
 } from "@/lib/schemas/quotations";
 import {
-  getQuotationDocument,
   listQuotations,
   prefillFromClient,
   prefillFromLead,
@@ -38,14 +31,9 @@ import type { ServerSupabase } from "@/lib/supabase/server";
 import { parseTableParams } from "@/components/app/data-table/params";
 import { toCsv } from "@/lib/schemas/clients";
 import { getStatus } from "@/lib/status";
-import { getFirmProfile } from "@/server/firm";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 import { logActivity, logEmployeeActivity } from "@/server/activity";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm, quotationFollowUpEmail, quotationSentEmail } from "@/server/email/templates";
-import { loadFirmLogo, pdfFileName, renderPdf } from "@/server/pdf";
-import { QuotationPdf } from "@/server/pdf/quotation";
 
 /**
  * Quotations (§7.5.2–§7.5.3), Partner/Manager only (§4.1; RLS and the 0143/0144 functions refuse
@@ -57,9 +45,8 @@ import { QuotationPdf } from "@/server/pdf/quotation";
  *   saveQuotationDraft          the builder's autosave and Save draft (creates the Draft on first save)
  *   submitQuotationForApproval  a Manager's quotation over the limit → Pending approval; Partners told
  *   decideQuotationApproval     Partner: Approve, or Return with comments (Approve & send = approve, then send)
- *   sendQuotationEmail          the branded email with View quotation (/q/<token>) and the PDF attached
- *   logQuotationHandoff         Gmail / WhatsApp hand-off or a copied link: records the send or follow-up
- *   sendQuotationFollowUp       a day-N follow-up by email, now
+ *   logQuotationHandoff         the WhatsApp hand-off (the message with the link, the PDF downloaded to
+ *                               attach) or a copied link: records the send or the day-N follow-up
  *   reviseQuotation             a new Draft revision; the old one Superseded
  *   deleteQuotation             to the recycle bin (never an accepted one)
  */
@@ -73,10 +60,6 @@ function throwDb(error: { code?: string; message?: string; details?: string } | 
     throw new ActionError(error.message.slice("USER: CONFLICT: ".length), { code: "conflict" });
   }
   throwIfDbError(error);
-}
-
-function appUrl(): string {
-  return env.appUrl().replace(/\/+$/, "");
 }
 
 type Loaded = {
@@ -328,129 +311,6 @@ export const decideQuotationApproval = defineAction(
 // Sending (§7.5.3)
 // =================================================================================================
 
-async function renderQuotationPdf(supabase: ServerSupabase, id: string): Promise<{ bytes: Buffer; fileName: string; number: string }> {
-  const firm = await getFirmProfile(supabase);
-  const doc = await getQuotationDocument(supabase, id, firm.stateCode);
-  if (!doc) throw new ActionError("This quotation no longer exists.", { code: "not_found" });
-  const logo = await loadFirmLogo(firm).catch(() => null);
-  const bytes = await renderPdf(createElement(QuotationPdf, { firm, logo, doc }) as never);
-  return { bytes, fileName: pdfFileName(doc.number, "Quotation"), number: doc.number };
-}
-
-export type SendResult = { outcome: EmailSendOutcome; updatedAt: string | null; status: string | null };
-
-export const sendQuotationEmail = defineAction(
-  { name: "quotations.send_email", schema: SendQuotationEmailSchema, roles: PM },
-  async (input, ctx): Promise<ActionResult<SendResult>> => {
-    const q = await load(ctx.supabase, input.id);
-    if (q.updated_at !== input.updatedAt) throw stale(q.updated_at);
-    await assertSendable(ctx.supabase, q);
-
-    const firm = await getFirmProfile(ctx.supabase);
-    const pdf = await renderQuotationPdf(ctx.supabase, q.id);
-    let revisionOf: string | null = null;
-    if (q.revised_from_id) {
-      const { data: prev } = await ctx.supabase.from("quotations").select("quotation_number").eq("id", q.revised_from_id).maybeSingle();
-      revisionOf = prev?.quotation_number ?? null;
-    }
-    const mail = quotationSentEmail(
-      {
-        recipientName: q.client_name,
-        quotationNumber: q.quotation_number,
-        totalPaise: toPaise(q.total),
-        validUntil: q.valid_until,
-        viewUrl: `${appUrl()}/q/${q.token}`,
-        coveringNote: input.coveringNote || null,
-        preparedByName: ctx.user.fullName,
-        revisionOf,
-      },
-      emailFirm(firm),
-    );
-    const { count: priorSends } = await ctx.supabase
-      .from("quotation_email_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("quotation_id", q.id)
-      .eq("channel", "email")
-      .in("email_type", ["initial", "revision"])
-      .in("status", ["sent", "delivered", "opened"]);
-    const emailType = q.revised_from_id ? "revision" : "initial";
-    const recipients = [input.to, ...input.cc.split(/[,;]\s*/).map((s) => s.trim()).filter(Boolean)];
-    const sent = await sendEmail({
-      to: recipients,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "quotation_sent",
-      clientId: q.client_id,
-      related: { type: "quotation", id: q.id },
-      attachments: [{ filename: pdf.fileName, content: pdf.bytes, contentType: "application/pdf" }],
-      idempotencyKey: `quotation:${q.id}:send:${priorSends ?? 0}`,
-    });
-
-    if (sent.status !== "sent") {
-      if (sent.status === "failed") {
-        const { error: logErr } = await ctx.supabase
-          .from("quotation_email_logs")
-          .insert({ quotation_id: q.id, channel: "email", email_type: emailType, to: recipients.join(", "), subject: mail.subject, status: "failed", error: sent.error ?? null });
-        if (logErr) throwIfDbError(logErr);
-      }
-      await ctx.audit({
-        event: "data_update",
-        resourceType: "quotation",
-        resourceId: q.id,
-        action: "quotations.send_email",
-        success: false,
-        error: sent.error ?? sent.status,
-        details: { quotation_number: q.quotation_number, to: recipients },
-      });
-      return ok({ outcome: { status: sent.status, error: sent.error }, updatedAt: null, status: null });
-    }
-
-    const { data, error } = await ctx.supabase.rpc("mark_quotation_sent", {
-      p_id: q.id,
-      p_expected_updated_at: null,
-      p_channel: "email",
-      p_to: recipients.join(", "),
-      p_subject: mail.subject,
-      p_provider_message_id: sent.providerMessageId ?? null,
-      p_email_type: emailType,
-    });
-    if (error) {
-      // The email went; say so, and what didn't happen.
-      return ok(
-        { outcome: { status: "sent" }, updatedAt: null, status: null },
-        [`Emailed, but the quotation couldn't be marked as sent (${error.message?.replace(/^USER:\s*/, "") ?? "database error"}). Reload the page.`],
-      );
-    }
-    const row = (data ?? [])[0];
-    await ctx.audit({
-      event: "data_update",
-      resourceType: "quotation",
-      resourceId: q.id,
-      action: "quotations.send_email",
-      details: { quotation_number: q.quotation_number, to: recipients, provider_message_id: sent.providerMessageId ?? null, first_send: row?.first_send ?? null },
-    });
-    ctx.after("Add to the timeline", () =>
-      q.lead_id || q.client_id
-        ? addTimelineEvent({
-            leadId: q.lead_id,
-            clientId: q.client_id,
-            eventType: "quotation_sent",
-            title: `Quotation ${q.quotation_number} emailed to ${recipients[0]}`,
-            metadata: { quotation_id: q.id, total: q.total },
-          })
-        : Promise.resolve(),
-    );
-    ctx.after("Record the quotation's history", () =>
-      logActivity({ entityType: "quotation", entityId: q.id, action: "quotation_sent", description: `Emailed to ${recipients.join(", ")} by ${ctx.user.fullName}` }),
-    );
-    ctx.after("Add to your activity", () =>
-      logEmployeeActivity({ activityType: "email_sent", description: `Emailed quotation ${q.quotation_number} to ${who(q)}`, entityType: "quotation", entityId: q.id, entityName: q.quotation_number }),
-    );
-    return ok({ outcome: { status: "sent" }, updatedAt: row?.updated_at ?? null, status: row?.status ?? null });
-  },
-);
-
 export const logQuotationHandoff = defineAction(
   { name: "quotations.handoff", schema: QuotationHandoffSchema, roles: PM },
   async (input, ctx): Promise<ActionResult<{ updatedAt: string | null; status: string | null }>> => {
@@ -460,7 +320,7 @@ export const logQuotationHandoff = defineAction(
     let status: string | null = null;
 
     if (input.followUpDay) {
-      if (input.channel === "internal_note") return fail("Follow up by WhatsApp or Gmail.", { code: "validation" });
+      if (input.channel === "internal_note") return fail("Send the follow-up on WhatsApp.", { code: "validation" });
       const { error } = await ctx.supabase.rpc("record_quotation_follow_up", {
         p_id: q.id,
         p_day: input.followUpDay,
@@ -535,7 +395,7 @@ export const logQuotationHandoff = defineAction(
     if (input.channel !== "internal_note") {
       ctx.after("Add to your activity", () =>
         logEmployeeActivity({
-          activityType: input.channel === "whatsapp_handoff" ? "whatsapp_sent" : "email_sent",
+          activityType: "whatsapp_sent",
           description: what,
           entityType: "quotation",
           entityId: q.id,
@@ -544,72 +404,6 @@ export const logQuotationHandoff = defineAction(
       );
     }
     return ok({ updatedAt, status });
-  },
-);
-
-export const sendQuotationFollowUp = defineAction(
-  { name: "quotations.follow_up_email", schema: FollowUpEmailSchema, roles: PM },
-  async (input, ctx): Promise<ActionResult<{ outcome: EmailSendOutcome }>> => {
-    const q = await load(ctx.supabase, input.id);
-    if (!["sent", "viewed"].includes(q.status) || q.valid_until < todayIST()) {
-      throw new ActionError("This quotation is no longer open, so there is nothing to follow up.");
-    }
-    const { data: fu, error: fuErr } = await ctx.supabase.from("quotation_follow_ups").select("id, status").eq("quotation_id", q.id).eq("follow_up_day", input.day).maybeSingle();
-    throwIfDbError(fuErr);
-    if (!fu) return fail(`There is no day-${input.day} follow-up for this quotation.`, { code: "not_found" });
-    if (fu.status !== "pending" && fu.status !== "failed") return fail(`The day-${input.day} follow-up has already been ${fu.status}.`, { code: "conflict" });
-
-    const firm = emailFirm(await getFirmProfile(ctx.supabase));
-    const mail = quotationFollowUpEmail(
-      {
-        day: followUpTone(input.day),
-        recipientName: q.client_name,
-        quotationNumber: q.quotation_number,
-        totalPaise: toPaise(q.total),
-        validUntil: q.valid_until,
-        viewUrl: `${appUrl()}/q/${q.token}`,
-        sentOn: q.sent_at ?? todayIST(),
-        senderName: ctx.user.fullName,
-      },
-      firm,
-    );
-    const sent = await sendEmail({
-      to: q.client_email,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "quotation_follow_up",
-      clientId: q.client_id,
-      related: { type: "quotation", id: q.id },
-      idempotencyKey: `quotation:${q.id}:follow_up_${input.day}`,
-    });
-    if (sent.status === "not_configured") return ok({ outcome: { status: "not_configured", error: sent.error } });
-    const { error } = await ctx.supabase.rpc("record_quotation_follow_up", {
-      p_id: q.id,
-      p_day: input.day,
-      p_channel: "email",
-      p_to: q.client_email,
-      p_subject: mail.subject,
-      p_status: sent.status === "sent" ? "sent" : "failed",
-      p_provider_message_id: sent.providerMessageId ?? null,
-      p_error: sent.status === "failed" ? (sent.error ?? "The email didn't go through.") : null,
-    });
-    throwDb(error);
-    await ctx.audit({
-      event: "data_update",
-      resourceType: "quotation",
-      resourceId: q.id,
-      action: "quotations.follow_up_email",
-      success: sent.status === "sent",
-      error: sent.status === "failed" ? (sent.error ?? "The email didn't go through.") : undefined,
-      details: { quotation_number: q.quotation_number, day: input.day },
-    });
-    if (sent.status === "sent") {
-      ctx.after("Record the quotation's history", () =>
-        logActivity({ entityType: "quotation", entityId: q.id, action: "quotation_follow_up", description: `Day-${input.day} follow-up emailed by ${ctx.user.fullName}` }),
-      );
-    }
-    return ok({ outcome: { status: sent.status, error: sent.error } });
   },
 );
 

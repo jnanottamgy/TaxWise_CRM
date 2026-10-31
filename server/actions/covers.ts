@@ -14,7 +14,6 @@ import { getClientsOfPerson, getCover, type CoverRow } from "@/lib/data/covers";
 import { listActiveStaff } from "@/lib/data/people";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
-import { sendEmail } from "@/server/email/send";
 
 /**
  * Cover access (§4.7): grant (client cover, person cover, or a split into client covers), extend,
@@ -207,31 +206,6 @@ export const grantCover = defineAction(
             dedupeKey: `cover-started:${c.id}:absent`,
           });
         });
-      }
-      if (input.email_cover_person && cover?.email) {
-        ctx.after(
-          "Email the cover person",
-          async () => {
-            const result = await sendEmail({
-              to: cover.email,
-              subject: `TaxWise Consultants | You're covering for ${absent?.full_name ?? "a colleague"} until ${untilDate(c.ends_at)}`,
-              text: [
-                `Hi ${cover.full_name.split(/\s+/)[0]},`,
-                "",
-                `${ctx.user.fullName} has asked you to cover ${c.kind === "client" ? "a client" : `${absent?.full_name ?? "a colleague"}'s clients`} ${window}.`,
-                `${coverBadge(absent?.full_name ?? "a colleague", c.ends_at)}.`,
-                input.handover_note ? `\nHandover note:\n${input.handover_note}` : "",
-                "",
-                "The clients appear in My clients while the cover is in force. Fees and invoices stay hidden as usual.",
-              ].join("\n"),
-              kind: "notification",
-              related: { type: "client_cover", id: c.id },
-              idempotencyKey: `cover-started:${c.id}`,
-            });
-            if (result.status === "failed") throw new Error(result.error ?? "email failed");
-          },
-          "The cover is saved, but the email to the cover person didn't go. Tell them by WhatsApp or in person.",
-        );
       }
     }
     return ok({ ids: created.map((c) => c.id), merged }, warnings);

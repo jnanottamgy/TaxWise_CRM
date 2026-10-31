@@ -84,7 +84,7 @@ export const PORTAL_FAQ: FaqItem[] = [
     id: "password",
     question: "How do I change my password, or what if I forget it?",
     answer: [
-      "Sign out, then choose Forgot password? on the sign-in page and we'll email you a link to set a new one. Keep your login to yourself: it opens your financial records.",
+      "Ask the person who looks after you at the firm to reset your portal access. They send you a temporary password on WhatsApp, and you choose your own the next time you sign in. Keep your login to yourself: it opens your financial records.",
     ],
   },
   {

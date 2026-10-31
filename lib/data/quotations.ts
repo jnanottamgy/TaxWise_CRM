@@ -510,43 +510,31 @@ export async function searchClientsForQuotation(supabase: ServerSupabase, q: str
 // Hand-off drafts (§7.13.2 "Quotation: the public link"; §7.13.3)
 // =================================================================================================
 
-export type QuotationTemplates = {
-  whatsapp: { id: string; body: string } | null;
-  email: { id: string; subject: string | null; body: string } | null;
-};
+/** A "Quotation" message template that fits WhatsApp (channel WhatsApp or Any). */
+export type QuotationTemplate = { id: string; name: string; type: string; channel: string; body: string };
 
-/** The active "Quotation" templates (WhatsApp and email), or null where the firm has none. */
-export async function getQuotationTemplates(supabase: ServerSupabase): Promise<QuotationTemplates> {
-  const { data, error } = await supabase.from("message_templates").select("id, channel, subject, body").eq("type", "quotation").eq("is_active", true).order("name").limit(20);
+/** The firm's active "Quotation" templates for WhatsApp (§7.13.4); empty when it has none. */
+export async function getQuotationTemplates(supabase: ServerSupabase): Promise<QuotationTemplate[]> {
+  const { data, error } = await supabase
+    .from("message_templates")
+    .select("id, name, type, channel, body")
+    .eq("type", "quotation")
+    .eq("is_active", true)
+    .in("channel", ["whatsapp", "any"])
+    .order("name")
+    .limit(20);
   if (error) throw error;
-  const rows = data ?? [];
-  const wa = rows.find((t) => t.channel === "whatsapp") ?? rows.find((t) => t.channel === "any") ?? null;
-  const em = rows.find((t) => t.channel === "email") ?? rows.find((t) => t.channel === "any") ?? null;
-  return {
-    whatsapp: wa ? { id: wa.id, body: wa.body } : null,
-    email: em ? { id: em.id, subject: em.subject, body: em.body } : null,
-  };
+  return (data ?? []).map((t) => ({ id: t.id, name: String(t.name), type: t.type, channel: t.channel, body: t.body }));
 }
 
-/** Fills a quotation template, falling back to the built-in wording when the firm has none. */
-export function quotationDraft(
-  templates: QuotationTemplates,
-  values: TemplateValues,
-): { whatsapp: string; emailSubject: string; emailBody: string } {
-  const whatsapp = templates.whatsapp
-    ? renderTemplate(templates.whatsapp.body, values)
-    : renderTemplate(
-        "Hi {{contact_name}}, thank you for your time. Our quotation for {{client_name}} ({{amount}}) is here: {{quotation_link}}\n\nYou can view, download, accept or decline it on that page. Happy to answer any questions.",
-        values,
-      );
-  const emailSubject = templates.email?.subject ? renderTemplate(templates.email.subject, values) : renderTemplate("{{firm_name}} | Our quotation for {{client_name}}", values);
-  const emailBody = templates.email
-    ? renderTemplate(templates.email.body, values)
-    : renderTemplate(
-        "Dear {{contact_name}},\n\nThank you for considering {{firm_name}}. Our quotation for {{client_name}} is ready. The quoted total is {{amount}}, and you can view, download, accept or decline it online:\n\n{{quotation_link}}\n\nIf you would like to change anything, just reply to this email or call us on {{firm_phone}}.\n\nWarm regards,\n{{sender_name}}\n{{firm_name}}",
-        values,
-      );
-  return { whatsapp, emailSubject, emailBody };
+/** The suggested WhatsApp message for a quotation: the firm's first Quotation template, filled in, else the built-in wording. */
+export function quotationDraft(templates: readonly QuotationTemplate[], values: TemplateValues): string {
+  const template = templates.find((t) => t.channel === "whatsapp") ?? templates[0] ?? null;
+  return renderTemplate(
+    template?.body ??
+      "Hi {{contact_name}}, thank you for your time. Our quotation for {{client_name}} ({{amount}}) is here: {{quotation_link}}\n\nYou can view, download, accept or decline it on that page. Happy to answer any questions.",
+    values,
+  );
 }
 
 /** The letterhead's firm block from the public profile (§4.6). */

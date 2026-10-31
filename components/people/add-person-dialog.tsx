@@ -16,8 +16,8 @@ import { LoginCreatedDialog } from "@/components/people/login-created-dialog"
 
 /**
  * Add team member (§4.5 points 1–2). The login is issued on save; the "Login created" dialog then
- * shows the temporary password once, with WhatsApp and Gmail hand-offs and the invite email's
- * outcome. Managers add Employees only, and don't see the Partner-only fields.
+ * shows the temporary password once, with Share on WhatsApp (nothing is emailed). Managers add
+ * Employees only, and don't see the Partner-only fields.
  */
 export function AddPersonDialog({ actorRole }: { actorRole: AppRole }) {
   const router = useRouter()

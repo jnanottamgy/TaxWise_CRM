@@ -516,9 +516,9 @@ export function supplierMissingItems(supplier: { name: string | null; gstin: str
   return [head, ...ordered.map((l) => `• ${followUpLineText(l)}`)].join("\n");
 }
 
-/** The draft used when the firm has no supplier follow-up template. */
-export function defaultSupplierFollowUp(input: { contactName: string | null; periodText: string; missingItems: string; channel: "whatsapp" | "email"; senderName: string; firmName: string }): string {
-  const hello = input.channel === "email" ? `Dear ${input.contactName ?? "Sir/Madam"},` : `Hi${input.contactName ? ` ${input.contactName}` : ""},`;
+/** The WhatsApp draft used when the firm has no supplier follow-up template. */
+export function defaultSupplierFollowUp(input: { contactName: string | null; periodText: string; missingItems: string }): string {
+  const hello = `Hi${input.contactName ? ` ${input.contactName}` : ""},`;
   const body = [
     hello,
     "",
@@ -528,15 +528,11 @@ export function defaultSupplierFollowUp(input: { contactName: string | null; per
     "",
     "Until the supplier files or corrects their GSTR-1, the input tax credit on these invoices is at risk. Please ask them to do so at the earliest; we will check again once GSTR-2B is updated.",
   ];
-  if (input.channel === "email") body.push("", "Warm regards,", input.senderName, input.firmName);
   return body.join("\n");
 }
 
-export const FOLLOW_UP_SUBJECT = (firmName: string, periodText: string, supplierName: string | null) =>
-  `${firmName} | GST input tax credit for ${periodText}: ${supplierName ?? "supplier"} to follow up`;
-
-/** Template names seeded for this hand-off (§16, supabase/seed/20_templates.sql). */
-export const FOLLOW_UP_TEMPLATE_NAMES = { whatsapp: "Supplier follow-up (WhatsApp)", email: "Supplier follow-up (email)" } as const;
+/** The template seeded for this hand-off (§16, supabase/seed/20_templates.sql). */
+export const FOLLOW_UP_TEMPLATE_NAMES = { whatsapp: "Supplier follow-up (WhatsApp)" } as const;
 
 // =================================================================================================
 // Schemas
@@ -654,7 +650,7 @@ export type ImsDecisionInput = z.input<typeof ImsDecisionSchema>;
 export const SupplierFollowedUpSchema = z.object({
   runId: uuid("reconciliation"),
   supplierGstin: z.string().trim().min(1).max(20),
-  channel: z.enum(["whatsapp_handoff", "gmail_handoff"]),
+  channel: z.enum(["whatsapp_handoff"]),
 });
 
 export const SupplierLinesSchema = z.object({ runId: uuid("reconciliation"), supplierGstin: z.string().trim().min(1).max(20) });

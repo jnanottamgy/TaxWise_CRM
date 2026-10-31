@@ -5,7 +5,7 @@ import { PublicNotice } from "@/components/quotations/public/public-notice"
 export default function PublicQuotationNotFound() {
   return (
     <PublicNotice tone="muted" icon={<LinkIcon className="text-text-muted" />} title="This link isn't valid any more">
-      Check that the whole link from our email or message was opened. If it was, the quotation may have been withdrawn: please contact TaxWise Consultants for a new one.
+      Check that the whole link from our message was opened. If it was, the quotation may have been withdrawn: please contact TaxWise Consultants for a new one.
     </PublicNotice>
   )
 }

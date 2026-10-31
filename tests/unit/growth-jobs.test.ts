@@ -7,23 +7,19 @@ vi.mock("@/server/admin", () => ({
   },
 }));
 vi.mock("@/server/notify", () => ({ notify: vi.fn(async () => undefined) }));
-vi.mock("@/server/email/send", () => ({ sendEmail: vi.fn() }));
-vi.mock("@/server/email/readiness", () => ({ getEmailReadiness: vi.fn() }));
 vi.mock("@/server/firm", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/server/firm")>();
   return { ...real, getFirmProfile: vi.fn(async () => real.defaultFirmProfile()) };
 });
 
 import { notify } from "@/server/notify";
-import { sendEmail } from "@/server/email/send";
-import { getEmailReadiness } from "@/server/email/readiness";
 import { run as runQuotations } from "@/server/jobs/quotations";
 import { run as runLeadFollowUps } from "@/server/jobs/lead-follow-ups";
 
 /**
  * The growth jobs (§7.5.1 automation, §7.5.3 follow-ups and expiry) against a recording stand-in for
- * the service-role client: what each run sends, records and counts, and that a second run does
- * nothing new (idempotent).
+ * the service-role client: who each run tells, what it records and counts, and that a second run
+ * does nothing new (idempotent). Nothing is emailed: follow-ups go on WhatsApp, sent by a person.
  */
 
 type Call = { table: string; op: string; args: unknown[] };
@@ -89,9 +85,8 @@ function followUps(q: ReturnType<typeof quotation>, notifiedAt: string | null = 
 }
 
 beforeEach(() => {
-  vi.mocked(notify).mockClear();
-  vi.mocked(sendEmail).mockReset();
-  vi.mocked(getEmailReadiness).mockReset();
+  vi.mocked(notify).mockReset();
+  vi.mocked(notify).mockResolvedValue(undefined);
 });
 
 describe("quotations job, 14:30 IST (§7.5.3)", () => {
@@ -108,40 +103,27 @@ describe("quotations job, 14:30 IST (§7.5.3)", () => {
     expect(vi.mocked(notify)).toHaveBeenCalledWith(expect.objectContaining({ to: { userIds: ["author-2"] }, title: "Quotation TW-Q/26-27/0003 expired", dedupeKey: "quotation_expired:q9" }));
   });
 
-  it("emails the latest follow-up due, skips the earlier one, and records it", async () => {
-    vi.mocked(getEmailReadiness).mockResolvedValue({ ready: true, reason: null });
-    vi.mocked(sendEmail).mockResolvedValue({ status: "sent", providerMessageId: "re_123" } as never);
-    const q = quotation();
-    const { admin, log, rpcs } = fakeAdmin(
-      (table, op) => {
-        if (table === "quotation_follow_ups" && op === "select") return { data: followUps(q), error: null };
-        if (table === "profiles") return { data: { full_name: "Asha Rao" }, error: null };
-        return { data: null, error: null };
-      },
-      (fn) => (fn === "expire_lapsed_quotations" ? { data: [], error: null } : { data: [{ follow_up_id: "f7", status: "sent" }], error: null }),
-    );
-    const r = await runQuotations(admin, NOW);
-    expect(r.counts).toMatchObject({ follow_ups_emailed: 1, follow_ups_skipped: 1, follow_ups_to_hand_off: 0, failed: 0 });
-    expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(expect.objectContaining({ to: "ravi@sharmatraders.in", kind: "quotation_follow_up", idempotencyKey: "quotation:q1:follow_up_7", related: { type: "quotation", id: "q1" } }));
-    const mail = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(mail.text).toContain("/q/Qm9vNXJmZ3B1a2hzZ3V5dmJ5cGh6d2xrbXF2Y2Rhbm8");
-    expect(rpcs.find((c) => c.fn === "record_quotation_follow_up")?.args).toMatchObject({ p_id: "q1", p_day: 7, p_channel: "email", p_status: "sent", p_provider_message_id: "re_123" });
-    const skip = log.find((e) => e.table === "quotation_follow_ups" && e.op === "update");
-    expect(skip?.payload).toMatchObject({ status: "skipped" });
-    expect(skip?.calls.find((c) => c.op === "in")?.args).toEqual(["id", ["f3"]]);
-  });
-
-  it("asks the author to hand it off, once, when email isn't set up", async () => {
-    vi.mocked(getEmailReadiness).mockResolvedValue({ ready: false, reason: "The sending domain isn't verified." });
+  it("asks the author, once, to send the latest follow-up due on WhatsApp, and skips the earlier one", async () => {
     const q = quotation();
     const first = fakeAdmin(
       (table, op) => (table === "quotation_follow_ups" && op === "select" ? { data: followUps(q), error: null } : { data: null, error: null }),
       (fn) => (fn === "expire_lapsed_quotations" ? { data: [], error: null } : { data: null, error: null }),
     );
     const r1 = await runQuotations(first.admin, NOW);
-    expect(r1.counts).toMatchObject({ follow_ups_to_hand_off: 1, follow_ups_emailed: 0 });
-    expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
-    expect(vi.mocked(notify)).toHaveBeenCalledWith(expect.objectContaining({ linkUrl: "/quotations/q1?followup=7", dedupeKey: "quotation_follow_up:q1:7" }));
+    expect(r1.counts).toMatchObject({ follow_ups_to_hand_off: 1, follow_ups_skipped: 1, failed: 0 });
+    expect(r1.counts).not.toHaveProperty("follow_ups_emailed");
+    expect(vi.mocked(notify)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: { userIds: ["author-1"] },
+        title: "Follow up quotation TW-Q/26-27/0007 on WhatsApp (day 7)",
+        body: expect.stringContaining("on WhatsApp"),
+        linkUrl: "/quotations/q1?followup=7",
+        dedupeKey: "quotation_follow_up:q1:7",
+      }),
+    );
+    expect(first.rpcs.some((c) => c.fn === "record_quotation_follow_up")).toBe(false);
+    const skip = first.log.find((e) => e.table === "quotation_follow_ups" && e.op === "update" && (e.payload as Record<string, unknown>).status === "skipped");
+    expect(skip?.calls.find((c) => c.op === "in")?.args).toEqual(["id", ["f3"]]);
     expect(first.log.some((e) => e.op === "update" && (e.payload as Record<string, unknown>).notified_at === NOW.toISOString())).toBe(true);
 
     vi.mocked(notify).mockClear();
@@ -154,56 +136,32 @@ describe("quotations job, 14:30 IST (§7.5.3)", () => {
     expect(vi.mocked(notify)).not.toHaveBeenCalled();
   });
 
-  it("records a failed email and falls back to the hand-off", async () => {
-    vi.mocked(getEmailReadiness).mockResolvedValue({ ready: true, reason: null });
-    vi.mocked(sendEmail).mockResolvedValue({ status: "failed", error: "Mailbox unavailable" } as never);
-    const q = quotation();
-    const { admin, rpcs } = fakeAdmin(
-      (table, op) => {
-        if (table === "quotation_follow_ups" && op === "select") return { data: followUps(q), error: null };
-        if (table === "profiles") return { data: { full_name: "Asha Rao" }, error: null };
-        return { data: null, error: null };
-      },
-      (fn) => (fn === "expire_lapsed_quotations" ? { data: [], error: null } : { data: [{ follow_up_id: "f7", status: "failed" }], error: null }),
-    );
-    const r = await runQuotations(admin, NOW);
-    expect(r.counts).toMatchObject({ emails_failed: 1, follow_ups_to_hand_off: 1, follow_ups_emailed: 0 });
-    expect(rpcs.find((c) => c.fn === "record_quotation_follow_up")?.args).toMatchObject({ p_status: "failed", p_error: "Mailbox unavailable" });
-    expect(vi.mocked(notify)).toHaveBeenCalledWith(expect.objectContaining({ body: expect.stringContaining("couldn't go by email") }));
-  });
-
   it("skips the follow-ups of a quotation that is no longer open", async () => {
-    vi.mocked(getEmailReadiness).mockResolvedValue({ ready: true, reason: null });
     const q = quotation({ status: "accepted" });
     const { admin, log } = fakeAdmin(
       (table, op) => (table === "quotation_follow_ups" && op === "select" ? { data: followUps(q), error: null } : { data: null, error: null }),
       (fn) => (fn === "expire_lapsed_quotations" ? { data: [], error: null } : { data: null, error: null }),
     );
     const r = await runQuotations(admin, NOW);
-    expect(r.counts).toMatchObject({ follow_ups_skipped: 2, follow_ups_emailed: 0 });
-    expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
+    expect(r.counts).toMatchObject({ follow_ups_skipped: 2, follow_ups_to_hand_off: 0 });
+    expect(vi.mocked(notify)).not.toHaveBeenCalled();
     expect(log.find((e) => e.op === "update")?.payload).toMatchObject({ status: "skipped" });
   });
 
   it("counts a quotation that fails and carries on", async () => {
-    vi.mocked(getEmailReadiness).mockResolvedValue({ ready: true, reason: null });
-    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("network down")).mockResolvedValue({ status: "sent", providerMessageId: "re_9" } as never);
+    vi.mocked(notify).mockRejectedValueOnce(new Error("network down"));
     const a = quotation();
-    const b = quotation({ id: "q2", quotation_number: "TW-Q/26-27/0008", token: "Zm9vNXJmZ3B1a2hzZ3V5dmJ5cGh6d2xrbXF2Y2Rhbm8" });
+    const b = quotation({ id: "q2", quotation_number: "TW-Q/26-27/0008" });
     const rows = [
       { id: "fa", quotation_id: "q1", follow_up_day: 3, scheduled_at: "2026-10-20T18:30:00Z", status: "pending", notified_at: null, quotations: a },
       { id: "fb", quotation_id: "q2", follow_up_day: 3, scheduled_at: "2026-10-20T18:30:00Z", status: "pending", notified_at: null, quotations: b },
     ];
     const { admin } = fakeAdmin(
-      (table, op) => {
-        if (table === "quotation_follow_ups" && op === "select") return { data: rows, error: null };
-        if (table === "profiles") return { data: { full_name: "Asha Rao" }, error: null };
-        return { data: null, error: null };
-      },
-      (fn) => (fn === "expire_lapsed_quotations" ? { data: [], error: null } : { data: [{ follow_up_id: "fb", status: "sent" }], error: null }),
+      (table, op) => (table === "quotation_follow_ups" && op === "select" ? { data: rows, error: null } : { data: null, error: null }),
+      (fn) => (fn === "expire_lapsed_quotations" ? { data: [], error: null } : { data: null, error: null }),
     );
     const r = await runQuotations(admin, NOW);
-    expect(r.counts).toMatchObject({ failed: 1, follow_ups_emailed: 1 });
+    expect(r.counts).toMatchObject({ failed: 1, follow_ups_to_hand_off: 1 });
   });
 });
 

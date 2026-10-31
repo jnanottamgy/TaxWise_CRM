@@ -3,7 +3,6 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Checkbox } from "@/components/ui/checkbox"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea"
 import { FormDialog } from "@/components/app/form-dialog"
@@ -12,24 +11,16 @@ import { SwitchField, TextField } from "@/components/app/form/fields"
 import { useActionForm, type FormError } from "@/hooks/use-action-form"
 import { DOCUMENT_CATEGORY_LABELS } from "@/lib/domain/enums"
 import { formatDate } from "@/lib/format"
-import { EMAIL_NOT_SET_UP_MESSAGE } from "@/lib/handoff"
 import { AddRequestItemSchema, REQUEST_LIMITS, UpdateRequestItemSchema, type AddRequestItemInput, type UpdateRequestItemInput } from "@/lib/schemas/document-requests"
-import { addRequestItem, reviewRequestItem, updateRequestItem, type EmailOutcome } from "@/server/actions/document-requests"
+import { addRequestItem, reviewRequestItem, updateRequestItem } from "@/server/actions/document-requests"
 import type { DocumentOption } from "@/lib/data/documents"
 import type { RequestItemRow } from "@/lib/data/document-requests"
 
 /**
  * The dialogs for one request item (§7.14): send it back with a reason (the client is told in the
- * portal and by email), accept it with a document already in the vault, add an item, edit an item.
+ * portal; tell them on WhatsApp from the request too), accept it with a document already in the vault,
+ * add an item, edit an item.
  */
-
-function emailToast(email: EmailOutcome | null, clientName: string) {
-  if (!email) return
-  if (email.status === "sent") toast.success(`Emailed ${email.recipientName ?? clientName} what to send again.`)
-  else if (email.status === "not_configured") toast.warning(`${EMAIL_NOT_SET_UP_MESSAGE} The client sees the reason in the portal.`, { duration: 10_000 })
-  else if (email.status === "no_recipient") toast.warning("There's no email address for this client. They see the reason in the portal; use WhatsApp to tell them.", { duration: 10_000 })
-  else toast.warning(`The email didn't go${email.error ? `: ${email.error}` : "."} Use WhatsApp or Gmail to tell the client.`, { duration: 12_000 })
-}
 
 export function RejectItemDialog({
   open,
@@ -38,7 +29,6 @@ export function RejectItemDialog({
   clientName,
   requestId,
   item,
-  emailReady,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -46,11 +36,9 @@ export function RejectItemDialog({
   clientName: string
   requestId: string
   item: RequestItemRow
-  emailReady: boolean
 }) {
   const router = useRouter()
   const [reason, setReason] = React.useState("")
-  const [email, setEmail] = React.useState(emailReady)
   const [pending, setPending] = React.useState(false)
   const [error, setError] = React.useState<FormError | null>(null)
   const [fieldError, setFieldError] = React.useState<string | null>(null)
@@ -66,15 +54,14 @@ export function RejectItemDialog({
     setPending(true)
     setError(null)
     try {
-      const r = await reviewRequestItem({ id: item.id, requestId, clientId, decision: "reject", reason: reason.trim(), updatedAt: item.updated_at, emailClient: email })
+      const r = await reviewRequestItem({ id: item.id, requestId, clientId, decision: "reject", reason: reason.trim(), updatedAt: item.updated_at })
       if (!r.ok) {
         if (r.fieldErrors?.reason?.[0]) setFieldError(r.fieldErrors.reason[0])
         setError({ message: r.error, ref: r.ref })
         return
       }
       for (const w of r.warnings ?? []) toast.warning(w, { duration: 12_000 })
-      toast.success(`${item.title} sent back to the client.`)
-      emailToast(r.data.email, clientName)
+      toast.success(`${item.title} sent back. ${clientName} sees why in the portal; to tell them now, use Remind on WhatsApp on the request.`)
       onOpenChange(false)
       router.refresh()
     } finally {
@@ -119,17 +106,7 @@ export function RejectItemDialog({
             </p>
           ) : null}
         </div>
-        {emailReady ? (
-          <label className="flex cursor-pointer items-start gap-2 text-base text-text">
-            <Checkbox checked={email} onCheckedChange={(v) => setEmail(v === true)} className="mt-0.5" />
-            <span>
-              Email the client as well
-              <span className="block text-sm text-text-muted">With what is still outstanding and the upload link.</span>
-            </span>
-          </label>
-        ) : (
-          <p className="text-sm text-text-muted">{EMAIL_NOT_SET_UP_MESSAGE}</p>
-        )}
+        <p className="text-sm text-text-muted">To tell them now as well, use Remind on WhatsApp on the request: the message lists what is still outstanding, with the upload link.</p>
       </div>
     </FormDialog>
   )

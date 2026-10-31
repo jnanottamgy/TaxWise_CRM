@@ -88,7 +88,7 @@ function firstStepOf(paths: string[]): number | null {
  * ✓ when valid, a sticky footer (Back · Save draft · Continue / Complete), the draft autosaved on
  * this device every 5 seconds (offered back on the next visit), the duplicate guard and the code
  * check on blur, the conflict check, and Complete behind a confirm. Complete runs one transaction
- * on the server; what follows it (notifications, the welcome email, the portal invite, the
+ * on the server; what follows it (notifications, the welcome message, the portal invite, the
  * WhatsApp group to-do) comes back as the success screen, with any failure as a warning.
  */
 export function OnboardingWizard({ setup, initial, source, servicesLocked }: { setup: WizardSetup; initial: OnboardingValues; source: WizardSource; servicesLocked: boolean }) {
@@ -734,7 +734,7 @@ export function OnboardingWizard({ setup, initial, source, servicesLocked }: { s
         details={
           <ul className="list-disc pl-4 text-sm text-text-muted">
             {values.invite_portal ? <li>A portal login is created and shown once on the next screen.</li> : null}
-            {values.send_welcome && values.email ? <li>The welcome email goes to {values.email}.</li> : null}
+            {values.send_welcome ? <li>The welcome message is ready to send on WhatsApp on the next screen.</li> : null}
             {source.kind !== "new" ? <li>The {source.kind} is marked as converted.</li> : null}
             {fileCount ? <li>{fileCount === 1 ? "The attached file is" : `The ${fileCount} attached files are`} filed in the client&apos;s documents.</li> : null}
           </ul>

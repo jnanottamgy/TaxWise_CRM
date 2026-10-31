@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useController, useFieldArray, type Control } from "react-hook-form"
-import { ArrowDownIcon, ArrowUpIcon, CheckCircle2Icon, MailWarningIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,10 +11,10 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { FormDialog } from "@/components/app/form-dialog"
 import { FormAlert } from "@/components/app/form/form-alert"
 import { FieldShell } from "@/components/app/form/field-shell"
-import { DateField, SwitchField, TextField, TextareaField } from "@/components/app/form/fields"
+import { DateField, TextField, TextareaField } from "@/components/app/form/fields"
 import { fieldDomId, useActionForm } from "@/hooks/use-action-form"
 import { todayIST } from "@/lib/domain/fy"
-import { EMAIL_NOT_SET_UP_MESSAGE } from "@/lib/handoff"
+import { formatWhatsAppNumber, normalizeWhatsAppNumber } from "@/lib/domain/messaging"
 import {
   CreateDocumentRequestSchema,
   UpdateDocumentRequestSchema,
@@ -22,15 +22,15 @@ import {
   type CreateDocumentRequestInput,
   type UpdateDocumentRequestInput,
 } from "@/lib/schemas/document-requests"
-import { createDocumentRequest, updateDocumentRequest, type EmailOutcome } from "@/server/actions/document-requests"
+import { createDocumentRequest, updateDocumentRequest } from "@/server/actions/document-requests"
 import type { RequestContact } from "@/lib/data/document-requests"
 import { RequestHandoff, type HandoffMessaging } from "@/components/documents/requests/request-handoff"
 
 /**
  * Request documents from the client: a PBC list (§7.14). Title*, due date, items* (title*, help
  * text, required), notes, reminder every N days (default from Settings → Reminders), and who it
- * goes to. On save the client sees it in the portal at once; it is emailed when email is set up,
- * and the confirmation offers WhatsApp and Gmail hand-offs carrying the portal link.
+ * goes to. On save the client sees it in the portal at once, and the confirmation offers Send on
+ * WhatsApp with the list and the portal link (nothing is emailed).
  */
 
 /** Items the firm asks for most often, to add in one click (they are plain items; edit freely). */
@@ -47,14 +47,20 @@ const COMMON_ITEMS = [
   "Rent agreement",
 ] as const
 
-type Created = { id: string; email: EmailOutcome | null; portalLink: string; title: string; items: Array<{ title: string; is_required: boolean }>; dueDate: string | null; contactId: string | null }
+type Created = { id: string; portalLink: string; title: string; items: Array<{ title: string; is_required: boolean }>; dueDate: string | null; contactId: string | null }
+
+/** " · +91 98450 12345", or " · no WhatsApp number": what the request's WhatsApp message goes to. */
+function numberLabel(c: { whatsapp: string | null; phone: string | null }): string {
+  const n = normalizeWhatsAppNumber(c.whatsapp) ?? normalizeWhatsAppNumber(c.phone)
+  return n ? ` · ${formatWhatsAppNumber(n)}` : " · no WhatsApp number"
+}
 
 function ContactField({ control, contacts }: { control: Control<CreateDocumentRequestInput, unknown, unknown> | Control<UpdateDocumentRequestInput, unknown, unknown>; contacts: RequestContact[] }) {
   const { field, fieldState } = useController({ control: control as Control<CreateDocumentRequestInput, unknown, unknown>, name: "contactId" })
   const { ref: fieldRef, value: fieldValue, onChange, onBlur } = field
   const id = fieldDomId(control, "contactId")
   return (
-    <FieldShell id={id} label="Send to" helper={contacts.length ? "Email and the hand-offs go to this contact." : "No contacts yet: it goes to the client's own email and phone."} error={fieldState.error?.message ?? null}>
+    <FieldShell id={id} label="Send to" helper={contacts.length ? "The WhatsApp message goes to this contact." : "No contacts yet: it goes to the client's own number."} error={fieldState.error?.message ?? null}>
       {(aria) => (
         <NativeSelect {...aria} ref={fieldRef} className="w-full" value={(fieldValue as string | null | undefined) ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={onBlur}>
           <NativeSelectOption value="">{contacts.length ? "The primary contact" : "The client"}</NativeSelectOption>
@@ -62,7 +68,7 @@ function ContactField({ control, contacts }: { control: Control<CreateDocumentRe
             <NativeSelectOption key={c.id} value={c.id}>
               {c.name}
               {c.role ? ` (${c.role})` : ""}
-              {c.email ? ` · ${c.email}` : " · no email"}
+              {numberLabel(c)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -205,30 +211,6 @@ function ItemRow({
   )
 }
 
-function EmailOutcomeNote({ email }: { email: EmailOutcome | null }) {
-  if (!email) return <p className="text-base text-text">It wasn’t emailed. Send the link by WhatsApp or Gmail below.</p>
-  if (email.status === "sent")
-    return (
-      <p className="flex items-start gap-2 text-base text-text">
-        <CheckCircle2Icon aria-hidden="true" className="mt-0.5 size-4 flex-none text-success-text" />
-        Emailed to {email.recipientName ?? "the client"}
-        {email.recipientEmail ? ` (${email.recipientEmail})` : ""}.
-      </p>
-    )
-  const message =
-    email.status === "not_configured"
-      ? EMAIL_NOT_SET_UP_MESSAGE
-      : email.status === "no_recipient"
-        ? "There's no email address for this client, so it wasn't emailed. Use WhatsApp, or add an email in Contacts."
-        : `The email didn't go${email.error ? `: ${email.error}` : "."} Send it from your own mailbox or WhatsApp instead; the link is filled in.`
-  return (
-    <div role="note" className="flex gap-3 rounded-md border border-warning/30 bg-warning-soft px-3 py-2.5 text-base text-text">
-      <MailWarningIcon aria-hidden="true" className="mt-0.5 size-4 flex-none text-warning-text" />
-      <p>{message}</p>
-    </div>
-  )
-}
-
 export function CreateRequestDialog({
   open,
   onOpenChange,
@@ -238,7 +220,6 @@ export function CreateRequestDialog({
   client,
   contacts,
   defaultEveryDays,
-  emailReady,
   messaging,
 }: {
   open: boolean
@@ -246,25 +227,23 @@ export function CreateRequestDialog({
   clientId: string
   clientName: string
   clientCode: string
-  client: { phone: string | null; whatsapp: string | null; email: string | null; has_portal: boolean }
+  client: { phone: string | null; whatsapp: string | null; has_portal: boolean }
   contacts: RequestContact[]
   defaultEveryDays: number
-  emailReady: boolean
   messaging: HandoffMessaging
 }) {
   const router = useRouter()
   const [created, setCreated] = React.useState<Created | null>(null)
   const primary = contacts.find((c) => c.is_primary) ?? null
   const defaults = React.useMemo<CreateDocumentRequestInput>(
-    () => ({ clientId, title: "", dueDate: "", items: [{ title: "", helpText: "", isRequired: true }], notes: "", reminderEveryDays: defaultEveryDays, contactId: primary?.id ?? "", sendEmail: emailReady }),
-    [clientId, defaultEveryDays, primary?.id, emailReady]
+    () => ({ clientId, title: "", dueDate: "", items: [{ title: "", helpText: "", isRequired: true }], notes: "", reminderEveryDays: defaultEveryDays, contactId: primary?.id ?? "" }),
+    [clientId, defaultEveryDays, primary?.id]
   )
   const f = useActionForm(CreateDocumentRequestSchema, createDocumentRequest, {
     defaultValues: defaults,
     onSuccess: (data, values) => {
       setCreated({
         id: data.id,
-        email: data.email,
         portalLink: data.portalLink,
         title: values.title.trim(),
         items: (values.items ?? []).map((i) => ({ title: i.title.trim(), is_required: i.isRequired !== false })),
@@ -299,16 +278,15 @@ export function CreateRequestDialog({
               ? `${clientName} can see it in the portal now, under Documents, and upload against each item.`
               : `${clientName} doesn't use the portal yet. The link below opens it once they're invited (Client 360 → Overview → Portal access).`}
           </p>
-          <EmailOutcomeNote email={created.email} />
           <div>
-            <p className="text-sm text-text-muted">Send the portal link yourself:</p>
+            <p className="text-sm text-text-muted">Send it on WhatsApp now: the message lists what&apos;s needed, with the upload link.</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <RequestHandoff
                 clientId={clientId}
                 clientName={clientName}
                 clientCode={clientCode}
                 client={client}
-                recipient={contact ? { contactId: contact.id, name: contact.name, email: contact.email, phone: contact.phone, whatsapp: contact.whatsapp } : null}
+                recipient={contact ? { contactId: contact.id, name: contact.name, phone: contact.phone, whatsapp: contact.whatsapp } : null}
                 request={{ id: created.id, title: created.title, due_date: created.dueDate }}
                 items={created.items.map((i) => ({ ...i, status: "pending" as const }))}
                 portalLink={created.portalLink}
@@ -345,14 +323,7 @@ export function CreateRequestDialog({
           <TextareaField control={f.control} name="notes" label="Notes for the client" rows={2} />
         </div>
         <ItemsEditor control={f.control} errors={itemErrors} />
-        {emailReady ? (
-          <SwitchField control={f.control} name="sendEmail" label="Email it now" description="The email lists the items and links to the portal. You can also hand it off on WhatsApp or Gmail afterwards." />
-        ) : (
-          <div role="note" className="flex gap-3 rounded-md border border-warning/30 bg-warning-soft px-3 py-2.5 text-base text-text">
-            <MailWarningIcon aria-hidden="true" className="mt-0.5 size-4 flex-none text-warning-text" />
-            <p>{EMAIL_NOT_SET_UP_MESSAGE} After saving, you can send the portal link by WhatsApp or Gmail.</p>
-          </div>
-        )}
+        <p className="text-sm text-text-muted">After saving, send it on WhatsApp: the message lists the items and links to the portal.</p>
       </div>
     </FormDialog>
   )

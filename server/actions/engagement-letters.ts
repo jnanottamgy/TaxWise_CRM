@@ -7,27 +7,19 @@ import { log } from "@/lib/log";
 import { formatDate } from "@/lib/format";
 import { compareDates, isFinancialYear, istDateOf, nextFinancialYear, todayIST } from "@/lib/domain/fy";
 import { SERVICE_TYPE_LABELS, type EngagementStatus, type ServiceType } from "@/lib/domain/enums";
-import { firstNameOf } from "@/lib/domain/messaging";
-import type { EmailSendOutcome } from "@/lib/handoff";
+import { formatWhatsAppNumber } from "@/lib/domain/messaging";
 import type { Json, TablesUpdate } from "@/lib/database.types";
-import { getLetter, getLetterClientContext, getLetterDocument, type LetterClientContext, type LetterRow } from "@/lib/data/engagement-letters";
+import { getLetter, getLetterClientContext, type LetterClientContext, type LetterRow } from "@/lib/data/engagement-letters";
 import { addTimelineEvent } from "@/server/timeline";
 import { logEmployeeActivity } from "@/server/activity";
-import { getFirmProfile } from "@/server/firm";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm } from "@/server/email/templates/layout";
-import { engagementLetterEmail } from "@/server/email/templates";
-import { buildEngagementLetterPdf } from "@/server/pdf/engagement-letter";
 import {
   AttachSignedCopySchema,
   CreateLetterSchema,
   DeclineLetterSchema,
   IssueLetterSchema,
-  LETTER_AUDIT_TYPE_LABEL,
   LetterClientContextSchema,
   LetterRefSchema,
   RenewLetterSchema,
-  SendLetterSchema,
   SignLetterSchema,
   UpdateLetterSchema,
   canMoveLetter,
@@ -49,11 +41,10 @@ import {
  *   createLetter / updateLetter   a Draft: client, FY, services, scope / exclusions, fee (excl.
  *                                 GST), the services schedule, the SA 210 terms for an audit, the
  *                                 signing Partner, expiry, notes. Edits carry updated_at (§13).
- *   issueLetter                   Draft → Issued on a date (not in the future).
- *   sendLetterEmail               emails the PDF for signature with the engagement-letter template
- *                                 (§10.13); a Draft is issued first. The outcome says whether it
- *                                 went, so the screen can offer Gmail or a download instead.
- *   recordLetterHandoff           a Gmail / WhatsApp hand-off of the letter, logged as "handed off".
+ *   issueLetter                   Draft → Issued on a date (not in the future); "Issue and send"
+ *                                 issues today, then sends it on WhatsApp.
+ *   recordLetterHandoff           the WhatsApp hand-off of an issued letter for signature (the PDF
+ *                                 downloaded to attach), logged as "handed off" and marked sent.
  *   signLetter                    Issued → Signed on a date, with the signed copy from the vault.
  *   attachSignedCopy              the signed copy, uploaded later.
  *   declineLetter                 Issued → Declined, with the client's reason.
@@ -244,114 +235,9 @@ export const issueLetter = defineAction(
   },
 );
 
-export type SendLetterResult = { email: EmailSendOutcome; updatedAt: string; issued: boolean };
-
-export const sendLetterEmail = defineAction(
-  { name: "engagement_letters.send", schema: SendLetterSchema, roles: MANAGERS },
-  async (input, ctx): Promise<ActionResult<SendLetterResult>> => {
-    let letter = await loadLetter(ctx, input.id);
-    if (!sameStamp(letter.updated_at, input.updatedAt)) return fail(STALE, { code: "conflict" });
-    if (letter.status !== "draft" && letter.status !== "issued") {
-      return fail(`This letter is ${STATUS_WORD[letter.status]}, so there's nothing to send for signature.`, { code: "blocked" });
-    }
-    let recipientName = "";
-    if (input.contactId) {
-      const { data: contact, error } = await ctx.supabase.from("client_contacts").select("name, client_id").eq("id", input.contactId).maybeSingle();
-      throwIfDbError(error);
-      if (!contact || contact.client_id !== letter.client_id) return fail("That contact isn't one of this client's contacts.", { code: "validation", fieldErrors: { contactId: ["Choose one of the client's contacts."] } });
-      recipientName = contact.name;
-    }
-
-    // A draft is issued as it goes out (§7.15.3 Draft → Issued).
-    let issued = false;
-    let updatedAt = letter.updated_at;
-    if (letter.status === "draft") {
-      if (isAuditLetter(letter.service_types) && (!letter.reporting_framework || !letter.report_form || !letter.audit_type)) {
-        return fail("An audit letter needs the kind of audit, the reporting framework and the form of report (SA 210). Edit the draft first.", { code: "blocked" });
-      }
-      updatedAt = await updateWhere(ctx, letter.id, input.updatedAt, { status: "issued", issued_at: istNoon(todayIST()) });
-      issued = true;
-      const reloaded = await getLetter(ctx.supabase, letter.id);
-      if (reloaded) letter = reloaded;
-    }
-
-    const email = await emailLetter(ctx, { letter, to: input.to, contactId: input.contactId, recipientName, key: `engagement_letter:${letter.id}:send:${input.nonce}` });
-    if (email.status === "sent") {
-      const { data, error } = await ctx.supabase.from("engagement_letters").update({ sent_at: new Date().toISOString(), sent_to: input.to }).eq("id", letter.id).select("updated_at");
-      if (error) log("error", "engagement letter send not recorded on the letter", { source: "action:engagement_letters.send", userId: ctx.user.id, letterId: letter.id, err: error });
-      else updatedAt = ((data ?? [])[0] as { updated_at: string } | undefined)?.updated_at ?? updatedAt;
-    }
-    await ctx.audit({
-      event: "data_update",
-      resourceType: "engagement_letter",
-      resourceId: letter.id,
-      action: "engagement_letters.send",
-      details: { client_id: letter.client_id, financial_year: letter.financial_year, to: input.to, outcome: email.status, issued },
-      success: email.status === "sent",
-      error: email.status === "sent" ? undefined : email.error,
-    });
-    if (issued) {
-      ctx.after("Add the issue to the client's timeline", () =>
-        addTimelineEvent({ clientId: letter.client_id, eventType: "engagement_letter_issued", title: `Engagement letter for FY ${letter.financial_year} issued`, metadata: { engagement_letter_id: letter.id } }),
-      );
-    }
-    if (email.status === "sent") {
-      ctx.after("Add the email to the client's timeline", () =>
-        addTimelineEvent({ clientId: letter.client_id, eventType: "engagement_letter_sent", title: `Engagement letter for FY ${letter.financial_year} emailed for signature to ${input.to}`, metadata: { engagement_letter_id: letter.id } }),
-      );
-    }
-    return ok({ email, updatedAt, issued });
-  },
-);
-
-/** Renders the PDF and sends it with the §10.13 template. Never throws: the outcome says what happened. */
-async function emailLetter(ctx: ActionContext, p: { letter: LetterRow; to: string; contactId: string | null; recipientName: string; key: string }): Promise<EmailSendOutcome> {
-  try {
-    const [doc, firmProfile] = await Promise.all([getLetterDocument(ctx.supabase, p.letter.id), getFirmProfile(ctx.supabase)]);
-    if (!doc) return { status: "failed", error: "The letter couldn't be read to attach it." };
-    const firm = emailFirm(firmProfile);
-    const audit = isAuditLetter(p.letter.service_types);
-    const services = p.letter.services_schedule.length
-      ? p.letter.services_schedule.map((s) => s.description)
-      : p.letter.service_types.map((t) => (t === "audit" && p.letter.audit_type ? (LETTER_AUDIT_TYPE_LABEL[p.letter.audit_type as LetterAuditType] ?? SERVICE_TYPE_LABELS[t]) : SERVICE_TYPE_LABELS[t]));
-    if (audit && p.letter.services_schedule.length && p.letter.audit_type) services.unshift(LETTER_AUDIT_TYPE_LABEL[p.letter.audit_type as LetterAuditType] ?? "Audit");
-    const recipient = p.recipientName || doc.primaryContact?.name || doc.client.name;
-    const mail = engagementLetterEmail(
-      {
-        recipientName: firstNameOf(recipient) || recipient,
-        clientName: doc.client.legalName ?? doc.client.name,
-        financialYear: p.letter.financial_year,
-        services,
-        uploadUrl: null,
-        expiresOn: p.letter.expires_at,
-        partnerName: doc.signatory?.name ?? ctx.user.fullName,
-        isAudit: audit,
-      },
-      firm,
-    );
-    const pdf = await buildEngagementLetterPdf({ firm: firmProfile, doc });
-    const r = await sendEmail({
-      to: p.to,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "engagement_letter",
-      clientId: p.letter.client_id,
-      contactId: p.contactId,
-      related: { type: "engagement_letter", id: p.letter.id },
-      attachments: [{ filename: pdf.fileName, content: pdf.bytes, contentType: "application/pdf" }],
-      idempotencyKey: p.key,
-    });
-    return { status: r.status, error: r.error };
-  } catch (err) {
-    log("error", "engagement letter email failed", { source: "action:engagement_letters.send", userId: ctx.user.id, letterId: p.letter.id, err });
-    return { status: "failed", error: "The letter email couldn't be prepared. Download the PDF and send it from your own mailbox instead." };
-  }
-}
-
 const HandoffSchema = z.object({
   id: z.uuid(),
-  channel: z.enum(["gmail_handoff", "whatsapp_handoff"]),
+  channel: z.enum(["whatsapp_handoff"]),
   contactId: z
     .union([z.uuid(), z.literal(""), z.null()])
     .optional()
@@ -365,11 +251,14 @@ export const recordLetterHandoff = defineAction(
   { name: "engagement_letters.handoff", schema: HandoffSchema, roles: MANAGERS },
   async (input, ctx): Promise<ActionResult<{ messageId: string }>> => {
     const letter = await loadLetter(ctx, input.id);
-    if (letter.status !== "issued" && letter.status !== "draft") return fail(`This letter is ${STATUS_WORD[letter.status]}, so there's nothing to send for signature.`, { code: "blocked" });
+    if (letter.status === "draft") return fail("Issue the letter first: what the client signs is then fixed.", { code: "blocked" });
+    if (letter.status !== "issued") return fail(`This letter is ${STATUS_WORD[letter.status]}, so there's nothing to send for signature.`, { code: "blocked" });
+    let contactName: string | null = null;
     if (input.contactId) {
-      const { data: c, error } = await ctx.supabase.from("client_contacts").select("client_id").eq("id", input.contactId).maybeSingle();
+      const { data: c, error } = await ctx.supabase.from("client_contacts").select("client_id, name").eq("id", input.contactId).maybeSingle();
       throwIfDbError(error);
       if (!c || c.client_id !== letter.client_id) return fail("That contact isn't one of this client's contacts.", { code: "validation" });
+      contactName = c.name;
     }
     const { data, error } = await ctx.supabase
       .from("messages")
@@ -392,13 +281,18 @@ export const recordLetterHandoff = defineAction(
     throwIfDbError(error);
     const messageId = (data as { id: string }).id;
     await ctx.audit({ event: "data_create", resourceType: "message", resourceId: messageId, action: "engagement_letters.handoff", details: { channel: input.channel, engagement_letter_id: letter.id } });
-    const name = input.channel === "gmail_handoff" ? "Gmail" : "WhatsApp";
+    // Sent for signature (§7.15.3): the letters list and the letter show when, and to whom.
+    const number = /^\d{8,15}$/.test(input.recipient) ? formatWhatsAppNumber(input.recipient) : input.recipient;
+    const sentTo = contactName ? `${contactName} (${number})` : number;
+    const { error: sentError } = await ctx.supabase.from("engagement_letters").update({ sent_at: new Date().toISOString(), sent_to: sentTo.slice(0, 200) }).eq("id", letter.id);
+    if (sentError) log("error", "engagement letter hand-off not marked sent", { source: "action:engagement_letters.handoff", userId: ctx.user.id, letterId: letter.id, err: sentError });
+    const name = "WhatsApp";
     ctx.after("Record the hand-off event", async () => {
       const { error: evError } = await ctx.supabase.from("message_events").insert({ message_id: messageId, status: "handed_off", details: { channel: input.channel } });
       if (evError) throw evError;
     });
     ctx.after("Add the hand-off to the client's timeline", () =>
-      addTimelineEvent({ clientId: letter.client_id, eventType: "engagement_letter_handed_off", title: `Engagement letter for FY ${letter.financial_year} handed off on ${name} to ${input.recipient}`, metadata: { message_id: messageId, engagement_letter_id: letter.id } }),
+      addTimelineEvent({ clientId: letter.client_id, eventType: "engagement_letter_handed_off", title: `Engagement letter for FY ${letter.financial_year} sent for signature on ${name} to ${sentTo}`, metadata: { message_id: messageId, engagement_letter_id: letter.id } }),
     );
     return ok({ messageId });
   },

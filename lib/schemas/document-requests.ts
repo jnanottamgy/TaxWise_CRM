@@ -69,10 +69,8 @@ export const CreateDocumentRequestSchema = z
       .max(REQUEST_LIMITS.items, { error: `A request can have at most ${REQUEST_LIMITS.items} items. Split it into two.` }),
     notes: optionalText(REQUEST_LIMITS.notes, "Keep the notes under 2,000 characters."),
     reminderEveryDays: everyDays.default(3),
-    /** Who it goes to (email and hand-offs); the primary contact by default. */
+    /** Who the WhatsApp message goes to; the primary contact by default. */
     contactId,
-    /** Email it now (only once the sending domain is verified; otherwise the hand-offs are offered). */
-    sendEmail: z.boolean().default(true),
   })
   .superRefine((v, ctx) => {
     if (v.dueDate && v.dueDate < todayIST()) ctx.addIssue({ code: "custom", path: ["dueDate"], message: "Choose a due date from today on." });
@@ -114,8 +112,6 @@ export const ReviewRequestItemSchema = z
     /** Accept with a document already in the vault (staff linking one on the client's behalf). */
     documentId: uuid("document").nullish().transform((v) => v ?? null),
     updatedAt: z.string().min(1),
-    /** Tell the client by email as well as in the portal (rejections only). */
-    emailClient: z.boolean().default(true),
   })
   .superRefine((v, ctx) => {
     if (v.decision === "reject" && !v.reason) {
@@ -133,10 +129,7 @@ export const CancelDocumentRequestSchema = z.object({
 
 export const ReopenDocumentRequestSchema = z.object({ id: uuid("request"), clientId: uuid("client"), updatedAt: z.string().min(1) });
 
-/** "Send reminder now": emails what is still outstanding (§10.11 reminders). */
-export const SendRequestReminderSchema = z.object({ id: uuid("request"), clientId: uuid("client"), updatedAt: z.string().min(1) });
-
-/** Records a WhatsApp / Gmail hand-off of a request as contact made (counts towards the cadence). */
+/** Records a WhatsApp hand-off of a request as contact made (counts towards the cadence). */
 export const RecordRequestHandoffSchema = z.object({ id: uuid("request"), clientId: uuid("client") });
 
 // -------------------------------------------------------------------------------------------------
@@ -236,7 +229,7 @@ export function outstandingLines(items: readonly DraftItem[]): string[] {
 }
 
 /**
- * The WhatsApp / Gmail draft for a request: greeting, what's needed (and by when), the portal link.
+ * The WhatsApp draft for a request: greeting, what's needed (and by when), the portal link.
  * The signature is added by the WhatsApp button's caller when the person's preference says so.
  */
 export function requestHandoffDraft(d: {
@@ -257,7 +250,3 @@ export function requestHandoffDraft(d: {
   return [hello, "", intro, ...(lines.length ? lines : ["• Nothing is pending right now."]), "", `You can upload them here: ${d.portalLink}`].join("\n");
 }
 
-/** The subject for the Gmail hand-off (matches the email's subject style, §10). */
-export function requestHandoffSubject(firmName: string, title: string, reminder = false): string {
-  return `${firmName} | ${reminder ? "Reminder: documents still needed" : "Documents needed"} for ${title}`;
-}

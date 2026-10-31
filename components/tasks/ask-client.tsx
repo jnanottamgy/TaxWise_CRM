@@ -3,18 +3,17 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { WhatsAppButton, type MessageTemplateOption } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { renderTemplate } from "@/lib/domain/templates"
-import { askClientDraft, askClientSubject, askClientValues, type AskClientFacts } from "@/lib/schemas/tasks"
+import { askClientDraft, askClientValues, type AskClientFacts } from "@/lib/schemas/tasks"
 import { logHandoff } from "@/server/actions/messages"
 
 /**
- * "Ask client for data" (§7.6.6; §7.6.4 Data awaited "with WhatsApp/email drafts asking the client
- * for what's missing"): WhatsApp and Gmail hand-offs with the open checklist items as the list of
- * what's missing, from the firm's document-reminder templates (§7.13.4) or a suggested message.
- * Each opens a preview first; once opened it is logged against the task as "handed off", never
- * "delivered" (§7.13.1).
+ * "Ask client for data" (§7.6.6; §7.6.4 Data awaited "with drafts asking the client for what's
+ * missing"): Ask on WhatsApp with the open checklist items as the list of what's missing, from the
+ * firm's document-reminder templates (§7.13.4) or a suggested message. It opens a preview first;
+ * once opened it is logged against the task as "handed off", never "delivered" (§7.13.1). The
+ * app sends no email.
  */
 
 export type AskClientMessaging = {
@@ -59,53 +58,23 @@ export function AskClientForData({
   const waTemplates: MessageTemplateOption[] = messaging.templates
     .filter((t) => t.channel === "whatsapp" || t.channel === "any")
     .map((t) => ({ id: t.id, name: t.name, body: sign(renderTemplate(t.body, values, { missing: "mark" })) }))
-  const emailTemplate = messaging.templates.find((t) => t.channel === "email" || t.channel === "any")
-  const subject = emailTemplate?.subject ? renderTemplate(emailTemplate.subject, values) : askClientSubject(full)
-  const emailBody = emailTemplate ? renderTemplate(emailTemplate.body, values, { missing: "mark" }) : draft
   const number = pickWhatsAppNumber(recipient.contact, recipient.client, { countryCode: messaging.countryCode })
-  const email = recipient.contact?.email ?? recipient.client?.email ?? null
 
   return (
-    <>
-      <WhatsAppButton
-        recipientName={`${recipient.contact?.name ?? "Client"} · ${facts.clientName}`}
-        number={number?.digits ?? null}
-        draft={sign(draft)}
-        templates={waTemplates}
-        size={size === "sm" ? "sm" : "default"}
-        variant={variant}
-        label="Ask on WhatsApp"
-        disabledReason="No WhatsApp number for this client. Add one in Contacts."
-        onHandedOff={async ({ number: n, text, templateId }) => {
-          const r = await logHandoff({ clientId, contactId: recipient.contact?.id ?? null, channel: "whatsapp_handoff", recipient: n, body: text, templateId, related: { type: "task", id: taskId } })
-          if (!r.ok) throw new Error(r.error)
-          router.refresh()
-        }}
-      />
-      <GmailButton
-        to={email}
-        subject={subject}
-        body={emailBody}
-        buildUrl={(fields) => gmailComposeUrl({ to: fields.to, cc: fields.cc, subject: fields.subject, body: fields.body })}
-        size={size === "sm" ? "sm" : "default"}
-        variant={variant}
-        label="Ask by email"
-        disabledReason="No email address for this client. Add one in Contacts."
-        onHandedOff={async (fields) => {
-          const r = await logHandoff({
-            clientId,
-            contactId: recipient.contact?.id ?? null,
-            channel: "gmail_handoff",
-            recipient: fields.to,
-            subject: fields.subject,
-            body: fields.body || fields.subject,
-            templateId: emailTemplate?.id ?? null,
-            related: { type: "task", id: taskId },
-          })
-          if (!r.ok) throw new Error(r.error)
-          router.refresh()
-        }}
-      />
-    </>
+    <WhatsAppButton
+      recipientName={`${recipient.contact?.name ?? "Client"} · ${facts.clientName}`}
+      number={number?.digits ?? null}
+      draft={sign(draft)}
+      templates={waTemplates}
+      size={size === "sm" ? "sm" : "default"}
+      variant={variant}
+      label="Ask on WhatsApp"
+      disabledReason="No WhatsApp number for this client. Add one in Contacts."
+      onHandedOff={async ({ number: n, text, templateId }) => {
+        const r = await logHandoff({ clientId, contactId: recipient.contact?.id ?? null, channel: "whatsapp_handoff", recipient: n, body: text, templateId, related: { type: "task", id: taskId } })
+        if (!r.ok) throw new Error(r.error)
+        router.refresh()
+      }}
+    />
   )
 }

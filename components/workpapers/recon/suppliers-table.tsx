@@ -10,13 +10,12 @@ import { EmptyState } from "@/components/app/empty-state"
 import { DateText } from "@/components/app/date-text"
 import { ErrorBlock } from "@/components/app/error-block"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { renderTemplate } from "@/lib/domain/templates"
-import { FOLLOW_UP_SUBJECT, FOLLOW_UP_TEMPLATE_NAMES, SUPPLIER_DEFAULT_SORT, defaultSupplierFollowUp } from "@/lib/schemas/gst-recon"
+import { FOLLOW_UP_TEMPLATE_NAMES, SUPPLIER_DEFAULT_SORT, defaultSupplierFollowUp } from "@/lib/schemas/gst-recon"
 import type { SupplierRow, FollowUpContext } from "@/lib/data/gst-recon"
 import { logHandoff } from "@/server/actions/messages"
 import { markSupplierFollowedUp, supplierFollowUp } from "@/server/actions/gst-recon"
@@ -119,10 +118,10 @@ export function SuppliersTable({ target, rows, total, page, pageSize, sort, dir 
 }
 
 /**
- * "Draft supplier follow-up" (§7.8.1, §7.13.2): a WhatsApp or Gmail draft to the client's contact who
- * handles GST, listing this supplier's documents that aren't in GSTR-2B or don't match it, from the
- * firm's supplier follow-up templates. Opening WhatsApp or Gmail logs the hand-off ("Handed off",
- * never "delivered") and marks the supplier's open lines "Following up".
+ * "Draft supplier follow-up" (§7.8.1, §7.13.2): a WhatsApp draft to the client's contact who handles
+ * GST, listing this supplier's documents that aren't in GSTR-2B or don't match it, from the firm's
+ * supplier follow-up template. Opening WhatsApp logs the hand-off ("Handed off", never
+ * "delivered") and marks the supplier's open lines "Following up".
  */
 function FollowUpSheet({ target, supplier, onClose }: { target: FollowUpTarget; supplier: SupplierRow; onClose: () => void }) {
   const router = useRouter()
@@ -157,12 +156,10 @@ function FollowUpSheet({ target, supplier, onClose }: { target: FollowUpTarget; 
     sender_name: messaging.senderName,
   })
   const waTemplate = messaging.templates.find((t) => t.name === FOLLOW_UP_TEMPLATE_NAMES.whatsapp)
-  const mailTemplate = messaging.templates.find((t) => t.name === FOLLOW_UP_TEMPLATE_NAMES.email)
   const number = pickWhatsAppNumber(recipient, client, { countryCode: messaging.countryCode })
-  const email = recipient?.email ?? client.email
 
-  const after = async (channel: "whatsapp_handoff" | "gmail_handoff") => {
-    const r = await markSupplierFollowedUp({ runId: target.runId, supplierGstin: supplier.supplier_gstin, channel })
+  const after = async () => {
+    const r = await markSupplierFollowedUp({ runId: target.runId, supplierGstin: supplier.supplier_gstin, channel: "whatsapp_handoff" })
     if (!r.ok) toast.warning(`Handed off, but the lines weren't marked "Following up": ${r.error}`)
     onClose()
     router.refresh()
@@ -201,7 +198,7 @@ function FollowUpSheet({ target, supplier, onClose }: { target: FollowUpTarget; 
                   draft={sign(
                     waTemplate
                       ? renderTemplate(waTemplate.body, values(state.items))
-                      : defaultSupplierFollowUp({ contactName, periodText: target.periodText, missingItems: state.items, channel: "whatsapp", senderName: messaging.senderName, firmName: messaging.firmName }),
+                      : defaultSupplierFollowUp({ contactName, periodText: target.periodText, missingItems: state.items }),
                   )}
                   size="default"
                   variant="outline"
@@ -217,37 +214,11 @@ function FollowUpSheet({ target, supplier, onClose }: { target: FollowUpTarget; 
                       related: { type: "gst_recon_run", id: target.runId },
                     })
                     if (!r.ok) throw new Error(r.error)
-                    await after("whatsapp_handoff")
-                  }}
-                />
-                <GmailButton
-                  to={email}
-                  subject={mailTemplate?.subject ? renderTemplate(mailTemplate.subject, values(state.items)) : FOLLOW_UP_SUBJECT(messaging.firmName, target.periodText, supplier.supplier_name)}
-                  body={
-                    mailTemplate
-                      ? renderTemplate(mailTemplate.body, values(state.items))
-                      : defaultSupplierFollowUp({ contactName, periodText: target.periodText, missingItems: state.items, channel: "email", senderName: messaging.senderName, firmName: messaging.firmName })
-                  }
-                  buildUrl={(f) => gmailComposeUrl({ to: f.to, cc: f.cc, subject: f.subject, body: f.body })}
-                  size="default"
-                  disabledReason="No email address for this client. Add one in Contacts."
-                  onHandedOff={async (f) => {
-                    const r = await logHandoff({
-                      clientId: target.clientId,
-                      contactId: recipient?.contactId ?? null,
-                      channel: "gmail_handoff",
-                      recipient: f.to,
-                      subject: f.subject,
-                      body: f.body || f.subject,
-                      templateId: mailTemplate?.id ?? null,
-                      related: { type: "gst_recon_run", id: target.runId },
-                    })
-                    if (!r.ok) throw new Error(r.error)
-                    await after("gmail_handoff")
+                    await after()
                   }}
                 />
               </div>
-              <p className="text-sm text-text-muted">The app opens WhatsApp or Gmail with the message; you press Send there. Afterwards these lines show as Following up and keep carrying forward until the supplier files.</p>
+              <p className="text-sm text-text-muted">The app opens WhatsApp with the message; you press Send there. Afterwards these lines show as Following up and keep carrying forward until the supplier files.</p>
             </>
           )}
         </div>

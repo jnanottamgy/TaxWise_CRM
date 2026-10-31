@@ -9,26 +9,22 @@ import { ActionError } from "@/lib/result";
 import { log } from "@/lib/log";
 import { firstNameOf, normalizeWhatsAppNumber, pickWhatsAppNumber } from "@/lib/domain/messaging";
 import { createAdminClient } from "@/server/admin";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm } from "@/server/email/templates/layout";
-import { portalInviteEmail } from "@/server/email/templates/portal-invite";
-import { getFirmProfile } from "@/server/firm";
 import { addTimelineEvent } from "@/server/timeline";
 
 /**
- * Invites a client to the portal (§7.22 "Access", §10.3): creates an auth user with role `client`
- * (in app_metadata and profiles, with a temporary password that must be changed at first sign-in),
+ * Invites a client to the portal (§7.22 "Access"): creates an auth user with role `client` (in
+ * app_metadata and profiles, with a temporary password that must be changed at first sign-in),
  * links it to the client **only** through `clients.portal_user_id` (never by matching email
- * addresses), emails the invite, and returns the login details once for the hand-off (WhatsApp /
- * Gmail), like a staff login (§4.5).
+ * addresses), and returns the login details once for the hand-out: the person shares them on
+ * WhatsApp, like a staff login (§4.5). Nothing is emailed; the email address is only the sign-in name.
  *
  *   const invite = await inviteClientToPortal(ctx.supabase, ctx.user, clientId, { ip: ctx.ip, userAgent: ctx.userAgent });
  *
  * Shared by the onboarding wizard (after the client is created) and Client 360 → Overview → portal
  * access card. The caller must be a Partner or Manager; the link is written under the caller's
  * session (RLS agrees first), and the auth user is created with the service role (server/admin.ts),
- * then removed again if the link fails. Throws ActionError for known refusals (no email, already
- * invited, email used by another login); the email itself never throws (its outcome is returned).
+ * then removed again if the link fails. Throws ActionError for known refusals (no email address to
+ * sign in with, already invited, email used by another login).
  */
 
 export type PortalInviteResult = {
@@ -39,13 +35,12 @@ export type PortalInviteResult = {
   /** Shown once; never logged or stored. */
   temporaryPassword: string;
   loginUrl: string;
-  emailOutcome: { status: "sent" | "not_configured" | "failed"; error?: string };
-  /** The hand-off drafts, so the person can send the login another way (§7.13.2, §7.13.3). */
+  /** The WhatsApp hand-out of the login (§7.13.2). */
   handoff: {
     contactName: string;
+    contactId: string | null;
     whatsappNumber: string | null;
     whatsappText: string;
-    gmail: { to: string; subject: string; body: string };
   };
 };
 
@@ -61,7 +56,7 @@ export async function inviteClientToPortal(
 
   const { data: client, error } = await supabase
     .from("clients")
-    .select("id, display_name, email, phone, whatsapp, portal_user_id, deleted_at, owner_employee_id")
+    .select("id, display_name, email, phone, whatsapp, portal_user_id, deleted_at")
     .eq("id", clientId)
     .maybeSingle();
   if (error) throw error;
@@ -160,41 +155,13 @@ export async function inviteClientToPortal(
   await addTimelineEvent({ clientId, eventType: "portal_invited", title: `Invited to the client portal (${email})` });
 
   const loginUrl = `${env.appUrl().replace(/\/+$/, "")}/login`;
-  let emailOutcome: PortalInviteResult["emailOutcome"] = { status: "failed", error: "The invite email wasn't attempted." };
-  try {
-    const firm = emailFirm(await getFirmProfile(supabase));
-    let ownerName: string | null = null;
-    if (client.owner_employee_id) {
-      const { data: owner } = await supabase.from("employee_directory").select("full_name").eq("id", client.owner_employee_id).maybeSingle();
-      ownerName = owner?.full_name ?? null;
-    }
-    const mail = portalInviteEmail(
-      { contactName: firstNameOf(contactName) || contactName, clientName: client.display_name, email, temporaryPassword, loginUrl, ownerName, senderName: user.fullName },
-      firm,
-    );
-    const r = await sendEmail({
-      to: email,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "portal_invite",
-      clientId,
-      contactId: primary?.id ?? null,
-      related: { type: "client", id: clientId },
-      idempotencyKey: `portal_invite:${userId}`,
-    });
-    emailOutcome = { status: r.status, error: r.error };
-  } catch (err) {
-    log("error", "portal invite email failed", { source: "portal-invite", userId: user.id, clientId, err });
-  }
-
   const pick = pickWhatsAppNumber(primary, client);
   const whatsappText = [
     `Hi ${firstNameOf(contactName) || contactName}, we've set up your client portal for ${client.display_name}.`,
     `Sign in at ${loginUrl}`,
     `Email: ${email}`,
     `Temporary password: ${temporaryPassword}`,
-    "You'll choose your own password the first time you sign in.",
+    "You'll choose your own password the first time you sign in. Never share it with anyone; we will never ask you for it.",
   ].join("\n");
   return {
     clientId,
@@ -203,16 +170,11 @@ export async function inviteClientToPortal(
     email,
     temporaryPassword,
     loginUrl,
-    emailOutcome,
     handoff: {
       contactName,
+      contactId: primary?.id ?? null,
       whatsappNumber: pick?.digits ?? (client.whatsapp ? normalizeWhatsAppNumber(client.whatsapp) : null),
       whatsappText,
-      gmail: {
-        to: email,
-        subject: `Your client portal for ${client.display_name}`,
-        body: `${whatsappText}\n\nNever share this password with anyone; we will never ask you for it.`,
-      },
     },
   };
 }

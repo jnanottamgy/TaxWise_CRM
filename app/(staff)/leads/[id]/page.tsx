@@ -66,7 +66,7 @@ const OUTCOME_CHIP = {
 
 /**
  * One lead (§7.5.1 lead detail): its timeline (calls, notes, stage changes, quotations), Log a
- * call/note, WhatsApp / email (Gmail) / call with drafts, Create quotation, Run conflict check,
+ * call/note, WhatsApp / call with a draft, Create quotation, Run conflict check,
  * Convert to client (the onboarding wizard pre-filled from the lead) and Mark lost (reason*).
  * Partners and Managers only (§4.1); a lead that doesn't exist or is in the recycle bin is a 404.
  */
@@ -110,20 +110,12 @@ export default async function LeadPage({ params }: Params) {
     firm_phone: m?.firmPhone ?? null,
     sender_name: user.fullName,
   }
-  const tpl = templates.ok ? templates.data : { whatsapp: null, email: null }
-  const drafts = {
-    whatsapp: renderTemplate(
-      tpl.whatsapp?.body ??
-        "Hi {{contact_name}}, greetings from {{firm_name}}! Following up on our conversation about your {{service_type}} requirements: shall we send you a quotation, or is there anything we can clarify? Happy to help.",
-      values,
-    ),
-    emailSubject: renderTemplate(tpl.email?.subject ?? "{{firm_name}} | Following up on our conversation", values),
-    emailBody: renderTemplate(
-      tpl.email?.body ??
-        "Dear {{contact_name}},\n\nThank you for your interest in {{firm_name}}. I am following up on our recent conversation about your {{service_type}} requirements.\n\nIf you would like a quotation, or have any questions about how we can help, just reply to this email or call us on {{firm_phone}}.\n\nWarm regards,\n{{sender_name}}\n{{firm_name}}",
-      values,
-    ),
-  }
+  const tpl = templates.ok ? templates.data : { whatsapp: null }
+  const draft = renderTemplate(
+    tpl.whatsapp?.body ??
+      "Hi {{contact_name}}, greetings from {{firm_name}}! Following up on our conversation about your {{service_type}} requirements: shall we send you a quotation, or is there anything we can clarify? Happy to help.",
+    values,
+  )
   const latest = detail.acceptances[0] ?? null
   const title = lead.company || lead.name
   const accepted = detail.quotations.find((q) => q.status === "accepted") ?? null
@@ -133,7 +125,7 @@ export default async function LeadPage({ params }: Params) {
     <div className="flex min-w-0 flex-col">
       <ShellTitle crumbs={[{ label: "Leads", href: "/leads" }, { label: title }]} />
       <PageGuide title="A lead">
-        <p>Log every call and note here, so the next person picks up where you left off. The WhatsApp and Email buttons open a draft in WhatsApp or Gmail; you press Send there, and the hand-off is noted on the timeline.</p>
+        <p>Log every call and note here, so the next person picks up where you left off. The WhatsApp button opens a draft in WhatsApp; you press Send there, and the hand-off is noted on the timeline.</p>
         <p className="mt-2">Run the conflict check before taking a prospect on (it is required for audit work). When they agree, Convert to client opens the onboarding wizard filled in from the lead; a quotation the client accepts moves the lead to Won by itself.</p>
       </PageGuide>
       <GrowthSubnav active="leads" />
@@ -265,7 +257,7 @@ export default async function LeadPage({ params }: Params) {
             <div className="flex flex-col gap-3">
               <LeadContactButtons
                 lead={lead}
-                drafts={drafts}
+                draft={draft}
                 countryCode={m?.countryCode ?? "91"}
                 signature={{ add: m?.addSignature ?? user.role !== "partner", format: m?.signatureFormat ?? "– {first_name}", senderName: user.fullName }}
               />

@@ -83,6 +83,7 @@ export const GrantCoverSchema = z
     note: optionalNote(1000),
     handover_note: optionalNote(2000),
     include_vault: z.boolean().default(false),
+    /** Ignored: the app sends no email (the cover person is told in-app). Kept while the cover dialog still has its switch. */
     email_cover_person: z.boolean().default(true),
     leave_id: z.uuid().nullish(),
   })

@@ -17,7 +17,7 @@ import { HeaderActions } from "@/components/client360/header/header-actions"
 
 /**
  * The Client 360 header (§7.3.3): name, code, entity, status chip, priority, owner and group;
- * PAN / GSTIN / TAN with copy buttons; Call · WhatsApp · Email · Gmail; a "Covering for Ravi · until
+ * PAN / GSTIN / TAN with copy buttons; Call · WhatsApp; a "Covering for Ravi · until
  * Sat 25 Oct, 11:59 pm" chip for every cover in force (shown to everyone who can see the client,
  * §4.7), the handover note for the cover person; and the quick actions. Server Component; the
  * buttons are client islands.
@@ -46,7 +46,6 @@ export function ClientHeader({
   )
   const whatsapp = pickWhatsAppNumber(contact, client, { countryCode: messaging.countryCode })
   const phone = contact?.phone ?? client.phone ?? null
-  const email = (contact && !contact.email_bounced ? contact.email : null) ?? client.email ?? null
   const contactName = contact?.name ?? client.display_name
   const target: ContactTarget = {
     clientId: client.id,
@@ -54,7 +53,6 @@ export function ClientHeader({
     recipientName: contact ? `${contact.name} · ${client.display_name}` : client.display_name,
     phone,
     whatsapp: whatsapp?.digits ?? null,
-    email,
   }
 
   const values: TemplateValues = {
@@ -71,8 +69,6 @@ export function ClientHeader({
   const templates = messaging.templates
     .filter((t) => t.channel === "whatsapp" || t.channel === "any")
     .map((t) => ({ id: t.id, name: t.name, body: sign(renderTemplate(t.body, values, { missing: "mark" })) }))
-  const emailSubject = `${messaging.firmName} | ${client.display_name}`
-  const emailBody = `Dear ${values.contact_name},\n\n\n\nRegards,\n${messaging.senderName}\n${messaging.firmName}${messaging.firmPhone ? `\n${messaging.firmPhone}` : ""}`
 
   const myCover = covers.find((c) => c.cover_employee_id === user.employeeId && c.handover_note)
 
@@ -154,10 +150,10 @@ export function ClientHeader({
                 {contact.role ? `, ${contact.role}` : ""}
               </>
             ) : (
-              "No contacts yet: buttons use the client's own phone and email."
+              "No contacts yet: buttons use the client's own numbers."
             )}
           </p>
-          <ContactButtons target={target} draft={draft} templates={templates} emailSubject={emailSubject} emailBody={emailBody} />
+          <ContactButtons target={target} draft={draft} templates={templates} />
         </div>
       </section>
     </div>

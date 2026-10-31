@@ -117,8 +117,8 @@ export function HandoffQueue({ h }: { h: PaymentsDashboard["handoffs"] }) {
   if (!h.count) return null
   return (
     <SectionCard
-      title="Reminders to send by hand"
-      description={`${h.count} payment ${h.count === 1 ? "reminder" : "reminders"} couldn't go by email. Each has its WhatsApp and Gmail drafts ready on the invoice.`}
+      title="Reminders to send on WhatsApp"
+      description={`${h.count} payment ${h.count === 1 ? "reminder is" : "reminders are"} due. Each has its WhatsApp message ready on the invoice.`}
       flush
     >
       <ul className="divide-y divide-border border-t border-border">

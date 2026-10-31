@@ -29,7 +29,7 @@ const WAVE_A_ROUTES = [
   "/performance",
   "/leave",
   "/templates/jobs",
-  ...["firm", "bank", "numbering", "billing", "working-hours", "reminders", "email", "law", "diagnostics"].map((s) => `/settings/${s}`),
+  ...["firm", "bank", "numbering", "billing", "working-hours", "reminders", "law", "diagnostics"].map((s) => `/settings/${s}`),
 ];
 
 function pageFile(path: string): string {

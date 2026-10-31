@@ -315,9 +315,7 @@ export function safeInboxLink(link: string | null | undefined): string {
 
 /** The Communication tab's channel filter (`?comm_channel=`). */
 export const COMM_CHANNEL_FILTERS = {
-  email: { label: "Email", channels: ["email"] },
   whatsapp: { label: "WhatsApp", channels: ["whatsapp_handoff"] },
-  gmail: { label: "Gmail", channels: ["gmail_handoff"] },
   portal: { label: "Portal", channels: ["portal"] },
   calls: { label: "Calls and notes", channels: ["call_log", "internal_note"] },
 } as const;

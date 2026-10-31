@@ -188,7 +188,7 @@ export function PersonActions({
         open={dialog === "issue"}
         onOpenChange={close}
         title={`Create a login for ${person.full_name}?`}
-        description={`A temporary password is created for ${person.email}, and the invite is emailed. You'll see the password once, to share on WhatsApp or by Gmail.`}
+        description={`A temporary password is created for ${person.email}. You'll see it once, to share on WhatsApp; nothing is emailed.`}
         confirmLabel="Create login"
         onConfirm={() => run(() => issueLogin({ id: person.id }))}
       />
@@ -196,7 +196,7 @@ export function PersonActions({
         open={dialog === "reset"}
         onOpenChange={close}
         title={`Reset ${person.full_name}'s password?`}
-        description="Their current password stops working at once and they are signed out everywhere. You'll see a new temporary password once; they set their own at the next sign-in."
+        description="Their current password stops working at once and they are signed out everywhere. You'll see a new temporary password once, to share on WhatsApp; they set their own at the next sign-in."
         confirmLabel="Reset password"
         destructive
         onConfirm={() => run(() => resetPassword({ id: person.id }))}

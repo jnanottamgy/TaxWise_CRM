@@ -35,7 +35,7 @@ import { logEmployeeActivity } from "@/server/activity";
 /**
  * Leads (§7.5.1), Partner/Manager only (§4.1: leads never reach an Employee; RLS 0034 refuses
  * anyone else). Create and edit (at least one contact method), move between stages (a reason for
- * Lost; a converted lead stays Won: 0142), log calls and notes, record WhatsApp / Gmail hand-offs
+ * Lost; a converted lead stays Won: 0142), log calls and notes, record WhatsApp hand-offs
  * and the next follow-up, and delete. A lead's story is its timeline (client_timeline_events with
  * lead_id, money-side so Employees never read it), written here; the client it becomes inherits it.
  * Converting goes through the onboarding wizard (/clients/new?fromLead=<id>), whose
@@ -264,13 +264,12 @@ export const logLeadHandoff = defineAction(
   { name: "leads.handoff", schema: LeadHandoffSchema, roles: PM },
   async (input, ctx): Promise<ActionResult<{ ok: true }>> => {
     const lead = await loadLead(ctx.supabase, input.leadId);
-    const app = input.channel === "whatsapp_handoff" ? "WhatsApp" : "Gmail";
-    const to = input.channel === "whatsapp_handoff" && /^\d{8,15}$/.test(input.recipient) ? formatWhatsAppNumber(input.recipient) : input.recipient;
+    const to = /^\d{8,15}$/.test(input.recipient) ? formatWhatsAppNumber(input.recipient) : input.recipient;
     const { error } = await ctx.supabase.from("client_timeline_events").insert({
       lead_id: lead.id,
       client_id: lead.converted_client_id,
       event_type: "lead_message_sent",
-      title: input.subject ? `${app} handed off to ${to}: ${input.subject}` : `${app} handed off to ${to}`,
+      title: `WhatsApp handed off to ${to}`,
       description: input.body,
       metadata: { channel: input.channel, recipient: input.recipient },
       performed_by: ctx.user.id,
@@ -279,8 +278,8 @@ export const logLeadHandoff = defineAction(
     await ctx.audit({ event: "data_create", resourceType: "lead", resourceId: lead.id, action: "leads.handoff", details: { channel: input.channel, recipient: input.recipient } });
     ctx.after("Add to your activity", () =>
       logEmployeeActivity({
-        activityType: input.channel === "whatsapp_handoff" ? "whatsapp_sent" : "email_sent",
-        description: `${app} handed off to ${label(lead)}`,
+        activityType: "whatsapp_sent",
+        description: `WhatsApp handed off to ${label(lead)}`,
         entityType: "lead",
         entityId: lead.id,
         entityName: lead.company || lead.name,

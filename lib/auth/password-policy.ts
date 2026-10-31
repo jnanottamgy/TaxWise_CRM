@@ -71,7 +71,7 @@ export function passwordPolicyMessage(password: string): string | null {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Temporary passwords (§4.5): issued by a Partner or Manager, shared once (copy, WhatsApp, Gmail).
+// Temporary passwords (§4.5): issued by a Partner or Manager, shared once (copy, WhatsApp).
 // -------------------------------------------------------------------------------------------------
 
 // No look-alikes (0/O, 1/l/I), because people read these aloud and retype them from a phone.

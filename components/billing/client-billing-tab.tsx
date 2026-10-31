@@ -7,11 +7,13 @@ import { logUnexpected } from "@/lib/log"
 import { getSelectedFy } from "@/lib/fy-context"
 import { fyEnd, fyStart, todayIST } from "@/lib/domain/fy"
 import { fromPaise, toPaise } from "@/lib/domain/money"
+import { formatDate, pdfFileName } from "@/lib/format"
 import { CREDIT_NOTE_REASON_LABELS, PAYMENT_METHOD_LABELS, isEnumValue } from "@/lib/domain/enums"
 import { TDS_STATUS_LABEL } from "@/lib/schemas/receipts"
 import { listInvoices, type InvoiceListFilter, type InvoiceListRow } from "@/lib/data/invoices"
 import type { InvoiceListSort } from "@/lib/schemas/invoices"
 import { getClientTdsSummary, listClientReceipts, type ClientReceiptRow, type TdsCreditSummaryRow } from "@/lib/data/receipts"
+import { documentShare, getShareContextOrNull } from "@/lib/data/document-share"
 import { listClientCreditNotes, type ClientCreditNoteRow } from "@/lib/data/credit-notes"
 import type { TableParams } from "@/components/app/data-table/params"
 import { KpiStrip } from "@/components/app/kpi-strip"
@@ -23,13 +25,15 @@ import { MonoId } from "@/components/app/mono-id"
 import { DateText } from "@/components/app/date-text"
 import { Button } from "@/components/ui/button"
 import { InvoiceStatusCell } from "@/components/invoices/invoices-table"
+import { SendDocumentButton } from "@/components/comms/send-document"
 
 /**
  * Client 360 → Billing (§7.3.3, §7.9): what the client owes and is overdue (all years), what was
  * invoiced and received in the selected FY, the latest invoices, receipts and credit notes, the TDS
- * the client deducted by quarter (§7.9.9), and the statement of account. New invoice starts one for
- * this client. Partners and Managers only (§4.1): an Employee never gets a figure from here, and RLS
- * returns nothing to them anyway. Never throws: each block shows its own Ref.
+ * the client deducted by quarter (§7.9.9), and the statement of account (opened, or sent to the
+ * client on WhatsApp with the PDF to attach, §7.13.2). New invoice starts one for this client.
+ * Partners and Managers only (§4.1): an Employee never gets a figure from here, and RLS returns
+ * nothing to them anyway. Never throws: each block shows its own Ref.
  */
 
 const ISSUED = ["sent", "partially_paid", "paid", "disputed", "waived"]
@@ -58,7 +62,7 @@ export default async function ClientBillingTab({ clientId, user, supabase }: Cli
   const fy = await getSelectedFy()
   const listUrl = (q: string) => `/invoices?client=${clientId}&${q}`
 
-  const [recent, open, overdue, issuedFy, receipts, credits, tds] = await Promise.all([
+  const [recent, open, overdue, issuedFy, receipts, credits, tds, shareCtx] = await Promise.all([
     attempt("invoices", user.id, () => listInvoices(supabase, tableParams(), { fy: null, clientId, limit: 10, offset: 0, today })),
     attempt("open", user.id, () => listInvoices(supabase, tableParams({ status: OPEN }), { fy: null, clientId, limit: 1, offset: 0, today })),
     attempt("overdue", user.id, () => listInvoices(supabase, tableParams({ status: ["overdue"] }), { fy: null, clientId, limit: 1, offset: 0, today })),
@@ -66,10 +70,25 @@ export default async function ClientBillingTab({ clientId, user, supabase }: Cli
     attempt("receipts", user.id, () => listClientReceipts(supabase, clientId, { limit: 10 })),
     attempt("credit-notes", user.id, () => listClientCreditNotes(supabase, clientId, { limit: 10 })),
     attempt("tds", user.id, () => getClientTdsSummary(supabase, clientId)),
+    getShareContextOrNull(supabase, user, clientId, { source: "tab:client-billing:share" }),
   ])
 
   const statementTo = fyEnd(fy) < today ? fyEnd(fy) : today
   const statementHref = `/api/pdf/statement/client/${clientId}?from=${fyStart(fy)}&to=${statementTo}`
+  // A statement is about fees, so the hand-off is money-side ("fee_…", money_side_kind 0043): Employees never see it.
+  const statementShare = shareCtx
+    ? documentShare(shareCtx, {
+        draft: (first) =>
+          [
+            `${first ? `Hi ${first}` : "Hello"}, please find your statement of account with ${shareCtx.messaging.firmName} from ${formatDate(fyStart(fy))} to ${formatDate(statementTo)}: every invoice, payment and credit note in the period.`,
+            "Please check it against your books and tell us if anything doesn't match. If you deducted TDS, please send us the TDS certificates (Form 16A).",
+          ].join("\n\n"),
+        values: { period: `FY ${fy}` },
+        templateTypes: ["custom"],
+        attachment: { href: `${statementHref}&download=1`, filename: pdfFileName(`${shareCtx.client.code ?? ""} ${fyStart(fy)} to ${statementTo}`, "Statement") },
+        related: { type: "fee_statement", id: clientId },
+      })
+    : null
   const kpiRef = [open, overdue, issuedFy].find((r) => !r.ok) as { ok: false; ref: string } | undefined
 
   return (
@@ -83,6 +102,7 @@ export default async function ClientBillingTab({ clientId, user, supabase }: Cli
               Statement of account
             </a>
           </Button>
+          {statementShare ? <SendDocumentButton share={statementShare} label="Send statement on WhatsApp" size="default" /> : null}
           <Button asChild>
             <Link href={`/invoices/new?client=${clientId}`}>
               <PlusIcon aria-hidden="true" />

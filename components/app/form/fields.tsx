@@ -28,7 +28,7 @@ import { fieldDomId } from "@/hooks/use-action-form"
  *     <SelectField control={f.control} name="entity_type" label="Entity type" options={ENTITY_OPTIONS} required />
  *     <DateField control={f.control} name="due_date" label="Due date" required />
  *     <MoneyField control={f.control} name="fee" label="Monthly fee" />
- *     <SwitchField control={f.control} name="send_welcome" label="Send welcome email" description="…" />
+ *     <SwitchField control={f.control} name="send_welcome" label="Send a welcome message" description="…" />
  *   </div>
  */
 

@@ -277,14 +277,13 @@ export async function getLeadDetail(supabase: ServerSupabase, id: string): Promi
   };
 }
 
-/** Templates for lead hand-offs ("Lead follow-up", §7.13.2): by name, falling back to the built-in wording. */
-export async function getLeadTemplates(supabase: ServerSupabase): Promise<{ whatsapp: { id: string; body: string } | null; email: { id: string; subject: string | null; body: string } | null }> {
-  const { data, error } = await supabase.from("message_templates").select("id, name, channel, subject, body").eq("is_active", true).ilike("name", "Lead follow-up%").limit(10);
+/** The template for lead hand-offs ("Lead follow-up", §7.13.2): by name, WhatsApp or any channel, falling back to the built-in wording. */
+export async function getLeadTemplates(supabase: ServerSupabase): Promise<{ whatsapp: { id: string; body: string } | null }> {
+  const { data, error } = await supabase.from("message_templates").select("id, name, channel, body").eq("is_active", true).ilike("name", "Lead follow-up%").limit(10);
   if (error) throw error;
   const rows = data ?? [];
   const wa = rows.find((t) => t.channel === "whatsapp") ?? rows.find((t) => t.channel === "any") ?? null;
-  const em = rows.find((t) => t.channel === "email") ?? rows.find((t) => t.channel === "any") ?? null;
-  return { whatsapp: wa ? { id: wa.id, body: wa.body } : null, email: em ? { id: em.id, subject: em.subject, body: em.body } : null };
+  return { whatsapp: wa ? { id: wa.id, body: wa.body } : null };
 }
 
 // =================================================================================================

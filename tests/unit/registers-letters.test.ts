@@ -3,6 +3,7 @@ import {
   addresseeHeading,
   closingParagraphs,
   letterFileName,
+  letterShareText,
   letterReference,
   letterSubject,
   nonAuditOpening,
@@ -172,8 +173,16 @@ describe("the letter as printed (§7.15.3, SA 210)", () => {
 
   it("gives the letter a reference and a safe file name", () => {
     expect(letterReference("2026-27", "TW-C-0042")).toBe("EL/2026-27/TW-C-0042");
-    expect(letterFileName("2026-27", "TW-C-0042", false)).toBe("Engagement-letter-2026-27-TW-C-0042.pdf");
-    expect(letterFileName("2026-27", "TW C/0042", true)).toBe("Engagement-letter-2026-27-TW-C-0042-draft.pdf");
+    expect(letterFileName("2026-27", "TW-C-0042", false)).toBe("Engagement letter 2026-27-TW-C-0042.pdf");
+    expect(letterFileName("2026-27", "TW C/0042", true)).toBe("Engagement letter 2026-27-TW-C-0042-draft.pdf");
+  });
+
+  it("writes the WhatsApp message that goes with the letter's PDF", () => {
+    const m = letterShareText({ firstName: "Rakesh", clientName: "Sharma Traders Pvt Ltd", financialYear: "2026-27", signatoryName: "CA Vinay Karlagere" });
+    expect(m.startsWith("Hi Rakesh, please find attached our engagement letter for FY 2026-27 for Sharma Traders Pvt Ltd.")).toBe(true);
+    expect(m).toContain("send the signed copy back to us");
+    expect(m).toContain("Regards, CA Vinay Karlagere");
+    expect(letterShareText({ firstName: "", clientName: "X", financialYear: "2026-27", signatoryName: null }).startsWith("Hello,")).toBe(true);
   });
 
   it("names the audit and the statute in the subject; non-audit letters name the FY", () => {

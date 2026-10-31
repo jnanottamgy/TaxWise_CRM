@@ -12,7 +12,6 @@ import {
   parseTdsStatement,
   ratioPercent,
   reminderDueDateWindow,
-  reminderIdempotencyKey,
   reminderSettingsFrom,
   reminderSlotLabel,
   statementEvents,
@@ -75,12 +74,10 @@ describe("payment reminders (§7.9.5)", () => {
     expect(decideInvoiceReminder({ ...base, today: "2026-10-31" })).toEqual({ action: "wait" });
   });
 
-  it("reads the firm's reminder settings, keys each email once, and names each slot", () => {
+  it("reads the firm's reminder settings and names each slot", () => {
     expect(reminderSettingsFrom({ invoice_reminder_before_days: 5, invoice_reminder_after_days: [2, 10] })).toEqual({ beforeDays: 5, afterDays: [2, 10] });
     expect(reminderSettingsFrom(null)).toEqual({ beforeDays: 3, afterDays: [1, 7, 15] });
     expect(reminderSettingsFrom({ invoice_reminder_after_days: [0, -1] })).toEqual({ beforeDays: 3, afterDays: [1, 7, 15] });
-    expect(reminderIdempotencyKey("abc", { kind: "before_due", offsetDays: -3 })).toBe("invoice:abc:reminder:before_due:3");
-    expect(reminderIdempotencyKey("abc", { kind: "after_due", offsetDays: 15 })).toBe("invoice:abc:reminder:after_due:15");
     expect(reminderSlotLabel("before_due:3")).toBe("3 days before the due date");
     expect(reminderSlotLabel("after_due:1")).toBe("1 day after the due date");
     expect(reminderDueDateWindow("2026-10-23")).toEqual({ from: "2026-10-05", to: "2026-10-26" });
@@ -288,7 +285,7 @@ describe("TDS statements (§7.9.9)", () => {
         { invoiceNumber: "TW/26-27/0011", invoiceDate: "2026-05-05", tdsPaise: 1000_00, section: "393", quarter: "Q1 2026-27", statementPaise: 900_00 },
       ],
     });
-    expect(d.subject).toBe("TaxWise Consultants | TDS deducted on our invoices: correction needed");
+    expect(d).not.toHaveProperty("subject");
     expect(d.body).toContain("Dear Ravi,");
     expect(d.body).toContain("- ₹500.00 TDS on invoice TW/26-27/0004 dated 05 Apr 2026, section 194J, Q1 2026-27; it doesn't show in our 26AS / AIS");
     expect(d.body).toContain("our 26AS shows ₹900.00");

@@ -11,7 +11,7 @@ import { FIRM_DEFAULTS, type FirmDetails } from "@/lib/auth/firm-defaults";
 
 /**
  * Server helpers shared by the sign-in, password, MFA and first-run actions and pages.
- * Used by server/actions/auth.ts, server/actions/setup.ts, app/auth/confirm and the (auth) pages.
+ * Used by server/actions/auth.ts, server/actions/setup.ts and the (auth) pages.
  */
 
 export interface RequestMeta {
@@ -206,36 +206,4 @@ export async function loadFirmDetailsForSetup(): Promise<FirmDetails> {
     gstin: pick(data?.gstin, FIRM_DEFAULTS.gstin),
     pan: pick(data?.pan, FIRM_DEFAULTS.pan),
   };
-}
-
-// -------------------------------------------------------------------------------------------------
-// Password changes without the current password
-// -------------------------------------------------------------------------------------------------
-
-/** Sign-in methods that prove the person just opened a link from their own inbox. */
-const EMAIL_LINK_METHODS = new Set(["recovery", "otp", "magiclink", "invite", "email/signup"]);
-/** How long after opening the link the session may set a new password. */
-const EMAIL_LINK_WINDOW_SECONDS = 60 * 60;
-
-/**
- * True when this session began from an email link (a password reset) in the last hour, read from
- * the verified token's `amr` claim. Only such a session, or a forced change after a temporary
- * password, may set a new password without typing the current one (§4.4). Profile's change
- * password asks for the current one instead.
- */
-export async function cameFromEmailLink(supabase: ServerSupabase): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.auth.getClaims();
-    if (error || !data?.claims) return false;
-    const now = Math.floor(Date.now() / 1000);
-    const amr = (data.claims.amr ?? []) as Array<string | { method?: string; timestamp?: number }>;
-    return amr.some((entry) => {
-      const method = typeof entry === "string" ? entry : entry.method;
-      const at = typeof entry === "string" ? undefined : entry.timestamp;
-      return !!method && EMAIL_LINK_METHODS.has(method) && (at === undefined || now - at <= EMAIL_LINK_WINDOW_SECONDS);
-    });
-  } catch (err) {
-    log("warn", "amr check failed", { source: "auth:cameFromEmailLink", err });
-    return false;
-  }
 }

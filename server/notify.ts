@@ -1,20 +1,14 @@
 import "server-only";
 
-import { after } from "next/server";
 import type { Enums } from "@/lib/database.types";
-import { env } from "@/lib/env";
-import { isAppRole } from "@/lib/auth/roles";
-import { readEmailPreferences } from "@/lib/schemas/profile";
 import { createAdminClient } from "@/server/admin";
 import { sessionActor } from "@/server/activity";
-import { sendEmail } from "@/server/email/send";
-import { notificationEmail } from "@/server/email/templates/notification";
-import { emailFirm } from "@/server/email/templates/layout";
-import { getFirmProfile } from "@/server/firm";
 import { log } from "@/lib/log";
 
 /**
- * In-app notifications, with email for those who asked for it (§9, §7.17).
+ * In-app notifications (§9, §7.17): the Inbox and the bell. The app sends no email; anything that
+ * has to reach a client is put in front of someone here, linked to the page where the WhatsApp
+ * message is ready to send.
  *
  *   ctx.after("Tell the assignee", () => notify({
  *     to: { employeeIds: [task.assigned_employee_id] },
@@ -37,12 +31,7 @@ import { log } from "@/lib/log";
  *   - disabled people get nothing, and neither does the person who did the thing;
  *   - `dedupeKey` makes a job that runs twice notify once (e.g. `invoice_overdue:<id>:<date>`).
  *
- * Then, for each recipient whose Profile → Notifications says "email" for this type
- * (lib/schemas/profile.ts readEmailPreferences), the same notice goes out by email once the
- * sending domain is verified; `emailed_at` records it. Email runs after the response where the
- * platform allows (next/server `after`), so it never slows the save.
- *
- * Never throws: failures are logged with a Ref, and the caller's save stands (§0.1 rule 5).
+ * Never throws: failures are logged, and the caller's save stands (§0.1 rule 5).
  */
 
 export type NotificationType = Enums<"notification_type">;
@@ -71,7 +60,7 @@ export async function notify(input: NotifyInput): Promise<void> {
     if (!userIds.length && !employeeIds.length && !roles.length) return;
 
     const client = actor ? actor.supabase : createAdminClient();
-    const { data, error } = await client.rpc("insert_notifications", {
+    const { error } = await client.rpc("insert_notifications", {
       p_type: input.type,
       p_title: input.title,
       p_body: input.body,
@@ -86,19 +75,6 @@ export async function notify(input: NotifyInput): Promise<void> {
       p_exclude_user_id: actor?.userId ?? null,
     });
     if (error) throw error;
-
-    const created = (data ?? [])
-      .filter((r): r is { notification_id: string; recipient_id: string; forwarded: boolean | null } => Boolean(r.notification_id && r.recipient_id))
-      .map((r) => ({ id: r.notification_id, userId: r.recipient_id }));
-    if (!created.length) return;
-
-    const job = () => emailNotifications(created, input);
-    try {
-      after(job);
-    } catch {
-      // Not inside a request (a script): send now.
-      await job();
-    }
   } catch (err) {
     log("error", "notification failed", {
       source: "server:notify",
@@ -108,50 +84,5 @@ export async function notify(input: NotifyInput): Promise<void> {
       linkUrl: input.linkUrl,
       err,
     });
-  }
-}
-
-/** Emails the notice to each recipient who chose email for this type. Never throws. */
-async function emailNotifications(created: Array<{ id: string; userId: string }>, input: NotifyInput): Promise<void> {
-  try {
-    const admin = createAdminClient();
-    const { data: people, error } = await admin
-      .from("profiles")
-      .select("id, email, full_name, role, is_active, preferences")
-      .in(
-        "id",
-        created.map((c) => c.userId),
-      );
-    if (error) throw error;
-    const wanting = (people ?? []).filter((p) => {
-      if (!p.is_active || !p.email || !isAppRole(p.role) || p.role === "client") return false;
-      return readEmailPreferences(p.preferences, p.role)[input.type] === true;
-    });
-    if (!wanting.length) return;
-
-    const firm = emailFirm(await getFirmProfile(admin));
-    const link = `${env.appUrl().replace(/\/+$/, "")}${input.linkUrl}`;
-    for (const person of wanting) {
-      const n = created.find((c) => c.userId === person.id);
-      if (!n) continue;
-      const mail = notificationEmail({ recipientName: person.full_name, title: input.title, body: input.body, linkUrl: link }, firm);
-      const res = await sendEmail({
-        to: person.email,
-        subject: mail.subject,
-        text: mail.text,
-        html: mail.html,
-        kind: "notification",
-        related: input.entity ?? null,
-        idempotencyKey: `notification:${n.id}`,
-      });
-      if (res.status === "sent") {
-        const { error: stampError } = await admin.from("notifications").update({ emailed_at: new Date().toISOString() }).eq("id", n.id);
-        if (stampError) log("warn", "notification emailed_at not stamped", { source: "server:notify", notificationId: n.id, err: stampError });
-      } else if (res.status === "failed") {
-        log("warn", "notification email failed", { source: "server:notify", notificationId: n.id, error: res.error });
-      }
-    }
-  } catch (err) {
-    log("error", "notification email step failed", { source: "server:notify", type: input.type, err });
   }
 }

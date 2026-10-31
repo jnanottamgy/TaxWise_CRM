@@ -37,10 +37,14 @@ import {
   gstFrequencyLock,
   schemeDecisionFor,
   serviceName,
+  welcomeWhatsApp,
   type PreviewEvent,
 } from "@/lib/schemas/onboarding";
+import { applySignature, firstNameOf, normalizeWhatsAppNumber } from "@/lib/domain/messaging";
+import { whatsAppTemplateOptions } from "@/lib/schemas/message-templates";
 import {
   getClientsBrief,
+  getMessagingContext,
   getQuotationForOnboarding,
   getUnpaidInvoices,
   listClientsForExport,
@@ -55,10 +59,6 @@ import { getMyCoveredClients } from "@/lib/data/covers";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 import { logEmployeeActivity } from "@/server/activity";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm } from "@/server/email/templates/layout";
-import { welcomeEmail } from "@/server/email/templates/welcome";
-import { getFirmProfile } from "@/server/firm";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import type { ClientStatus } from "@/lib/domain/enums";
 
@@ -174,7 +174,8 @@ export type OnboardingResult = {
   checklist: Array<{ id: string; label: string }>;
   /** Filled by the after-effects (§0.1 rule 5): the portal login handout, shown once. */
   portal: PortalInviteResult | null;
-  welcome: { status: "sent" | "not_configured" | "failed" | "skipped"; to: string | null; error?: string } | null;
+  /** The welcome message, ready to send on WhatsApp from the screen after Complete (when asked for). */
+  welcome: { contactName: string; number: string | null; text: string; templates: Array<{ id: string; name: string; body: string }> } | null;
   whatsappTaskId: string | null;
 };
 
@@ -248,7 +249,7 @@ export const completeOnboarding = defineAction(
     const warnings: string[] = [];
     let events: ReturnType<typeof generateOnboardingEvents> = [];
     const scale = scaleContextFrom(await loadScaleParameterRows(ctx.supabase), today);
-    // GST follows the scheme (§7.3.2 step 3), so the welcome email and the payload agree.
+    // GST follows the scheme (§7.3.2 step 3), so the welcome message and the payload agree.
     const gstFrequency = gstFrequencyLock(schemeDecisionFor(input, scale)).frequency;
     for (const s of input.services) if (s.service_type === "gst") s.frequency = gstFrequency;
     try {
@@ -386,42 +387,50 @@ export const completeOnboarding = defineAction(
       );
     }
 
-    if (input.send_welcome && input.email) {
+    if (input.send_welcome) {
+      // Nothing is sent from here: the screen after Complete offers it on WhatsApp (§7.13.2).
       ctx.after(
-        "Send the welcome email",
+        "Prepare the welcome message",
         async () => {
-          const to = input.email.toLowerCase();
-          const firm = emailFirm(await getFirmProfile(ctx.supabase));
-          const { data: owner } = await ctx.supabase.from("employees").select("full_name, email, phone").eq("id", ownerId).maybeSingle();
-          const mail = welcomeEmail(
-            {
-              contactName: input.contact_name || input.display_name,
-              clientName: res.display_name,
-              ownerName: owner?.full_name ?? ctx.user.fullName,
-              ownerEmail: owner?.email ?? null,
-              ownerPhone: owner?.phone ?? null,
-              services: servicesInWords(input),
-              portalUrl: input.invite_portal ? `${env.appUrl().replace(/\/+$/, "")}/portal` : null,
-              senderName: ctx.user.fullName,
-            },
-            firm,
-          );
-          const r = await sendEmail({
-            to,
-            subject: mail.subject,
-            text: mail.text,
-            html: mail.html,
-            kind: "welcome",
-            clientId: res.client_id,
-            related: { type: "client", id: res.client_id },
-            idempotencyKey: `welcome:${res.client_id}`,
-          });
-          result.welcome = { status: r.status, to, error: r.error };
+          const [{ data: owner, error: ownerError }, m] = await Promise.all([
+            ctx.supabase.from("employees").select("full_name, phone").eq("id", ownerId).maybeSingle(),
+            getMessagingContext(ctx.supabase, ctx.user),
+          ]);
+          if (ownerError) throw ownerError;
+          const contactName = input.contact_name || input.display_name;
+          const portalUrl = input.invite_portal ? `${env.appUrl().replace(/\/+$/, "")}/portal` : null;
+          const sign = (text: string) => (m.addSignature ? applySignature(text, m.signatureFormat, firstNameOf(ctx.user.fullName)) : text);
+          result.welcome = {
+            contactName,
+            number: normalizeWhatsAppNumber(input.whatsapp, { countryCode: m.countryCode }) ?? normalizeWhatsAppNumber(input.phone, { countryCode: m.countryCode }),
+            text: sign(
+              welcomeWhatsApp({
+                contactName,
+                clientName: res.display_name,
+                firmName: m.firmName,
+                ownerName: owner?.full_name ?? ctx.user.fullName,
+                ownerPhone: owner?.phone ?? null,
+                services: servicesInWords(input),
+                portalUrl,
+              }),
+            ),
+            templates: whatsAppTemplateOptions(
+              m.templates,
+              {
+                client_name: res.display_name,
+                client_code: res.client_code,
+                contact_name: firstNameOf(contactName) || contactName,
+                portal_link: portalUrl ?? "",
+                firm_name: m.firmName,
+                firm_phone: m.firmPhone ?? "",
+                sender_name: ctx.user.fullName,
+              },
+              { types: ["welcome"], sign },
+            ),
+          };
         },
-        "The welcome email wasn't sent. Send it from the client's Communication tab.",
+        "The welcome message couldn't be prepared. Send one on WhatsApp from the client's page.",
       );
-    } else {
-      result.welcome = { status: "skipped", to: input.email || null };
     }
 
     ctx.after("Log the activity", () =>

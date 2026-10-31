@@ -139,7 +139,7 @@ describe("PDF helpers", () => {
 
   it("names files and headers safely", () => {
     expect(pdfFileName("TW/26-27/0042")).toBe("TW-26-27-0042.pdf");
-    expect(pdfFileName("TW-Q/26-27/0007", "Quotation")).toBe("Quotation-TW-Q-26-27-0007.pdf");
+    expect(pdfFileName("TW-Q/26-27/0007", "Quotation")).toBe("Quotation TW-Q-26-27-0007.pdf");
     expect(pdfFileName("///")).toBe("document.pdf");
     const headers = pdfResponseHeaders('in"voice.pdf', { download: true });
     expect(headers["Content-Disposition"]).toBe('attachment; filename="in-voice.pdf"');

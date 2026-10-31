@@ -7,7 +7,6 @@ import {
   outstandingLines,
   progressLabel,
   requestHandoffDraft,
-  requestHandoffSubject,
   requestPortalPath,
   requestProgress,
   type ItemLike,
@@ -78,8 +77,6 @@ describe("hand-off drafts carry the outstanding items and the portal link (§7.1
     const reminder = requestHandoffDraft({ contactName: null, clientName: "Sharma Traders", title: "Audit PBC", items: [], dueDateText: null, portalLink: link, reminder: true });
     expect(reminder.startsWith("Hello,")).toBe(true);
     expect(reminder).toContain("• Nothing is pending right now.");
-    expect(requestHandoffSubject("TaxWise Consultants", "Audit PBC")).toBe("TaxWise Consultants | Documents needed for Audit PBC");
-    expect(requestHandoffSubject("TaxWise Consultants", "Audit PBC", true)).toBe("TaxWise Consultants | Reminder: documents still needed for Audit PBC");
   });
 });
 
@@ -87,7 +84,8 @@ describe("request and review schemas", () => {
   it("needs a title and at least one titled item; defaults reminders to every 3 days", () => {
     const r = CreateDocumentRequestSchema.safeParse({ clientId: CLIENT, title: "Audit PBC", items: [{ title: "Trial balance" }] });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data).toMatchObject({ reminderEveryDays: 3, sendEmail: true, contactId: null, items: [{ title: "Trial balance", isRequired: true, helpText: null }] });
+    if (r.success) expect(r.data).toMatchObject({ reminderEveryDays: 3, contactId: null, items: [{ title: "Trial balance", isRequired: true, helpText: null }] });
+    if (r.success) expect(r.data).not.toHaveProperty("sendEmail");
     expect(CreateDocumentRequestSchema.safeParse({ clientId: CLIENT, title: " ", items: [{ title: "x" }] }).success).toBe(false);
     expect(CreateDocumentRequestSchema.safeParse({ clientId: CLIENT, title: "x", items: [] }).success).toBe(false);
     expect(CreateDocumentRequestSchema.safeParse({ clientId: CLIENT, title: "x", items: [{ title: "" }] }).success).toBe(false);

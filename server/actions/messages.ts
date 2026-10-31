@@ -13,8 +13,9 @@ import type { ServerSupabase } from "@/lib/supabase/server";
  * Logging contact that happens outside the app (§7.13.1 "Every channel writes to messages … so the
  * Communication tab shows one complete history"):
  *
- *   logHandoff   a WhatsApp or Gmail hand-off the person just opened (§7.13.2, §7.13.3): a messages
- *                row with status handed_off. The app never claims it was delivered.
+ *   logHandoff   a WhatsApp hand-off the person just opened (§7.13.2): a messages row with status
+ *                handed_off, linked to the record it sent (`related`: an invoice, a receipt, a
+ *                computation …). The app never claims it was delivered.
  *   logCallNote  "Log a call" on the Communication tab: a call, a meeting or a note (channel
  *                call_log / internal_note, status logged as sent).
  *
@@ -105,7 +106,7 @@ export const logHandoff = defineAction(
     );
     ctx.after("Add to your activity", () =>
       logEmployeeActivity({
-        activityType: input.channel === "whatsapp_handoff" ? "whatsapp_sent" : "email_sent",
+        activityType: "whatsapp_sent",
         description: `${channelName} handed off to ${to}`,
         entityType: "client",
         entityId: input.clientId,

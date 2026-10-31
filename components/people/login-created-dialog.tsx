@@ -1,22 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { CircleAlertIcon, CircleCheckIcon, KeyRoundIcon } from "lucide-react"
+import { CircleAlertIcon, KeyRoundIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FormDialog } from "@/components/app/form-dialog"
 import { CopyButton } from "@/components/app/copy-button"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { gmailComposeUrl } from "@/lib/domain/messaging"
-import { loginInviteEmail, loginShareMessage } from "@/lib/schemas/people"
+import { loginShareMessage } from "@/lib/schemas/people"
 import type { LoginHandout } from "@/server/actions/people"
 import { cn } from "@/lib/utils"
 
 /**
  * "Login created" (§4.5 point 2) — and the same view after a password reset (point 3): the login
- * email, the temporary password with a copy button, Share on WhatsApp (pre-drafted message with the
- * login link, email and password) and Send via Gmail, and whether the invite email went (with the
- * provider's reason if it didn't). The password is shown once: it is only in this dialog's memory.
+ * email, the temporary password with a copy button, and Share on WhatsApp (pre-drafted message with
+ * the login link, email and password). Nothing is emailed: this hand-out is how the person gets
+ * their login. The password is shown once: it is only in this dialog's memory.
  */
 export function LoginCreatedDialog({
   logins,
@@ -73,8 +71,6 @@ export function LoginCreatedDialog({
 
 function LoginCard({ login, compact }: { login: LoginHandout; compact: boolean }) {
   const share = { fullName: login.fullName, email: login.email, temporaryPassword: login.temporaryPassword, loginUrl: login.loginUrl, firmName: login.firmName }
-  const mail = loginInviteEmail(share, login.kind)
-  const sent = login.invite.status === "sent"
   return (
     <section aria-label={`Login for ${login.fullName}`} className={cn("rounded-lg border border-border", compact ? "p-3" : "p-4")}>
       {compact ? <h3 className="mb-2 text-base font-semibold text-text">{login.fullName}</h3> : null}
@@ -94,24 +90,19 @@ function LoginCard({ login, compact }: { login: LoginHandout; compact: boolean }
         <dd className="min-w-0 truncate text-sm text-text-muted">{login.loginUrl}</dd>
       </dl>
 
-      <p className={cn("mt-3 flex items-start gap-2 text-sm", sent ? "text-success-text" : "text-warning-text")} role="status">
-        {sent ? <CircleCheckIcon aria-hidden="true" className="mt-0.5 size-4 flex-none" /> : <CircleAlertIcon aria-hidden="true" className="mt-0.5 size-4 flex-none" />}
-        <span>
-          {sent
-            ? `The ${login.kind === "reset" ? "new password" : "invite"} was emailed to ${login.email}.`
-            : `The email didn't go${login.invite.error ? `: ${login.invite.error}` : "."} Share the login on WhatsApp or from Gmail instead.`}
-        </span>
+      <p className="mt-3 text-sm text-text-muted">
+        {login.kind === "reset" ? "Share the new password" : "Share the login"} with {login.fullName} on WhatsApp: the message has the sign-in page, the email and the temporary password.
+        Nothing is emailed.
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <WhatsAppButton
           recipientName={login.fullName}
           number={login.whatsapp}
-          draft={loginShareMessage(share)}
+          draft={loginShareMessage(share, login.kind)}
           label="Share on WhatsApp"
-          disabledReason={`No WhatsApp or mobile number for ${login.fullName}. Add one in their details, or use Gmail.`}
+          disabledReason={`No WhatsApp or mobile number for ${login.fullName}. Add one in their details, or copy the login above and give it to them in person.`}
         />
-        <GmailButton to={login.email} subject={mail.subject} body={mail.text} buildUrl={(f) => gmailComposeUrl(f)} label="Send via Gmail" />
       </div>
     </section>
   )

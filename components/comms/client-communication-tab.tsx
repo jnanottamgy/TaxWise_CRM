@@ -10,12 +10,12 @@ import { COMM_CHANNEL_FILTERS, THREAD_MAX_PAGES, isCommChannelFilter, type CommC
 import { ClientThread } from "@/components/comms/client-thread"
 
 /**
- * Client 360 → Communication (§7.3.3 tab 11): every message with this client across email,
- * WhatsApp hand-off, Gmail hand-off, portal and call notes, in one thread view, each with the status
- * the app may claim for its channel (§7.13.1); templates; "Log a call"; and a portal reply. Read
- * under the viewer's RLS: an Employee never sees a message about fees, invoices or quotations.
- * Opening it marks the client's unread portal messages read. Its own params: `comm_channel` and
- * `comm_pages`. Never throws: a failed load shows inside the tab with its Ref.
+ * Client 360 → Communication (§7.3.3 tab 11): every message with this client across WhatsApp
+ * hand-offs, the portal and call notes (and any earlier emails), in one thread view, each with
+ * the status the app may claim for its channel (§7.13.1); templates; "Log a call"; and a portal
+ * reply. Read under the viewer's RLS: an Employee never sees a message about fees, invoices or
+ * quotations. Opening it marks the client's unread portal messages read. Its own params:
+ * `comm_channel` and `comm_pages`. Never throws: a failed load shows inside the tab with its Ref.
  */
 
 function first(v: string | string[] | undefined): string | null {
@@ -81,7 +81,6 @@ export default async function ClientCommunicationTab({ clientId, user, supabase,
           name: thread.client.display_name,
           code: thread.client.client_code,
           onPortal: thread.client.on_portal,
-          email: thread.client.email,
           phone: thread.client.phone,
           whatsapp: thread.client.whatsapp,
         }}

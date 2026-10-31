@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SERVICE_FREQUENCIES, SERVICE_FREQUENCY_LABELS, SERVICE_TYPES, SERVICE_TYPE_LABELS, type EngagementStatus, type EntityType, type ServiceFrequency, type ServiceType } from "@/lib/domain/enums";
 import { addMonths, compareDates, diffDays, fyEnd, isDateString, isFinancialYear, nextFinancialYear, incomeTaxStatute, taxYearLabel, assessmentYearOf, type DateString, type FinancialYear } from "@/lib/domain/fy";
 import { fromPaise, multiplyPaise, parseAmount, paiseToDecimalString, sumPaise, toPaise, type Paise } from "@/lib/domain/money";
+import { pdfFileName } from "@/lib/format";
 
 /**
  * Engagement letters (§7.15.3, §6.8 SA 210, §6.9, §4.1 Partner/Manager only): the letter form and
@@ -545,14 +546,15 @@ export const AttachSignedCopySchema = z.object({ id: z.uuid(), updatedAt: z.stri
 export const RenewLetterSchema = z.object({ id: z.uuid() });
 export const LetterClientContextSchema = z.object({ clientId: z.uuid() });
 
-export const SendLetterSchema = z.object({
-  id: z.uuid(),
-  updatedAt: z.string().min(1),
-  contactId: optionalUuid,
-  to: z.email({ error: "Enter the email address to send it to." }),
-  /** A fresh value per click, so a double click doesn't send twice and a resend is a new send. */
-  nonce: z.string().trim().min(6).max(64),
-});
+/** The suggested WhatsApp message that goes with the letter's PDF, asking for it to be signed (§7.15.3). */
+export function letterShareText(d: { firstName: string; clientName: string; financialYear: string; signatoryName: string | null }): string {
+  return [
+    `${d.firstName ? `Hi ${d.firstName}` : "Hello"}, please find attached our engagement letter for FY ${d.financialYear} for ${d.clientName}.`,
+    "",
+    "Please read it, have an authorised signatory sign where marked, and send the signed copy back to us here.",
+    ...(d.signatoryName ? ["", `Regards, ${d.signatoryName}`] : []),
+  ].join("\n");
+}
 
 /** A date at noon IST (a stored timestamp for a date the user picked). */
 export function istNoon(date: DateString): string {
@@ -590,10 +592,9 @@ export function letterReference(fy: FinancialYear, clientCode: string): string {
   return `EL/${fy}/${clientCode}`;
 }
 
-/** The PDF's file name: "Engagement-letter-2026-27-TW-C-0042.pdf". */
+/** The PDF's file name: "Engagement letter 2026-27-TW-C-0042.pdf" (a draft's ends "-draft"). */
 export function letterFileName(fy: FinancialYear, clientCode: string, draft: boolean): string {
-  const safe = `${fy}-${clientCode}`.replace(/[^A-Za-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `Engagement-letter-${safe}${draft ? "-draft" : ""}.pdf`;
+  return pdfFileName(`${fy}-${clientCode}${draft ? "-draft" : ""}`, "Engagement letter");
 }
 
 /** The subject line of the letter. */

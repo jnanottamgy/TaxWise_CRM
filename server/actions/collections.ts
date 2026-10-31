@@ -21,9 +21,9 @@ import { logActivity, logEmployeeActivity } from "@/server/activity";
  *
  *   logFollowUp              one entry in an invoice's follow-up log: channel, notes, the payment
  *                            date promised (it feeds the collection forecast) and the next follow-up
- *   completeReminderHandoff  a payment reminder the job couldn't email, sent by hand: logs the
- *                            WhatsApp / Gmail hand-off in the client's messages ("Handed off", never
- *                            "delivered", §7.13.1) and closes the reminder
+ *   completeReminderHandoff  a payment reminder that is due, sent on WhatsApp: logs the hand-off in
+ *                            the client's messages ("Handed off", never "delivered", §7.13.1) and
+ *                            closes the reminder
  *   dismissReminder          a waiting reminder that isn't needed (paid by hand, spoke to them), with why
  *
  * Each writes an audit row; the invoice history, the client's timeline (money side: "payment_…",
@@ -159,7 +159,7 @@ export const completeReminderHandoff = defineAction(
     });
 
     const channelName = MESSAGE_CHANNEL_LABEL[input.channel];
-    const who = input.channel === "whatsapp_handoff" && /^\d{8,15}$/.test(input.recipient) ? formatWhatsAppNumber(input.recipient) : input.recipient;
+    const who = /^\d{8,15}$/.test(input.recipient) ? formatWhatsAppNumber(input.recipient) : input.recipient;
     const to = contactName ? `${contactName} (${who})` : who;
     const slot = reminderSlotLabel(reminder.reminder_key).toLowerCase();
     ctx.after("Record the hand-off event", async () => {
@@ -179,7 +179,7 @@ export const completeReminderHandoff = defineAction(
     );
     ctx.after("Add to your activity", () =>
       logEmployeeActivity({
-        activityType: input.channel === "whatsapp_handoff" ? "whatsapp_sent" : "email_sent",
+        activityType: "whatsapp_sent",
         description: `Payment reminder for invoice ${inv.invoice_number} handed off by ${channelName}`,
         entityType: "invoice",
         entityId: inv.id,

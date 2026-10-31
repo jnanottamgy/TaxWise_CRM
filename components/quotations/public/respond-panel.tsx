@@ -116,7 +116,7 @@ export function RespondPanel({
                   You accepted quotation <span className="font-mono text-[13px]">{number}</span> ({total} including GST) electronically as <span className="font-semibold">{done.name}</span>
                   {done.at ? ` on ${formatDateTime(done.at)}` : ""}.
                 </p>
-                <p className="mt-2 text-base text-text-muted">We&apos;ll be in touch shortly to get started. A confirmation is on its way to your email.</p>
+                <p className="mt-2 text-base text-text-muted">We&apos;ll be in touch shortly to get started.</p>
               </>
             ) : done.kind === "declined" ? (
               <p className="mt-1 text-base text-text">

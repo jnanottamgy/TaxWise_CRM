@@ -10,10 +10,6 @@ import { PortalAccessSchema, RevokePortalSchema } from "@/components/client360/l
 import { createAdminClient } from "@/server/admin";
 import { endAllSessions, setLoginBanned } from "@/server/people-admin";
 import { inviteClientToPortal, type PortalInviteResult } from "@/server/portal-invite";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm } from "@/server/email/templates/layout";
-import { portalInviteEmail } from "@/server/email/templates/portal-invite";
-import { getFirmProfile } from "@/server/firm";
 import { addTimelineEvent } from "@/server/timeline";
 
 /**
@@ -23,14 +19,14 @@ import { addTimelineEvent } from "@/server/timeline";
  *                        with role client, linked ONLY through clients.portal_user_id), or, for a
  *                        client whose access was revoked, the same login restored: unbanned, a new
  *                        temporary password, linked again;
- *   resendPortalInvite   a new temporary password (must be changed at first sign-in), sessions ended,
- *                        the invite emailed again;
+ *   resendPortalInvite   a new temporary password (must be changed at first sign-in), sessions ended:
+ *                        how a client who forgot their password gets back in;
  *   revokePortalAccess   unlinks the login first (that alone ends what it can see, RLS), then bans it,
  *                        deactivates its profile and ends its sessions (server/admin.ts).
  *
- * Each returns the login details once for the hand-off (WhatsApp / Gmail, §7.13) where relevant,
- * writes an audit row (user_create / user_update / user_disable) and a timeline entry. Email never
- * fails the save: its outcome is returned and shown (§0.1 rule 5, §7.13.3).
+ * Each returns the login details once for the hand-out (Share on WhatsApp, §7.13.2) where relevant,
+ * and writes an audit row (user_create / user_update / user_disable) and a timeline entry. Nothing
+ * is emailed.
  */
 
 const MANAGERS = ["partner", "manager"] as const;
@@ -43,7 +39,6 @@ export interface PortalHandout {
   /** Shown once; never logged or stored. */
   temporaryPassword: string;
   loginUrl: string;
-  emailOutcome: { status: "sent" | "not_configured" | "failed"; error?: string };
   handoff: PortalInviteResult["handoff"];
 }
 
@@ -81,7 +76,7 @@ async function primaryContact(ctx: ActionContext, clientId: string) {
   return (data ?? [])[0] ?? null;
 }
 
-/** The hand-off drafts for a login sent another way (§7.13.2, §7.13.3), worded like the invite's. */
+/** The WhatsApp hand-out of a login (§7.13.2), worded like the invite's. */
 function handoffFor(client: ClientRow, contact: Awaited<ReturnType<typeof primaryContact>>, email: string, password: string, kind: PortalHandout["kind"]): PortalHandout["handoff"] {
   const contactName = contact?.name ?? client.display_name;
   const first = firstNameOf(contactName) || contactName;
@@ -89,61 +84,20 @@ function handoffFor(client: ClientRow, contact: Awaited<ReturnType<typeof primar
     kind === "resend"
       ? `Hi ${first}, here is a new temporary password for your client portal for ${client.display_name}.`
       : `Hi ${first}, we've set up your client portal for ${client.display_name}.`;
-  const whatsappText = [opening, `Sign in at ${loginUrl()}`, `Email: ${email}`, `Temporary password: ${password}`, "You'll choose your own password the first time you sign in."].join("\n");
+  const whatsappText = [
+    opening,
+    `Sign in at ${loginUrl()}`,
+    `Email: ${email}`,
+    `Temporary password: ${password}`,
+    "You'll choose your own password the first time you sign in. Never share it with anyone; we will never ask you for it.",
+  ].join("\n");
   const pick = pickWhatsAppNumber(contact, client);
   return {
     contactName,
+    contactId: contact?.id ?? null,
     whatsappNumber: pick?.digits ?? (client.whatsapp ? normalizeWhatsAppNumber(client.whatsapp) : null),
     whatsappText,
-    gmail: {
-      to: email,
-      subject: kind === "resend" ? `Your client portal password for ${client.display_name}` : `Your client portal for ${client.display_name}`,
-      body: `${whatsappText}\n\nNever share this password with anyone; we will never ask you for it.`,
-    },
   };
-}
-
-async function emailLogin(
-  ctx: ActionContext,
-  p: { client: ClientRow; contact: Awaited<ReturnType<typeof primaryContact>>; userId: string; email: string; password: string; reset: boolean; key: string },
-): Promise<PortalHandout["emailOutcome"]> {
-  try {
-    const firm = emailFirm(await getFirmProfile(ctx.supabase));
-    let ownerName: string | null = null;
-    if (p.client.owner_employee_id) {
-      const { data: owner } = await ctx.supabase.from("employee_directory").select("full_name").eq("id", p.client.owner_employee_id).maybeSingle();
-      ownerName = owner?.full_name ?? null;
-    }
-    const contactName = p.contact?.name ?? p.client.display_name;
-    const mail = portalInviteEmail(
-      {
-        contactName: firstNameOf(contactName) || contactName,
-        clientName: p.client.display_name,
-        email: p.email,
-        temporaryPassword: p.password,
-        loginUrl: loginUrl(),
-        ownerName,
-        senderName: ctx.user.fullName,
-        reset: p.reset,
-      },
-      firm,
-    );
-    const r = await sendEmail({
-      to: p.email,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "portal_invite",
-      clientId: p.client.id,
-      contactId: p.contact?.id ?? null,
-      related: { type: "client", id: p.client.id },
-      idempotencyKey: `${p.key}:${p.userId}:${crypto.randomUUID()}`,
-    });
-    return { status: r.status, error: r.error ?? (r.status === "not_configured" ? "The firm's email domain isn't verified yet (Settings → Email)." : undefined) };
-  } catch (err) {
-    log("error", "portal email failed", { source: `action:portal.${p.key}`, userId: ctx.user.id, clientId: p.client.id, err });
-    return { status: "failed", error: "The email service didn't answer." };
-  }
 }
 
 /** A portal login's profile (service role): it must be a client login. */
@@ -201,7 +155,6 @@ export const invitePortal = defineAction(
         ctx.after("Add the portal restore to the client's timeline", () =>
           addTimelineEvent({ clientId: client.id, eventType: "portal_restored", title: `Portal access restored (${profile.email})` }),
         );
-        const emailOutcome = await emailLogin(ctx, { client, contact, userId: profile.id, email: profile.email, password, reset: false, key: "portal_restore" });
         return ok({
           kind: "restore",
           clientId: client.id,
@@ -209,7 +162,6 @@ export const invitePortal = defineAction(
           email: profile.email,
           temporaryPassword: password,
           loginUrl: loginUrl(),
-          emailOutcome,
           handoff: handoffFor(client, contact, profile.email, password, "restore"),
         });
       }
@@ -223,7 +175,6 @@ export const invitePortal = defineAction(
       email: r.email,
       temporaryPassword: r.temporaryPassword,
       loginUrl: r.loginUrl,
-      emailOutcome: r.emailOutcome,
       handoff: r.handoff,
     });
   },
@@ -260,7 +211,6 @@ export const resendPortalInvite = defineAction(
         title: neverSignedIn ? `Portal invite sent again (${profile.email})` : `Portal password reset (${profile.email})`,
       }),
     );
-    const emailOutcome = await emailLogin(ctx, { client, contact, userId: profile.id, email: profile.email, password, reset: !neverSignedIn, key: "portal_resend" });
     return ok({
       kind: "resend",
       clientId: client.id,
@@ -268,7 +218,6 @@ export const resendPortalInvite = defineAction(
       email: profile.email,
       temporaryPassword: password,
       loginUrl: loginUrl(),
-      emailOutcome,
       handoff: handoffFor(client, contact, profile.email, password, "resend"),
     });
   },

@@ -234,3 +234,14 @@ export function formatMinutes(minutes: number | null | undefined): string {
 export function formatFinancialYear(fy: string | null | undefined): string {
   return fy ? `FY ${fy}` : EMPTY;
 }
+
+/**
+ * A downloaded document's file name, readable and safe on every system: ("TW/26-27/0070",
+ * "Invoice") → `Invoice TW-26-27-0070.pdf`. Slashes, spaces and other characters a file name can't
+ * carry become hyphens in the number. The same name is used for the PDF route's download and for
+ * the file that Send on WhatsApp downloads, so the client sees it in the chat as it reads here.
+ */
+export function pdfFileName(documentNumber: string, prefix?: string): string {
+  const safe = documentNumber.replace(/[^A-Za-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  return `${prefix ? `${prefix} ` : ""}${safe || "document"}.pdf`;
+}

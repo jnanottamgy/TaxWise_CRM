@@ -26,7 +26,6 @@ import {
 } from "@/lib/data/documents"
 import { getRequestContext, listDocumentRequests } from "@/lib/data/document-requests"
 import { getMessagingContext } from "@/lib/data/clients"
-import { getEmailReadiness } from "@/server/email/readiness"
 import { DocumentsSubnav, type SubnavCounts } from "@/components/documents/documents-subnav"
 import { DocumentsTabSkeleton } from "@/components/documents/documents-tab-skeleton"
 import { VaultActionsProvider, UploadButton } from "@/components/documents/vault/vault-actions"
@@ -179,7 +178,6 @@ type RequestsData = [
   Awaited<ReturnType<typeof getRequestContext>>,
   DocumentOption[],
   Awaited<ReturnType<typeof getMessagingContext>>,
-  { ready: boolean; reason: string | null },
 ]
 
 async function RequestsSection({ client, user, supabase, searchParams }: { client: VaultClient; user: ClientTabProps["user"]; supabase: ClientTabProps["supabase"]; searchParams: ClientTabProps["searchParams"] }) {
@@ -191,14 +189,13 @@ async function RequestsSection({ client, user, supabase, searchParams }: { clien
       getRequestContext(supabase, client.id),
       listDocumentOptions(supabase, client.id),
       getMessagingContext(supabase, user),
-      getEmailReadiness(supabase),
     ])
   } catch (err) {
     unstable_rethrow(err)
     ref = logUnexpected(err, { source: "tab:documents:requests", userId: user.id, role: user.role, clientId: client.id })
   }
   if (!loaded) return <SectionError message="Couldn't load the document requests." errorRef={ref} />
-  const [list, context, documents, messaging, email] = loaded
+  const [list, context, documents, messaging] = loaded
   if (!context) return <SectionError message="This client's requests aren't available to you." errorRef={null} />
   const focus = readParam(searchParams, VAULT_PARAM.request)
   return (
@@ -214,12 +211,10 @@ async function RequestsSection({ client, user, supabase, searchParams }: { clien
         signatureFormat: messaging.signatureFormat,
         addSignature: messaging.addSignature,
         senderName: messaging.senderName,
-        templates: messaging.templates.filter((t) => t.type === "document_reminder").map((t) => ({ id: t.id, name: t.name, body: t.body, channel: t.channel, subject: t.subject })),
+        templates: messaging.templates.filter((t) => t.type === "document_reminder").map((t) => ({ id: t.id, name: t.name, body: t.body, channel: t.channel })),
       }}
       portalBase={env.appUrl().replace(/\/+$/, "")}
-      emailReady={email.ready}
       canManage={isManagerOrPartner(user.role)}
-      canSetUpEmail={isPartner(user.role)}
       today={todayIST()}
       focusRequestId={focus && /^[0-9a-f-]{36}$/i.test(focus) ? focus : null}
       openCreate={focus === "new"}

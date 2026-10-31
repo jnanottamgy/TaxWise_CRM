@@ -3,21 +3,13 @@
 import * as React from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
-import { Controller, useWatch } from "react-hook-form"
-import { CheckIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { FormAlert } from "@/components/app/form/form-alert"
-import { UnsavedChangesGuard } from "@/components/app/unsaved-changes"
-import { useActionForm } from "@/hooks/use-action-form"
 import { applyDensity } from "@/components/shell/user-menu"
 import { saveTheme } from "@/server/actions/preferences"
-import { saveMessagingPreferences, saveNotificationPreferences } from "@/server/actions/profile"
-import type { AppRole } from "@/lib/auth/roles"
+import { saveMessagingPreferences } from "@/server/actions/profile"
 import type { DensityPreference, ThemePreference } from "@/lib/preferences"
-import { NotificationPrefsSchema, notificationEventsFor, type NotificationEvent } from "@/lib/schemas/profile"
 import { cn } from "@/lib/utils"
 import { ProfileCard } from "@/components/people/profile-card"
 
@@ -110,165 +102,6 @@ export function AppearanceCard({ initialDensity }: { initialDensity: DensityPref
           ]}
         />
       </div>
-    </ProfileCard>
-  )
-}
-
-// -------------------------------------------------------------------------------------------------
-// Notifications (§7.1, §7.17): in-app always on; email per event
-// -------------------------------------------------------------------------------------------------
-
-/**
- * Per event and channel: In-app is always on (the Inbox and the bell); Email can be turned on or off
- * for each event this role receives. Money events show only to Partners and Managers (§4.1).
- */
-export function NotificationsCard({ role, email, digest = false }: { role: AppRole; email: Record<string, boolean>; digest?: boolean }) {
-  const events = React.useMemo(() => notificationEventsFor(role), [role])
-  const groups = React.useMemo(() => {
-    const out: Array<{ group: NotificationEvent["group"]; events: NotificationEvent[] }> = []
-    for (const e of events) {
-      const g = out.find((x) => x.group === e.group)
-      if (g) g.events.push(e)
-      else out.push({ group: e.group, events: [e] })
-    }
-    return out
-  }, [events])
-
-  const f = useActionForm(NotificationPrefsSchema, saveNotificationPreferences, {
-    defaultValues: role === "partner" ? { email, digest } : { email },
-    successMessage: "Notification choices saved.",
-  })
-  const values = useWatch({ control: f.control, name: "email" }) as Record<string, boolean | undefined> | undefined
-  const onCount = events.filter((e) => values?.[e.type]).length
-  const dirty = f.form.formState.isDirty
-
-  const setAll = (on: boolean) => {
-    for (const e of events) f.form.setValue(`email.${e.type}`, on, { shouldDirty: true })
-  }
-
-  return (
-    <ProfileCard
-      id="notifications"
-      title="Notifications"
-      description="Everything reaches your Inbox. Choose what also comes by email."
-      action={<span className="num text-sm text-text-muted">{onCount === 0 ? "No emails" : `${onCount} of ${events.length} by email`}</span>}
-    >
-      <form noValidate onSubmit={f.onSubmit} className="flex flex-col gap-4">
-        <UnsavedChangesGuard when={dirty && !f.pending} />
-        <FormAlert state={f} />
-        <div className="-mx-4 overflow-x-auto md:-mx-5">
-          <table className="w-full min-w-[22rem] border-separate border-spacing-0 text-base">
-            <caption className="sr-only">Notification channels for each event</caption>
-            <thead>
-              <tr>
-                <th scope="col" className="h-9 border-b border-border px-4 text-left text-xs font-medium text-text-muted md:px-5">
-                  Event
-                </th>
-                <th scope="col" className="h-9 w-20 border-b border-border px-2 text-center text-xs font-medium text-text-muted">
-                  In-app
-                </th>
-                <th scope="col" className="h-9 w-20 border-b border-border px-4 text-center text-xs font-medium text-text-muted md:px-5">
-                  Email
-                </th>
-              </tr>
-            </thead>
-            {groups.map((g) => (
-              <tbody key={g.group}>
-                <tr>
-                  <th scope="rowgroup" colSpan={3} className="border-b border-border/70 bg-surface-2/60 px-4 py-1.5 text-left text-sm font-medium text-text md:px-5">
-                    {g.group}
-                  </th>
-                </tr>
-                {g.events.map((e) => {
-                  const id = `notify-email-${e.type}`
-                  return (
-                    <tr key={e.type}>
-                      <th scope="row" className="border-b border-border/70 px-4 py-2 text-left font-normal text-text md:px-5">
-                        <label htmlFor={id} className="cursor-pointer">
-                          {e.label}
-                        </label>
-                      </th>
-                      <td className="border-b border-border/70 px-2 py-2 text-center">
-                        <span className="inline-flex items-center justify-center text-text-muted" title="Always on: every notification reaches your Inbox.">
-                          <CheckIcon aria-hidden="true" className="size-4" />
-                          <span className="sr-only">Always on</span>
-                        </span>
-                      </td>
-                      <td className="border-b border-border/70 px-4 py-2 text-center md:px-5">
-                        <Controller
-                          control={f.control}
-                          name={`email.${e.type}`}
-                          render={({ field }) => (
-                            <Switch
-                              id={id}
-                              checked={!!field.value}
-                              onCheckedChange={(v) => field.onChange(v)}
-                              onBlur={field.onBlur}
-                              aria-label={`Email: ${e.label}`}
-                            />
-                          )}
-                        />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            ))}
-            {role === "partner" ? (
-              <tbody>
-                <tr>
-                  <th scope="rowgroup" colSpan={3} className="border-b border-border/70 bg-surface-2/60 px-4 py-1.5 text-left text-sm font-medium text-text md:px-5">
-                    Daily digest
-                  </th>
-                </tr>
-                <tr>
-                  <th scope="row" className="border-b border-border/70 px-4 py-2 text-left font-normal text-text md:px-5">
-                    <label htmlFor="notify-email-digest" className="cursor-pointer">
-                      The 08:00 digest: today&apos;s deadlines, approvals waiting, overdue receivables and unassigned work
-                    </label>
-                  </th>
-                  <td className="border-b border-border/70 px-2 py-2 text-center">
-                    <span className="text-text-muted" title="The digest is an email only.">
-                      <span aria-hidden="true">–</span>
-                      <span className="sr-only">Email only</span>
-                    </span>
-                  </td>
-                  <td className="border-b border-border/70 px-4 py-2 text-center md:px-5">
-                    <Controller
-                      control={f.control}
-                      name="digest"
-                      render={({ field }) => (
-                        <Switch id="notify-email-digest" checked={!!field.value} onCheckedChange={(v) => field.onChange(v)} onBlur={field.onBlur} aria-label="Email: the daily digest" />
-                      )}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            ) : null}
-          </table>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => setAll(true)} disabled={f.pending}>
-              Email me everything
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setAll(false)} disabled={f.pending}>
-              No emails
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            {dirty ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => f.form.reset()} disabled={f.pending}>
-                Discard
-              </Button>
-            ) : null}
-            <Button type="submit" size="sm" disabled={!dirty || f.pending}>
-              {f.pending ? <Spinner /> : null}
-              Save choices
-            </Button>
-          </div>
-        </div>
-      </form>
     </ProfileCard>
   )
 }

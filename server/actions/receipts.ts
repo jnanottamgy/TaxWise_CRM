@@ -1,20 +1,11 @@
 "use server";
 
-import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
+import { defineAction, throwIfDbError } from "@/lib/action";
 import { ActionError, ok, type ActionResult } from "@/lib/result";
-import { log } from "@/lib/log";
 import { formatINR, toPaise } from "@/lib/domain/money";
 import { PAYMENT_METHOD_LABELS, isEnumValue } from "@/lib/domain/enums";
-import { firstNameOf } from "@/lib/domain/messaging";
-import type { EmailSendOutcome } from "@/lib/handoff";
 import type { Json } from "@/lib/database.types";
-import { EmailReceiptSchema, RecordReceiptSchema, RejectPaymentClaimSchema, ReverseReceiptSchema, receiptPayload, storedTdsSection } from "@/lib/schemas/receipts";
-import { getReceiptDocument } from "@/lib/data/receipts";
-import { getFirmProfile } from "@/server/firm";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm } from "@/server/email/templates/layout";
-import { paymentReceiptEmail } from "@/server/email/templates/payments";
-import { buildReceiptPdf } from "@/server/pdf/receipt";
+import { RecordReceiptSchema, RejectPaymentClaimSchema, ReverseReceiptSchema, receiptPayload, storedTdsSection } from "@/lib/schemas/receipts";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 import { logActivity, logEmployeeActivity } from "@/server/activity";
@@ -23,10 +14,10 @@ import { logActivity, logEmployeeActivity } from "@/server/activity";
  * Receipts (§7.9.4, §6.5). Partners and Managers (§4.1); record_receipt / reverse_receipt (0152) do
  * the work in one transaction, and the settlement trigger derives Partially paid / Paid (§7.9.3).
  *
- *   recordReceipt   a receipt with TDS, numbered from the receipt series; optionally emails the receipt
- *                   PDF (§10.9). Owner and Partners are told (§9 "Payment received").
+ *   recordReceipt   a receipt with TDS, numbered from the receipt series. Owner and Partners are told
+ *                   (§9 "Payment received"). The receipt PDF goes to the client on WhatsApp from the
+ *                   invoice page (its hand-off is logged with logHandoff, related to the receipt).
  *   reverseReceipt  with a reason; receipts are never deleted.
- *   emailReceipt    sends (or re-sends) the receipt PDF.
  *   rejectPaymentClaim  a portal "I've paid" the firm can't find in its bank: closed as not received;
  *                   the reason is kept in the invoice's history and the audit log, never on the
  *                   claim the client can read (a claim the bank confirms is closed by recordReceipt
@@ -40,57 +31,12 @@ function throwDb(error: { code?: string; message?: string } | null): void {
   throwIfDbError(error);
 }
 
-async function emailReceiptPdf(ctx: ActionContext, p: { receiptId: string; to: string; key: string }): Promise<EmailSendOutcome> {
-  try {
-    const [doc, firmProfile] = await Promise.all([getReceiptDocument(ctx.supabase, p.receiptId, "staff"), getFirmProfile(ctx.supabase)]);
-    if (!doc) return { status: "failed", error: "That receipt doesn't exist." };
-    if (doc.reversed_at) return { status: "failed", error: "This receipt was reversed, so it isn't sent." };
-    const { data: contact } = await ctx.supabase.from("client_contacts").select("id, name").eq("client_id", doc.invoice.client_id).eq("email", p.to).limit(1).maybeSingle();
-    const recipientName = contact?.name ?? doc.invoice.client_name;
-    const methodLabel = isEnumValue("payment_method", doc.method) ? PAYMENT_METHOD_LABELS[doc.method] : doc.method;
-    const firm = emailFirm(firmProfile);
-    const mail = paymentReceiptEmail(
-      {
-        recipientName: firstNameOf(recipientName) || recipientName,
-        receiptNumber: doc.receipt_number,
-        invoiceNumber: doc.invoice.invoice_number ?? "",
-        paymentDate: doc.payment_date,
-        amountReceivedPaise: toPaise(doc.amount_received),
-        tdsPaise: toPaise(doc.tds_amount),
-        methodLabel,
-        reference: doc.reference,
-        balancePaise: Math.max(0, toPaise(doc.invoice.outstanding_amount)),
-        senderName: ctx.user.fullName,
-      },
-      firm,
-    );
-    const pdf = await buildReceiptPdf({ firm: firmProfile, doc, signerName: ctx.user.fullName });
-    const r = await sendEmail({
-      to: p.to,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "payment_receipt",
-      clientId: doc.invoice.client_id,
-      contactId: contact?.id ?? null,
-      related: { type: "receipt", id: doc.id },
-      attachments: [{ filename: pdf.fileName, content: pdf.bytes, contentType: "application/pdf" }],
-      idempotencyKey: p.key,
-    });
-    return { status: r.status, error: r.error };
-  } catch (err) {
-    log("error", "receipt email failed", { source: "action:receipts.email", userId: ctx.user.id, receiptId: p.receiptId, err });
-    return { status: "failed", error: "The receipt email couldn't be prepared. Download the PDF and send it from your own mailbox." };
-  }
-}
-
 export type RecordedReceipt = {
   receiptId: string;
   receiptNumber: string;
   status: string;
   outstanding: number;
   invoiceUpdatedAt: string;
-  email: EmailSendOutcome | null;
 };
 
 export const recordReceipt = defineAction(
@@ -121,11 +67,6 @@ export const recordReceipt = defineAction(
       action: "receipts.record",
       details: { invoice_id: r.invoice_id, receipt_number: r.receipt_number, amount_received: payload.amount_received, tds_amount: payload.tds_amount, tds_section: payload.tds_section, method: input.method, claim_id: input.claimId },
     });
-
-    let email: EmailSendOutcome | null = null;
-    if (input.emailReceipt && input.emailTo) {
-      email = await emailReceiptPdf(ctx, { receiptId: r.receipt_id, to: input.emailTo, key: `receipt:${r.receipt_id}:issue` });
-    }
 
     ctx.after("Add the payment to the client's timeline", () =>
       addTimelineEvent({
@@ -164,7 +105,7 @@ export const recordReceipt = defineAction(
     ctx.after("Add to your activity", () =>
       logEmployeeActivity({ activityType: "payment_recorded", description: `Recorded receipt ${r.receipt_number} on ${r.invoice_number}`, entityType: "invoice", entityId: r.invoice_id, entityName: r.invoice_number }),
     );
-    return ok({ receiptId: r.receipt_id, receiptNumber: r.receipt_number, status: r.status, outstanding: Number(r.outstanding_amount), invoiceUpdatedAt: r.updated_at, email });
+    return ok({ receiptId: r.receipt_id, receiptNumber: r.receipt_number, status: r.status, outstanding: Number(r.outstanding_amount), invoiceUpdatedAt: r.updated_at });
   },
 );
 
@@ -194,23 +135,6 @@ export const reverseReceipt = defineAction(
     );
     const warnings = r.tds_status === "claimed" ? [`The TDS on receipt ${r.receipt_number} was marked claimed. Check the TDS credit register.`] : undefined;
     return ok({ status: r.status, outstanding: Number(r.outstanding_amount) }, warnings);
-  },
-);
-
-export const emailReceipt = defineAction(
-  { name: "receipts.email", schema: EmailReceiptSchema, roles: MONEY_ROLES },
-  async (input, ctx): Promise<ActionResult<{ email: EmailSendOutcome }>> => {
-    const email = await emailReceiptPdf(ctx, { receiptId: input.receiptId, to: input.to, key: `receipt:${input.receiptId}:send:${input.nonce}` });
-    await ctx.audit({
-      event: "data_update",
-      resourceType: "payment_receipt",
-      resourceId: input.receiptId,
-      action: "receipts.email",
-      details: { to: input.to, outcome: email.status },
-      success: email.status === "sent",
-      error: email.status === "sent" ? undefined : email.error,
-    });
-    return ok({ email });
   },
 );
 

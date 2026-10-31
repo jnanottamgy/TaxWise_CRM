@@ -11,15 +11,17 @@ import { FormAlert } from "@/components/app/form/form-alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ReportRangeSchema } from "@/lib/schemas/compliance"
 import { fyEnd, fyStart, previousFinancialYear } from "@/lib/domain/fy"
-import { formatDate } from "@/lib/format"
+import { formatDate, pdfFileName } from "@/lib/format"
+import { SendDocumentButton, type DocumentShare } from "@/components/comms/send-document"
 
 /**
  * The client compliance report (§7.7, §11): choose the period (this FY, last FY, or any dates) and
- * download the branded PDF: every statutory deadline in it, its status, filed-on date,
- * acknowledgement number and whether it was on time. The PDF comes from
- * /api/pdf/compliance-report/<clientId>; a refusal shows its sentence and Ref here.
+ * download the branded PDF, or send it on WhatsApp (the message, with the PDF downloading to
+ * attach, §7.13.2): every statutory deadline in it, its status, filed-on date, acknowledgement
+ * number and whether it was on time. The PDF comes from /api/pdf/compliance-report/<clientId>; a
+ * refusal shows its sentence and Ref here.
  */
-export function ReportButton({ clientId, clientCode, fy }: { clientId: string; clientCode: string; fy: string }) {
+export function ReportButton({ clientId, clientCode, fy, share = null }: { clientId: string; clientCode: string; fy: string; share?: DocumentShare | null }) {
   const [open, setOpen] = React.useState(false)
   const [preset, setPreset] = React.useState<"this" | "last" | "custom">("this")
   const [from, setFrom] = React.useState(fyStart(fy))
@@ -28,6 +30,8 @@ export function ReportButton({ clientId, clientCode, fy }: { clientId: string; c
   const [error, setError] = React.useState<{ message: string; ref?: string } | null>(null)
 
   const range = preset === "this" ? { from: fyStart(fy), to: fyEnd(fy) } : preset === "last" ? { from: fyStart(previousFinancialYear(fy)), to: fyEnd(previousFinancialYear(fy)) } : { from, to }
+  const valid = ReportRangeSchema.safeParse(range)
+  const fileName = (r: { from: string; to: string }) => pdfFileName(`${clientCode} ${r.from} to ${r.to}`, "Compliance report")
 
   const download = async (event?: React.FormEvent) => {
     event?.preventDefault()
@@ -50,7 +54,7 @@ export function ReportButton({ clientId, clientCode, fy }: { clientId: string; c
       const href = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = href
-      a.download = `Compliance-report-${clientCode}-${parsed.data.from}-to-${parsed.data.to}.pdf`
+      a.download = fileName(parsed.data)
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -75,8 +79,16 @@ export function ReportButton({ clientId, clientCode, fy }: { clientId: string; c
         onOpenChange={setOpen}
         size="sm"
         title="Compliance report"
-        description="Every statutory deadline in the period, its status, filed-on date, acknowledgement and whether it was on time. For sending to the client."
+        description="Every statutory deadline in the period, its status, filed-on date, acknowledgement and whether it was on time. Download it, or send it to the client on WhatsApp."
         onSubmit={download}
+        footerStart={
+          share && valid.success ? (
+            <SendDocumentButton
+              share={{ ...share, attachment: { href: `/api/pdf/compliance-report/${clientId}?from=${valid.data.from}&to=${valid.data.to}&download=1`, filename: fileName(valid.data) } }}
+              size="default"
+            />
+          ) : null
+        }
         pending={busy}
         submitLabel={busy ? "Preparing…" : "Download PDF"}
       >

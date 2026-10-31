@@ -38,10 +38,11 @@ import {
   type PreviewEvent,
   type QuotationForOnboarding,
   isPresumptiveNature,
+  welcomeWhatsApp,
 } from "@/lib/schemas/onboarding";
 
 const TODAY = "2026-10-23";
-const base = (): OnboardingValues => emptyOnboardingValues({ clientCode: "TW-C-0042", reminderDays: 7, notifyChannels: ["email", "whatsapp"] });
+const base = (): OnboardingValues => emptyOnboardingValues({ clientCode: "TW-C-0042", reminderDays: 7, notifyChannels: ["whatsapp"] });
 
 /** A wizard filled in enough to pass every step. */
 function complete(over: Partial<OnboardingValues> = {}): OnboardingValues {
@@ -133,9 +134,26 @@ describe("onboarding step rules (§7.3.2)", () => {
     expect(paths).toEqual(expect.arrayContaining(["services.0.agreed_fee", "services.0.first_billing_date"]));
   });
 
-  it("needs the email for the portal invite and the welcome email", () => {
+  it("needs an email address to sign in with for the portal invite; the welcome message goes on WhatsApp", () => {
     const paths = stepIssues("review", asDataLoose(complete({ email: "", invite_portal: true, send_welcome: true })), TODAY).map((i) => i.path);
-    expect(paths).toEqual(expect.arrayContaining(["invite_portal", "send_welcome", "notify_channels"]));
+    expect(paths).toContain("invite_portal");
+    expect(paths).not.toContain("send_welcome");
+    expect(paths).not.toContain("notify_channels");
+    expect(stepIssues("review", asDataLoose(complete({ notify_channels: ["portal"], invite_portal: false })), TODAY).map((i) => i.path)).toContain("notify_channels");
+  });
+
+  it("writes the welcome message for WhatsApp, with the portal when they have a login", () => {
+    const d = { contactName: "Mr Rakesh Sharma", clientName: "Sharma Steel", firmName: "TaxWise Consultants", ownerName: "Anita Rao", ownerPhone: "+91 98450 12345", services: ["GST returns (monthly)", "Income tax return (yearly)"], portalUrl: "https://app.twchartered.com/portal" };
+    const withPortal = welcomeWhatsApp(d);
+    expect(withPortal.startsWith("Hi Rakesh, welcome to TaxWise Consultants. We're glad to be working with Sharma Steel.")).toBe(true);
+    expect(withPortal).toContain("Anita Rao looks after you (+91 98450 12345).");
+    expect(withPortal).toContain("What we'll do for you: GST returns (monthly), Income tax return (yearly).");
+    expect(withPortal).toContain("https://app.twchartered.com/portal");
+    const noPortal = welcomeWhatsApp({ ...d, contactName: null, ownerPhone: null, services: [], portalUrl: null });
+    expect(noPortal.startsWith("Hello, welcome")).toBe(true);
+    expect(noPortal).toContain("Anita Rao looks after you.");
+    expect(noPortal).toContain("Send your documents here on WhatsApp");
+    expect(noPortal).not.toContain("What we'll do");
   });
 
   it("puts each field in its step", () => {

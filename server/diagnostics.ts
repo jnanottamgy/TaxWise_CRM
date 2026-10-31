@@ -57,7 +57,6 @@ export const DIAGNOSTIC_CHECKS = [
   { id: "columns", label: "Recently added columns", description: "The newest columns the code reads are there." },
   { id: "rls_helpers", label: "Row-level security helpers", description: "app_role(), is_partner(), can_see_client() and the other helpers exist and answer for you." },
   { id: "storage", label: "Storage buckets", description: "client-documents, task-files, branding and generated exist, with the right visibility." },
-  { id: "email", label: "Email", description: "The resolved sender, the sending domain's status and the last delivery error." },
   { id: "env", label: "Environment variables", description: "Required variables for this environment are set and well-formed (shown as yes/no only)." },
   { id: "cron", label: "Scheduled jobs", description: "The last run of each scheduled job and its result." },
 ] as const satisfies ReadonlyArray<{ id: string; label: string; description: string }>;
@@ -465,7 +464,7 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
         return {
           label: b.id,
           status: b.public ? "warn" : "fail",
-          detail: b.public ? "The bucket is private: the logo won't show on invoices and emails." : "The bucket is PUBLIC: anyone with a link can read its files. Make it private.",
+          detail: b.public ? "The bucket is private: the logo won't show on invoices and quotations." : "The bucket is PUBLIC: anyone with a link can read its files. Make it private.",
         };
       }
       return { label: b.id, status: "pass", detail: b.public ? "Exists, public-read (logo only)." : "Exists, private." };
@@ -475,76 +474,6 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
       status: worst(items),
       summary: failed.length ? `${plural(failed.length, "bucket needs", "buckets need")} attention.` : "All four buckets exist with the right visibility.",
       code: items.find((i) => i.status === "fail")?.code ?? null,
-      items,
-    };
-  },
-
-  async email(supabase) {
-    const items: DiagnosticItem[] = [];
-    const deployed = appEnv() === "production" || appEnv() === "staging";
-    const settings = await supabase
-      .from("firm_settings")
-      .select("email_from_name, email_from_address, email_reply_to, sending_domain, domain_status, domain_verified_at")
-      .eq("id", 1)
-      .maybeSingle();
-    if (settings.error) {
-      items.push({ label: "Sender", status: "fail", code: errorCode(settings.error), detail: describe(settings.error) });
-    } else {
-      const s = settings.data as {
-        email_from_name: string | null;
-        email_from_address: string | null;
-        email_reply_to: string | null;
-        sending_domain: string | null;
-        domain_status: string | null;
-        domain_verified_at: string | null;
-      } | null;
-      const sender = s?.email_from_address ? `${s.email_from_name ?? "TaxWise Consultants"} <${s.email_from_address}>` : (process.env.EMAIL_FROM ?? "TaxWise Consultants <noreply@twchartered.com>");
-      items.push({ label: "Sender", status: "pass", detail: safeMessage(sender) });
-      items.push({ label: "Reply-to", status: "pass", detail: safeMessage(s?.email_reply_to ?? process.env.EMAIL_REPLY_TO ?? "info@twchartered.com") });
-      const status = s?.domain_status ?? "not_started";
-      items.push({
-        label: `Domain ${s?.sending_domain ?? "twchartered.com"}`,
-        status: status === "verified" ? "pass" : status === "failed" ? "fail" : "warn",
-        detail:
-          status === "verified"
-            ? "Verified in Resend."
-            : status === "pending"
-              ? "Waiting for Resend to see the DNS records (Settings → Email)."
-              : status === "failed"
-                ? "Resend couldn't verify the DNS records. Check them in Settings → Email."
-                : "Not set up yet (Settings → Email).",
-      });
-    }
-    const hasKey = Boolean(process.env.RESEND_API_KEY?.trim());
-    items.push({ label: "RESEND_API_KEY set", status: hasKey ? "pass" : deployed ? "fail" : "warn", detail: hasKey ? "yes" : "no" });
-
-    // Every email the app sends is in the delivery ledger (client emails, staff invites, digests,
-    // test sends), so the last failure or bounce is read there, not from client messages only.
-    const last = await supabase
-      .from("email_deliveries")
-      .select("kind, status, error, failed_at, bounced_at, updated_at")
-      .in("status", ["failed", "bounced"])
-      .order("updated_at", { ascending: false })
-      .limit(1);
-    if (last.error) {
-      items.push({ label: "Last delivery error", status: "warn", code: errorCode(last.error), detail: describe(last.error) });
-    } else {
-      const row = (last.data ?? [])[0];
-      const at = row ? (row.status === "bounced" ? row.bounced_at : row.failed_at) ?? row.updated_at : null;
-      items.push(
-        row
-          ? {
-              label: "Last delivery error",
-              status: "warn",
-              detail: `${at ? new Date(at).toISOString().slice(0, 16).replace("T", " ") + " UTC: " : ""}${row.status === "bounced" ? "bounced" : "failed"} (${safeMessage(row.kind.replace(/_/g, " "))}): ${safeMessage(row.error ?? "no message recorded")}`,
-            }
-          : { label: "Last delivery error", status: "pass", detail: "None recorded." },
-      );
-    }
-    const status = worst(items.filter((i) => i.label !== "Last delivery error"));
-    return {
-      status,
-      summary: status === "pass" ? "Email is configured and the domain is verified." : status === "warn" ? "Email works with gaps: see the items." : "Email can't be sent from this deployment.",
       items,
     };
   },

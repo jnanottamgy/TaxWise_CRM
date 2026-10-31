@@ -3,7 +3,7 @@ import { notFound, unstable_rethrow } from "next/navigation"
 import { requireManagerOrPartner } from "@/lib/auth/guards"
 import { getSession } from "@/lib/auth/current-user"
 import { logUnexpected } from "@/lib/log"
-import { formatDate } from "@/lib/format"
+import { formatDate, pdfFileName } from "@/lib/format"
 import { istDateOf, recentFinancialYears, taxYearLabel, todayIST } from "@/lib/domain/fy"
 import {
   AUDIT_STAGES,
@@ -20,6 +20,7 @@ import {
 import { auditYearLabel } from "@/lib/schemas/audits"
 import { readParam } from "@/components/app/data-table/params"
 import { getAuditDetail, listAuditTeamOptions, type AuditDetail } from "@/lib/data/audits"
+import { documentShare, getShareContextOrNull } from "@/lib/data/document-share"
 import { PageHeader } from "@/components/app/page-header"
 import { SectionCard } from "@/components/app/section-card"
 import { StatusChip } from "@/components/app/status-chip"
@@ -103,6 +104,19 @@ export default async function AuditPage({ params, searchParams }: Params) {
   const chip = stageChip(d.stage)
   const facts = systemFacts(d, today, { isPartner })
   const isEngagementPartner = d.gate?.isEngagementPartner ?? (user.employeeId !== null && user.employeeId === e.engagement_partner_id)
+  // The draft management representation letter goes to the client on WhatsApp with its PDF (§7.13.2).
+  const shareCtx = await getShareContextOrNull(supabase, user, d.client.id, { source: "page:/audits/[id]:share" })
+  const repLetterShare = shareCtx
+    ? documentShare(shareCtx, {
+        serviceType: "audit",
+        draft: (first) =>
+          `${first ? `Hi ${first}` : "Hello"}, please find the draft management representation letter for our audit of ${shareCtx.client.name} for FY ${e.financial_year}. Please put it on your letterhead, have it signed, and send us the signed copy dated on or before the date of our audit report.`,
+        values: { service_type: "Audit", period: `FY ${e.financial_year}` },
+        templateTypes: ["custom"],
+        attachment: { href: `/api/pdf/management-representation/${e.id}?download=1`, filename: pdfFileName(`${shareCtx.client.code ?? ""} FY ${e.financial_year}`, "Management representation") },
+        related: { type: "audit_representation_letter", id: e.id },
+      })
+    : null
   const steps: ChecklistStep[] = stepsFor(d.auditType, viewing).map((s) => ({
     key: s.key,
     title: s.title,
@@ -205,7 +219,7 @@ export default async function AuditPage({ params, searchParams }: Params) {
             <ReportCard d={d} canEdit={!archived} />
             <AssemblyCard d={d} today={today} params={d.params} />
             <DetailsCard d={d} canEdit={!archived} isPartner={isPartner} />
-            <LinkedCard d={d} />
+            <LinkedCard d={d} repLetterShare={repLetterShare} />
             <StageLogCard d={d} />
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { boardMoveOptions, dropCheck, type BoardCardFacts } from "@/components/tasks/board-logic"
-import { askClientDraft, askClientSubject, askClientValues, missingLines, type AskClientFacts } from "@/lib/schemas/tasks"
+import { askClientDraft, askClientValues, missingLines, type AskClientFacts } from "@/lib/schemas/tasks"
 
 const EMP = "11111111-1111-4111-8111-111111111111"
 const OTHER = "22222222-2222-4222-8222-222222222222"
@@ -107,11 +107,6 @@ describe("asking the client for data (§7.6.6, §7.13.4)", () => {
   it("greets plainly without a contact name and leaves out a missing period and date", () => {
     const d = askClientDraft(facts({ contactName: null, period: null, dueDateText: null }))
     expect(d.startsWith("Hello,\n\nTo complete GSTR-3B for Sharma Traders, we need the following:")).toBe(true)
-  })
-
-  it("builds the email subject", () => {
-    expect(askClientSubject(facts())).toBe("TaxWise Consultants | Data needed for GSTR-3B (Sep 2026)")
-    expect(askClientSubject(facts({ period: null }))).toBe("TaxWise Consultants | Data needed for GSTR-3B")
   })
 
   it("fills every template variable, empty when unknown", () => {

@@ -49,7 +49,7 @@ type ViewportKey = keyof typeof VIEWPORTS;
 const CLIENT_TABS = ["overview", "profile", "services", "tasks", "compliance", "documents", "workpapers", "registers", "billing", "engagement", "communication", "whatsapp", "timeline"];
 const REGISTER_TABS = ["vault", "registrations", "dsc", "udin", "filings"];
 const WORK_VIEWS = ["table", "board", "calendar", "review"];
-const SETTINGS = ["firm", "bank", "numbering", "billing", "working-hours", "reminders", "email", "whatsapp", "law", "templates", "data", "diagnostics"];
+const SETTINGS = ["firm", "bank", "numbering", "billing", "working-hours", "reminders", "whatsapp", "law", "templates", "data", "diagnostics"];
 
 const qid = (name: string) => fid(`qa:${name}`);
 
@@ -162,7 +162,7 @@ function visitsFor(role: RoleKey, d: Record<string, string | null>): Visit[] {
     // The Employee's home is My day: the firm dashboard redirects there.
     refuse(["/dashboard"], "Employee");
   }
-  if (role === "manager") refuse(["/payments", "/audit-log", "/settings/firm", "/settings/bank", "/settings/numbering", "/settings/billing", "/settings/email", "/settings/law", "/settings/data", "/settings/templates"], "Manager");
+  if (role === "manager") refuse(["/payments", "/audit-log", "/settings/firm", "/settings/bank", "/settings/numbering", "/settings/billing", "/settings/law", "/settings/data", "/settings/templates"], "Manager");
   // Unique by path.
   const seen = new Set<string>();
   return out.filter((v) => (seen.has(v.path) ? false : (seen.add(v.path), true)));

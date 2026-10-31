@@ -14,7 +14,7 @@ export default async function RemindersSettingsPage() {
 
   return (
     <div className="min-w-0">
-      <SectionHeader title="Reminders" description="When deadlines, invoices, document requests and quotations are chased, and the Partner digest." />
+      <SectionHeader title="Reminders" description="When deadlines, invoices, document requests and quotations are chased, and how new clients are told." />
       {!result.ok ? (
         <SectionLoadError what="the reminder settings" errorRef={result.ref} />
       ) : !result.data ? (

@@ -14,12 +14,12 @@ import { announceInboxChanged, announceThreadRead } from "@/components/comms/com
 /**
  * A client's whole conversation with the firm, as Client 360 → Communication and /messages show it
  * (§7.3.3, §7.13.1): who has read it, a channel filter, the messages, and the composer (portal
- * reply, WhatsApp and Gmail hand-offs, log a call). Opening it marks the client's unread portal
+ * reply, WhatsApp hand-off, log a call). Opening it marks the client's unread portal
  * messages read (the firm's read receipt) and stamps when you last looked (0173).
  */
 
 export type ClientThreadProps = {
-  client: { id: string; name: string; code: string; onPortal: boolean; email: string | null; phone: string | null; whatsapp: string | null }
+  client: { id: string; name: string; code: string; onPortal: boolean; phone: string | null; whatsapp: string | null }
   contacts: ComposerContact[]
   messages: ThreadMessage[]
   messaging: ComposerMessaging

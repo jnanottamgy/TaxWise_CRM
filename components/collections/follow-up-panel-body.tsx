@@ -7,7 +7,6 @@ import { MessageSquareTextIcon, PlusIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { formatINR, type Paise } from "@/lib/domain/money"
-import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { reminderSlotLabel } from "@/lib/domain/collections"
 import { FOLLOW_UP_CHANNEL_LABEL } from "@/lib/schemas/collections"
 import type { FollowUpRow, ReminderRow } from "@/lib/data/collections"
@@ -16,15 +15,15 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/app/empty-state"
 import { ConfirmDialog } from "@/components/app/confirm-dialog"
-import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
+import { WhatsAppButton, type MessageTemplateOption, type WhatsAppAttachment } from "@/components/app/messaging/whatsapp-button"
 import { PromiseChip, ReminderChip, reminderLine } from "@/components/collections/ui"
 import { FollowUpDialog } from "@/components/collections/follow-up-dialog"
 
 /**
  * The inside of the invoice's Collections panel (§7.9.5): Log follow-up, the latest promise, the
- * reminders waiting to be sent by hand (WhatsApp / Gmail drafts ready, or "Not needed" with a
- * reason), the follow-up log, and the reminders that went. Plain data in; the server renders it.
+ * payment reminders waiting to be sent (Send on WhatsApp with the reminder filled in and the
+ * invoice PDF, or "Not needed" with a reason), the follow-up log, and the reminders that went.
+ * Plain data in; the server renders it.
  */
 
 export type PendingReminderView = {
@@ -38,10 +37,8 @@ export type PendingReminderView = {
   whatsappNumber: string | null
   whatsappTemplateId: string | null
   whatsappDraft: string
-  email: string | null
-  emailTemplateId: string | null
-  emailSubject: string
-  emailBody: string
+  /** The firm's payment-reminder templates, filled in for this reminder. */
+  templates: MessageTemplateOption[]
 }
 
 export function FollowUpPanelBody(props: {
@@ -56,7 +53,8 @@ export function FollowUpPanelBody(props: {
   followUps: FollowUpRow[]
   reminders: ReminderRow[]
   pending: PendingReminderView[]
-  pdfHref: string
+  /** The invoice PDF, downloaded as WhatsApp opens. */
+  attachment?: WhatsAppAttachment
 }) {
   const { invoiceId, canLog, promise, nextFollowUp, followUps, reminders, pending } = props
   const [open, setOpen] = React.useState(false)
@@ -93,9 +91,9 @@ export function FollowUpPanelBody(props: {
       </div>
 
       {pending.length ? (
-        <ul className="flex flex-col gap-2" aria-label="Reminders to send by hand">
+        <ul className="flex flex-col gap-2" aria-label="Reminders to send on WhatsApp">
           {pending.map((p) => (
-            <PendingReminder key={p.id} p={p} invoiceNumber={props.invoiceNumber} pdfHref={props.pdfHref} />
+            <PendingReminder key={p.id} p={p} invoiceNumber={props.invoiceNumber} attachment={props.attachment} />
           ))}
         </ul>
       ) : null}
@@ -136,7 +134,7 @@ export function FollowUpPanelBody(props: {
           <EmptyState
             size="compact"
             icon={<MessageSquareTextIcon />}
-            message={canLog ? "No follow-ups yet. Log a call, email or visit to record what the client said." : "No follow-ups were logged."}
+            message={canLog ? "No follow-ups yet. Log a call, a WhatsApp chat or a visit to record what the client said." : "No follow-ups were logged."}
           />
         )}
       </div>
@@ -167,15 +165,15 @@ export function FollowUpPanelBody(props: {
   )
 }
 
-function PendingReminder({ p, invoiceNumber, pdfHref }: { p: PendingReminderView; invoiceNumber: string | null; pdfHref: string }) {
+function PendingReminder({ p, invoiceNumber, attachment }: { p: PendingReminderView; invoiceNumber: string | null; attachment?: WhatsAppAttachment }) {
   const router = useRouter()
   const [dismissing, setDismissing] = React.useState(false)
   const [reason, setReason] = React.useState("")
   const [reasonError, setReasonError] = React.useState<string | null>(null)
   const reasonId = React.useId()
 
-  const handedOff = async (channel: "whatsapp_handoff" | "gmail_handoff", recipient: string, body: string, subject: string | null, templateId: string | null) => {
-    const r = await completeReminderHandoff({ reminderId: p.id, channel, contactId: p.contactId, recipient, body, subject, templateId })
+  const handedOff = async (recipient: string, body: string, templateId: string | null) => {
+    const r = await completeReminderHandoff({ reminderId: p.id, channel: "whatsapp_handoff", contactId: p.contactId, recipient, body, templateId })
     if (!r.ok) throw new Error(r.error)
     router.refresh()
   }
@@ -192,16 +190,11 @@ function PendingReminder({ p, invoiceNumber, pdfHref }: { p: PendingReminderView
           recipientName={p.contactName}
           number={p.whatsappNumber}
           draft={p.whatsappDraft}
+          templates={p.templates}
+          attachment={attachment}
+          label="Send on WhatsApp"
           variant="outline"
-          onHandedOff={({ number, text }) => handedOff("whatsapp_handoff", number, text, null, p.whatsappTemplateId)}
-        />
-        <GmailButton
-          to={p.email}
-          subject={p.emailSubject}
-          body={p.emailBody}
-          buildUrl={(f) => gmailComposeUrl({ to: f.to, cc: f.cc, subject: f.subject, body: f.body })}
-          pdfHref={pdfHref}
-          onHandedOff={(f) => handedOff("gmail_handoff", f.to, f.body || f.subject, f.subject, p.emailTemplateId)}
+          onHandedOff={({ number, text, templateId }) => handedOff(number, text, templateId ?? p.whatsappTemplateId)}
         />
         <Button type="button" variant="ghost" size="sm" onClick={() => setDismissing(true)}>
           Not needed

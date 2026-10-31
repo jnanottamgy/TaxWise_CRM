@@ -14,14 +14,38 @@ import {
 } from "@/lib/domain/tds";
 
 /**
- * Receipts (§7.9.4, §6.5): the Record receipt form and its action, the reversal, the receipt email,
- * and the helpers the form shows: the TDS section picker from the parameters in force on the payment
- * date, the expected TDS on the taxable value excluding GST (CBDT Circular 23/2017) with the
- * difference from what the client deducted, and the received + TDS ≤ outstanding + ₹1 check.
- * Client-safe.
+ * Receipts (§7.9.4, §6.5): the Record receipt form and its action, the reversal, the WhatsApp
+ * message that goes with the receipt PDF, and the helpers the form shows: the TDS section picker
+ * from the parameters in force on the payment date, the expected TDS on the taxable value excluding
+ * GST (CBDT Circular 23/2017) with the difference from what the client deducted, and the
+ * received + TDS ≤ outstanding + ₹1 check. Client-safe.
  */
 
 export const RECEIPT_LIMITS = { reference: 120, depositedTo: 120, notes: 2000, reason: 500 } as const;
+
+/** The suggested WhatsApp message with a receipt PDF (§7.9.4): what was received, against which invoice, and what is left. */
+export function receiptShareText(r: {
+  contactName: string | null;
+  receiptNumber: string;
+  invoiceNumber: string;
+  paymentDate: string;
+  /** "₹10,620.00", formatted. */
+  amount: string;
+  /** "₹1,180.00" TDS deducted, or null. */
+  tds: string | null;
+  /** "₹2,000.00" still outstanding on the invoice, or null when it is settled. */
+  balance: string | null;
+  firmName: string;
+}): string {
+  const first = r.contactName?.trim().split(/\s+/)[0];
+  return [
+    `${first ? `Hi ${first}` : "Hello"}, thank you for your payment of ${r.amount}${r.tds ? ` (and TDS of ${r.tds})` : ""} received on ${r.paymentDate} against invoice ${r.invoiceNumber}.`,
+    "",
+    `Please find receipt ${r.receiptNumber} from ${r.firmName} attached.`,
+    r.balance ? `${r.balance} is still to pay on the invoice.` : "The invoice is now fully paid.",
+    ...(r.tds ? ["", "Please send us the TDS certificate (Form 16A) once it's issued, so we can claim the credit."] : []),
+  ].join("\n");
+}
 
 /** §7.9.4 "Bank transfer NEFT/IMPS/RTGS · UPI · Cheque · Cash · Card · Other". */
 export const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentMethod; label: string }> = PAYMENT_METHODS.map((m) => ({
@@ -83,16 +107,12 @@ export const RecordReceiptSchema = z
     reference: optionalText(RECEIPT_LIMITS.reference),
     depositedTo: optionalText(RECEIPT_LIMITS.depositedTo),
     notes: optionalText(RECEIPT_LIMITS.notes),
-    /** Email the receipt PDF to the client (§10.9) once recorded. */
-    emailReceipt: z.boolean().optional().default(false),
-    emailTo: z.string().trim().max(320).optional().default(""),
     /** A portal "I've paid" claim this receipt answers (§7.22). */
     claimId: z.union([z.uuid(), z.literal(""), z.null()]).optional().transform((v) => (v ? v : null)),
   })
   .superRefine((v, ctx) => {
     const tds = v.tdsAmount === "" ? 0 : parseAmount(v.tdsAmount).ok ? (parseAmount(v.tdsAmount) as { paise: number }).paise : 0;
     if (tds > 0 && v.tdsSection === "") ctx.addIssue({ code: "custom", path: ["tdsSection"], message: "Choose the section the client deducted TDS under." });
-    if (v.emailReceipt && !z.email().safeParse(v.emailTo).success) ctx.addIssue({ code: "custom", path: ["emailTo"], message: "Enter the email address to send the receipt to." });
   });
 export type RecordReceiptInput = z.input<typeof RecordReceiptSchema>;
 export type RecordReceiptValues = z.output<typeof RecordReceiptSchema>;
@@ -158,12 +178,6 @@ export const RejectPaymentClaimSchema = z.object({
     .max(1000, { error: "Keep it under 1,000 characters." }),
 });
 export type RejectPaymentClaimInput = z.input<typeof RejectPaymentClaimSchema>;
-
-export const EmailReceiptSchema = z.object({
-  receiptId: z.uuid({ error: "That receipt isn't valid." }),
-  to: z.email({ error: "Enter a valid email address." }),
-  nonce: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, { error: "Reload the page and try again." }),
-});
 
 // -------------------------------------------------------------------------------------------------
 // TDS on the receipt (§6.5)

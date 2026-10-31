@@ -67,8 +67,6 @@ describe("channelFits", () => {
     expect(channelFits("any", "whatsapp")).toBe(true);
     expect(channelFits("whatsapp", "whatsapp")).toBe(true);
     expect(channelFits("email", "whatsapp")).toBe(false);
-    expect(channelFits("email", "email")).toBe(true);
-    expect(channelFits("whatsapp", "email")).toBe(false);
     expect(channelFits("email", "portal")).toBe(true);
     expect(channelFits("whatsapp", "portal")).toBe(true);
   });

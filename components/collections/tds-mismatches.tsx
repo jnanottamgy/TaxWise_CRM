@@ -7,7 +7,6 @@ import { toast } from "sonner"
 import { CheckCircle2Icon, FileSearchIcon } from "lucide-react"
 import { formatDate } from "@/lib/format"
 import { formatINR, type Paise } from "@/lib/domain/money"
-import { gmailComposeUrl } from "@/lib/domain/messaging"
 import type { TdsMatchStatus } from "@/lib/domain/collections"
 import type { StatementIssue } from "@/lib/data/tds-credits"
 import type { FormError } from "@/hooks/use-action-form"
@@ -21,15 +20,14 @@ import { FormDialog } from "@/components/app/form-dialog"
 import { FormAlert } from "@/components/app/form/form-alert"
 import { MonoId } from "@/components/app/mono-id"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
 import { TdsMatchChip } from "@/components/collections/ui"
 
 /**
  * TDS mismatches (§7.9.9). Two lists:
  *
  *   Not showing in 26AS / AIS: credits still Expected although the deductor's statement for their
- *   quarter was due before the latest import, grouped by client, each with a WhatsApp and a Gmail
- *   draft asking the client to correct their TDS statement (logged as a hand-off).
+ *   quarter was due before the latest import, grouped by client, each with a WhatsApp draft
+ *   asking the client to correct their TDS statement (logged as a hand-off).
  *   Statement lines that didn't match: the amount differs from our receipts, or the TAN isn't in our
  *   books. Set a line aside with a reason, or bring it back.
  */
@@ -51,11 +49,9 @@ export type CorrectionGroup = {
   clientName: string
   contactId: string | null
   contactName: string | null
-  email: string | null
   whatsappNumber: string | null
   items: CorrectionItem[]
   totalPaise: Paise
-  subject: string
   body: string
 }
 
@@ -93,9 +89,9 @@ function CorrectionRow({ group: g }: { group: CorrectionGroup }) {
   const router = useRouter()
   const related = { type: "tds_credit", id: g.items[0].receiptId }
 
-  const handedOff = async (channel: "whatsapp_handoff" | "gmail_handoff", recipient: string, body: string, subject: string | null) => {
+  const handedOff = async (recipient: string, body: string) => {
     try {
-      const r = await logHandoff({ clientId: g.clientId, contactId: g.contactId, channel, recipient, subject, body, templateId: null, related })
+      const r = await logHandoff({ clientId: g.clientId, contactId: g.contactId, channel: "whatsapp_handoff", recipient, body, templateId: null, related })
       if (!r.ok) {
         toast.error(r.ref ? `The message opened, but it wasn't logged: ${r.error} (Ref ${r.ref})` : `The message opened, but it wasn't logged: ${r.error}`)
         return
@@ -141,15 +137,9 @@ function CorrectionRow({ group: g }: { group: CorrectionGroup }) {
           recipientName={g.contactName ? `${g.contactName} · ${g.clientName}` : g.clientName}
           number={g.whatsappNumber}
           draft={g.body}
+          label="Ask on WhatsApp"
           variant="outline"
-          onHandedOff={({ number, text }) => handedOff("whatsapp_handoff", number, text, null)}
-        />
-        <GmailButton
-          to={g.email}
-          subject={g.subject}
-          body={g.body}
-          buildUrl={(f) => gmailComposeUrl({ to: f.to, cc: f.cc, subject: f.subject, body: f.body })}
-          onHandedOff={(f) => handedOff("gmail_handoff", f.to, f.body || f.subject, f.subject)}
+          onHandedOff={({ number, text }) => handedOff(number, text)}
         />
       </div>
     </li>

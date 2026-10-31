@@ -34,7 +34,7 @@ export const sendPortalReply = defineAction(
     throwIfDbError(clientError);
     if (!client || client.deleted_at) return fail("Not one of your clients.", { code: "not_found" });
     if (!client.portal_user_id) {
-      return fail(`${client.display_name} isn't on the portal yet. Invite them from the Overview tab, or send this on WhatsApp or Gmail.`, { code: "blocked" });
+      return fail(`${client.display_name} isn't on the portal yet. Invite them from the Overview tab, or send this on WhatsApp.`, { code: "blocked" });
     }
 
     let templateType: string | null = null;

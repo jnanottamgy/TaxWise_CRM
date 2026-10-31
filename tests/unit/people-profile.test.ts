@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   MembershipSchema,
   NOTIFICATION_EVENTS,
-  NotificationPrefsSchema,
   PROFILE_IMAGE_LIMITS,
   ProfileDetailsSchema,
   checkProfileImage,
   notificationEventsFor,
   profileImagePathPattern,
-  readEmailPreferences,
   readWhatsAppSignaturePreference,
   sniffImageFormat,
 } from "@/lib/schemas/profile";
@@ -79,8 +77,8 @@ describe("name, phone and membership number (§7.1)", () => {
   });
 });
 
-describe("notification preferences (§7.1, §9, §4.1)", () => {
-  it("every notification type has a preference row", () => {
+describe("notification events (§7.1, §9, §4.1)", () => {
+  it("every notification type has an event row", () => {
     expect(NOTIFICATION_EVENTS.map((e) => e.type).sort()).toEqual([...NOTIFICATION_TYPES].sort());
   });
 
@@ -98,25 +96,6 @@ describe("notification preferences (§7.1, §9, §4.1)", () => {
     expect(notificationEventsFor("manager").map((e) => e.type)).not.toContain("invoice_awaiting_approval");
     expect(notificationEventsFor("manager").map((e) => e.type)).toContain("leave_requested");
     expect(notificationEventsFor("client")).toEqual([]);
-  });
-
-  it("stored choices win over defaults; anything unreadable falls back to the defaults", () => {
-    const prefs = { notifications: { email: { task_assigned: false, info: true, invoice_overdue: true } } };
-    const emp = readEmailPreferences(prefs, "employee");
-    expect(emp.task_assigned).toBe(false);
-    expect(emp.info).toBe(true);
-    expect(emp.leave_decided).toBe(true); // default on
-    expect("invoice_overdue" in emp).toBe(false); // never offered to an Employee
-    expect(readEmailPreferences(prefs, "manager").invoice_overdue).toBe(true);
-    const defaults = readEmailPreferences("garbage", "manager");
-    expect(defaults.task_assigned).toBe(true);
-    expect(defaults.cover_ending).toBe(false);
-    expect(readEmailPreferences({ notifications: [] }, "partner").security_alert).toBe(true);
-  });
-
-  it("the save schema takes known types only", () => {
-    expect(NotificationPrefsSchema.safeParse({ email: { task_assigned: true, cover_started: false } }).success).toBe(true);
-    expect(NotificationPrefsSchema.safeParse({ email: { not_a_type: true } }).success).toBe(false);
   });
 
   it("WhatsApp signature: on by default for Managers and Employees, off for Partners", () => {

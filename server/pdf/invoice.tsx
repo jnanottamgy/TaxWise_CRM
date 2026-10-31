@@ -365,7 +365,7 @@ export async function buildInvoicePdf(input: {
     input.eInvoicing && doc.e_invoice.signed_qr ? qrPng(doc.e_invoice.signed_qr, { size: 300 }).catch(() => null) : Promise.resolve(null),
   ]);
   const bytes = await renderPdf(<InvoicePdf firm={firm} doc={doc} assets={{ logo, signature, upiQr, irnQr }} firmStateCode={input.firmStateCode} eInvoicing={input.eInvoicing} />);
-  const prefix = doc.invoice_kind === "debit_note" ? "Debit-note" : "Invoice";
+  const prefix = doc.invoice_kind === "debit_note" ? "Debit note" : "Invoice";
   const fileName = doc.invoice_number ? pdfFileName(doc.invoice_number, prefix) : pdfFileName(`draft ${doc.id.slice(0, 8)}`, prefix);
   return { bytes, fileName };
 }

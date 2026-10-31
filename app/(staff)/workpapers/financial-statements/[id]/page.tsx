@@ -6,14 +6,16 @@ import { requireStaff } from "@/lib/auth/guards"
 import { getSession } from "@/lib/auth/current-user"
 import { logUnexpected } from "@/lib/log"
 import { formatDate } from "@/lib/format"
-import { comparativeYear, FS_STATUS_META, isFsTab, needsAttention, yearEndedLabel, type FsTab } from "@/lib/schemas/financial-statements"
+import { comparativeYear, financialStatementsFileName, FS_STATUS_META, isFsTab, needsAttention, yearEndedLabel, type FsTab } from "@/lib/schemas/financial-statements"
 import { getStatementDetail, type StatementDetail } from "@/lib/data/financial-statements"
+import { documentShare, getShareContextOrNull } from "@/lib/data/document-share"
 import { readParam } from "@/components/app/data-table/params"
 import { PageHeader } from "@/components/app/page-header"
 import { ErrorBlock } from "@/components/app/error-block"
 import { Button } from "@/components/ui/button"
 import { PageGuide, ShellTitle } from "@/components/shell/page-slots"
 import { FsStatusChip } from "@/components/workpapers/fs/statements-table"
+import { SendDocumentButton } from "@/components/comms/send-document"
 import { StatementEditor } from "@/components/workpapers/fs/statement-editor"
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }
@@ -47,8 +49,9 @@ function people(d: StatementDetail): string {
  * One client's financial statements for a year (§6.13, §7.8.3): "Do the accounts balance, and is
  * every ledger where it belongs?" The figures and the checks lead; the balance sheet, the profit
  * and loss, the notes, the ledger mapping and the inputs follow as tabs, with a live preview while
- * editing. Export the PDF on the letterhead or the Excel workbook. Any staff member who can see the
- * client (Employees: their own clients, §4.1); another client's statement is a 404 (RLS).
+ * editing. Export the PDF on the letterhead or the Excel workbook, or send the PDF to the client on
+ * WhatsApp (§7.13.2). Any staff member who can see the client (Employees: their own clients, §4.1);
+ * another client's statement is a 404 (RLS).
  */
 export default async function FinancialStatementPage({ params, searchParams }: Params) {
   const { user, supabase } = await requireStaff()
@@ -88,6 +91,19 @@ export default async function FinancialStatementPage({ params, searchParams }: P
   const role = user.role === "partner" || user.role === "manager" ? user.role : "employee"
   const sourceFile = detail.sourceDocument ? { documentId: detail.sourceDocument.id, fileName: detail.sourceDocument.fileName } : null
   const editorKey = `${detail.sourceDocument?.id ?? detail.inputs.tb?.documentId ?? "none"}|${detail.ledgers.length}`
+  const fsClient = detail.client
+  const shareCtx = await getShareContextOrNull(supabase, user, fsClient.id, { source: "page:/workpapers/financial-statements/[id]:share" })
+  const share = shareCtx
+    ? documentShare(shareCtx, {
+        serviceType: "bookkeeping",
+        draft: (first) =>
+          `${first ? `Hi ${first}` : "Hello"}, please find the financial statements of ${fsClient.name} for the year ended ${yearEndedLabel(fy)}${r.status === "final" ? "" : ", in draft for your review"}. Please go through them and tell us if anything needs to change.`,
+        values: { period: `FY ${fy}` },
+        templateTypes: ["custom"],
+        attachment: { href: `/api/pdf/financial-statements/${r.id}?download=1`, filename: financialStatementsFileName(fsClient.code, fy) },
+        related: { type: "financial_statements", id: r.id },
+      })
+    : null
 
   return (
     <div className="flex min-w-0 flex-col">
@@ -115,6 +131,7 @@ export default async function FinancialStatementPage({ params, searchParams }: P
                 Export Excel
               </a>
             </Button>
+            {share ? <SendDocumentButton share={share} size="default" /> : null}
           </div>
         }
       />

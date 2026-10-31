@@ -7,15 +7,15 @@ import { cn } from "@/lib/utils"
 import { StatusChip } from "@/components/app/status-chip"
 import { formatDateTime, formatTime } from "@/lib/format"
 import { formatWhatsAppNumber } from "@/lib/domain/messaging"
-import { MESSAGE_CHANNEL_LABEL, deliveryFailedMessage, messageStatusInfo } from "@/lib/handoff"
+import { MESSAGE_CHANNEL_LABEL, messageStatusInfo } from "@/lib/handoff"
 import { senderLabel, threadEntries, type ThreadMessage } from "@/lib/schemas/inbox"
 
 /**
- * One client's messages in one history (§7.13.1, §7.3.3 Communication): email, WhatsApp and Gmail
- * hand-offs, portal messages, calls and notes, oldest first with a divider per day and a "New"
- * marker where you last left off. Every status is what the app may claim for that channel
- * (messageStatusInfo): an email is Sent / Delivered / Opened / Failed, a hand-off only ever
- * "Handed off", a call or note "Logged".
+ * One client's messages in one history (§7.13.1, §7.3.3 Communication): WhatsApp hand-offs, portal
+ * messages, calls and notes (and the emails and Gmail hand-offs logged before the app stopped
+ * using email), oldest first with a divider per day and a "New" marker where you last left off.
+ * Every status is what the app may claim for that channel (messageStatusInfo): a hand-off only
+ * ever "Handed off", a call or note "Logged", an old email its Sent / Delivered / Failed.
  */
 
 const CHANNEL_ICON: Record<string, React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>> = {
@@ -104,7 +104,7 @@ function MessageCard({ m, clientId, clientName, mine }: { m: ThreadMessage; clie
       ) : null}
       {m.status === "failed" ? (
         <p className="text-sm text-danger-text">
-          {deliveryFailedMessage(clientName)}
+          {`This didn't reach ${clientName}. Send it on WhatsApp instead.`}
           {m.error ? <span className="block text-text-muted">Reason: {m.error}</span> : null}
         </p>
       ) : null}

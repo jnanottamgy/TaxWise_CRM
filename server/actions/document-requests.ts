@@ -6,18 +6,17 @@
  *
  *   createDocumentRequest   title, due date, items, notes, reminder cadence, who it goes to; one
  *                           transaction (create_document_request, 0122). The client sees it in the
- *                           portal at once; it is emailed to the contact when email is set up
- *                           (§7.13.5), and the result says how it went so the WhatsApp / Gmail
- *                           hand-offs with the portal link can be offered.
+ *                           portal at once, and the screen then offers Send on WhatsApp with the
+ *                           list and the portal link (nothing is emailed).
  *   updateDocumentRequest   title, due date, notes, cadence, contact (optimistic, §13).
  *   addRequestItem / updateRequestItem / removeRequestItem
  *   reviewRequestItem       Accept (with the uploaded file, or a vault document), or Reject with a
- *                           reason: the client is told in the portal and by email (§7.14). The request
- *                           completes by itself when every required item is accepted (0122).
+ *                           reason: the client is told in the portal (§7.14), and on WhatsApp from
+ *                           the request. The request completes by itself when every required item
+ *                           is accepted (0122).
  *   cancelDocumentRequest / reopenDocumentRequest
- *   sendRequestReminder     emails what is still outstanding now (the 09:00 job does it every N days).
- *   recordRequestHandoff    a WhatsApp / Gmail hand-off of the request counts as a reminder, so the
- *                           job doesn't chase the client again the next morning.
+ *   recordRequestHandoff    a WhatsApp hand-off of the request counts as a reminder, so the 09:00
+ *                           job doesn't ask for another one the next morning.
  *
  * Every save writes an audit row and, where it is part of the client's story, a timeline entry.
  */
@@ -35,29 +34,15 @@ import {
   RemoveRequestItemSchema,
   ReopenDocumentRequestSchema,
   ReviewRequestItemSchema,
-  SendRequestReminderSchema,
   UpdateDocumentRequestSchema,
   UpdateRequestItemSchema,
   requestPortalPath,
-  requestProgress,
 } from "@/lib/schemas/document-requests";
-import { sendEmail } from "@/server/email/send";
-import { documentRequestEmail, emailFirm } from "@/server/email/templates";
-import { getFirmProfile } from "@/server/firm";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 
 const STAFF = ["partner", "manager", "employee"] as const;
 const MANAGERS = ["partner", "manager"] as const;
-
-export interface EmailOutcome {
-  status: "sent" | "not_configured" | "failed" | "no_recipient";
-  /** Why it didn't go, in a sentence. */
-  error?: string;
-  /** Who it went (or would have gone) to. */
-  recipientName?: string | null;
-  recipientEmail?: string | null;
-}
 
 interface RequestRecord {
   id: string;
@@ -114,73 +99,15 @@ async function loadItems(ctx: ActionContext, requestId: string): Promise<ItemRec
   return (data ?? []) as ItemRecord[];
 }
 
-async function clientInfo(ctx: ActionContext, clientId: string): Promise<{ display_name: string; portal_user_id: string | null; email: string | null }> {
-  const { data, error } = await ctx.supabase.from("clients").select("display_name, portal_user_id, email, deleted_at").eq("id", clientId).maybeSingle();
+async function clientInfo(ctx: ActionContext, clientId: string): Promise<{ display_name: string; portal_user_id: string | null }> {
+  const { data, error } = await ctx.supabase.from("clients").select("display_name, portal_user_id, deleted_at").eq("id", clientId).maybeSingle();
   throwIfDbError(error);
   if (!data || data.deleted_at) throw new ActionError("That client isn't in the client list any more. It may be in the recycle bin.", { code: "not_found" });
-  return { display_name: data.display_name, portal_user_id: data.portal_user_id, email: data.email ? String(data.email) : null };
-}
-
-/** The request's contact, else the primary contact, else the client's own email. */
-async function recipientFor(ctx: ActionContext, clientId: string, contactId: string | null, clientEmail: string | null): Promise<{ contactId: string | null; name: string | null; email: string | null; bounced: boolean }> {
-  const { data, error } = await ctx.supabase
-    .from("client_contacts")
-    .select("id, name, email, email_bounced, is_primary")
-    .eq("client_id", clientId)
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: true })
-    .limit(50);
-  throwIfDbError(error);
-  const contacts = data ?? [];
-  const chosen = (contactId ? contacts.find((c) => c.id === contactId) : null) ?? contacts.find((c) => c.is_primary && c.email) ?? contacts.find((c) => c.email) ?? null;
-  if (chosen) return { contactId: chosen.id, name: chosen.name, email: chosen.email ? String(chosen.email) : null, bounced: Boolean(chosen.email_bounced) };
-  return { contactId: null, name: null, email: clientEmail, bounced: false };
+  return { display_name: data.display_name, portal_user_id: data.portal_user_id };
 }
 
 function portalLink(requestId: string): string {
   return `${env.appUrl().replace(/\/+$/, "")}${requestPortalPath(requestId)}`;
-}
-
-/** Emails the request (or a reminder of what is outstanding) to its recipient. Never throws. */
-async function emailRequest(
-  ctx: ActionContext,
-  req: RequestRecord,
-  items: ItemRecord[],
-  opts: { reminder: boolean; idempotencyKey: string; clientName: string; clientEmail: string | null },
-): Promise<EmailOutcome> {
-  try {
-    const to = await recipientFor(ctx, req.client_id, req.contact_id, opts.clientEmail);
-    if (!to.email) return { status: "no_recipient", error: "No email address for this client. Add one in Contacts.", recipientName: to.name };
-    const firm = emailFirm(await getFirmProfile(ctx.supabase));
-    const mail = documentRequestEmail(
-      {
-        recipientName: to.name ?? opts.clientName,
-        clientName: opts.clientName,
-        title: req.title,
-        items: items.map((i) => ({ title: i.title, helpText: i.help_text, status: i.status, rejectionReason: i.rejection_reason, required: i.is_required })),
-        dueDate: req.due_date,
-        uploadUrl: portalLink(req.id),
-        notes: req.notes,
-        senderName: ctx.user.fullName,
-        reminderNumber: opts.reminder ? req.reminder_count + 1 : null,
-      },
-      firm,
-    );
-    const r = await sendEmail({
-      to: to.email,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: opts.reminder ? "document_request_reminder" : "document_request",
-      clientId: req.client_id,
-      contactId: to.contactId,
-      related: { type: "document_request", id: req.id },
-      idempotencyKey: opts.idempotencyKey,
-    });
-    return { status: r.status, error: r.error, recipientName: to.name ?? opts.clientName, recipientEmail: to.email };
-  } catch {
-    return { status: "failed", error: "The email couldn't be prepared." };
-  }
 }
 
 /** Contact made: the cadence restarts from now (§7.14 "Reminder every N days"). */
@@ -198,7 +125,7 @@ async function markContacted(ctx: ActionContext, req: RequestRecord, countAsRemi
 
 export const createDocumentRequest = defineAction(
   { name: "document_requests.create", schema: CreateDocumentRequestSchema, roles: STAFF },
-  async (input, ctx): Promise<ActionResult<{ id: string; email: EmailOutcome | null; portalLink: string }>> => {
+  async (input, ctx): Promise<ActionResult<{ id: string; portalLink: string }>> => {
     const client = await clientInfo(ctx, input.clientId);
     const { data, error } = await ctx.supabase.rpc("create_document_request", {
       p_client_id: input.clientId,
@@ -220,20 +147,13 @@ export const createDocumentRequest = defineAction(
       details: { client_id: input.clientId, title: input.title, items: input.items.length, due_date: input.dueDate, contact_id: input.contactId, reminder_every_days: input.reminderEveryDays },
     });
 
-    let email: EmailOutcome | null = null;
-    if (input.sendEmail) {
-      const req = await loadRequest(ctx, id, input.clientId);
-      email = await emailRequest(ctx, req, await loadItems(ctx, id), { reminder: false, idempotencyKey: `document_request:${id}:sent`, clientName: client.display_name, clientEmail: client.email });
-      if (email.status === "sent") await markContacted(ctx, req, false);
-    }
-
     const due = input.dueDate ? `, due ${formatDate(input.dueDate)}` : "";
     ctx.after("Add the request to the client's timeline", () =>
       addTimelineEvent({
         clientId: input.clientId,
         eventType: "document_requested",
         title: `Documents requested: ${input.title} (${input.items.length} ${input.items.length === 1 ? "item" : "items"}${due})`,
-        metadata: { request_id: id, items: input.items.length, emailed: email?.status === "sent" },
+        metadata: { request_id: id, items: input.items.length },
       }),
     );
     if (client.portal_user_id) {
@@ -250,7 +170,7 @@ export const createDocumentRequest = defineAction(
         }),
       );
     }
-    return ok({ id, email, portalLink: portalLink(id) });
+    return ok({ id, portalLink: portalLink(id) });
   },
 );
 
@@ -355,7 +275,7 @@ export const reviewRequestItem = defineAction(
   async (
     input,
     ctx,
-  ): Promise<ActionResult<{ itemStatus: RequestItemStatus; requestStatus: RequestStatus; updatedAt: string; email: EmailOutcome | null; portalLink: string }>> => {
+  ): Promise<ActionResult<{ itemStatus: RequestItemStatus; requestStatus: RequestStatus; updatedAt: string; portalLink: string }>> => {
     const req = await loadRequest(ctx, input.requestId, input.clientId);
     const { data, error } = await ctx.supabase.rpc("review_document_request_item", {
       p_item_id: input.id,
@@ -390,7 +310,6 @@ export const reviewRequestItem = defineAction(
       }
     });
 
-    let email: EmailOutcome | null = null;
     if (input.decision === "reject") {
       const client = await clientInfo(ctx, req.client_id);
       if (client.portal_user_id) {
@@ -407,17 +326,8 @@ export const reviewRequestItem = defineAction(
           }),
         );
       }
-      if (input.emailClient) {
-        email = await emailRequest(ctx, req, await loadItems(ctx, req.id), {
-          reminder: false,
-          idempotencyKey: `document_request:${req.id}:rejected:${input.id}:${r.updated_at}`,
-          clientName: client.display_name,
-          clientEmail: client.email,
-        });
-        if (email.status === "sent") await markContacted(ctx, req, false);
-      }
     }
-    return ok({ itemStatus: r.item_status, requestStatus: r.request_status, updatedAt: r.updated_at, email, portalLink: portalLink(req.id) });
+    return ok({ itemStatus: r.item_status, requestStatus: r.request_status, updatedAt: r.updated_at, portalLink: portalLink(req.id) });
   },
 );
 
@@ -462,28 +372,6 @@ export const reopenDocumentRequest = defineAction(
       addTimelineEvent({ clientId: req.client_id, eventType: "document_request_reopened", title: `Document request reopened: ${req.title}`, metadata: { request_id: req.id } }),
     );
     return ok({ id: saved.id, status: saved.status });
-  },
-);
-
-export const sendRequestReminder = defineAction(
-  { name: "document_requests.remind", schema: SendRequestReminderSchema, roles: STAFF },
-  async (input, ctx): Promise<ActionResult<{ email: EmailOutcome; portalLink: string }>> => {
-    const req = await loadRequest(ctx, input.id, input.clientId);
-    if (req.status !== "open") return fail("Only an open request is chased.", { code: "blocked" });
-    const items = await loadItems(ctx, req.id);
-    if (requestProgress(items).outstanding === 0) return fail("Nothing is outstanding: every item has been uploaded.", { code: "blocked" });
-    const client = await clientInfo(ctx, req.client_id);
-    const email = await emailRequest(ctx, req, items, {
-      reminder: true,
-      idempotencyKey: `document_request:${req.id}:reminder:${req.reminder_count + 1}`,
-      clientName: client.display_name,
-      clientEmail: client.email,
-    });
-    if (email.status === "sent") {
-      await markContacted(ctx, req, true);
-      await ctx.audit({ event: "data_update", resourceType: "document_request", resourceId: req.id, action: "document_requests.remind", details: { client_id: req.client_id, reminder: req.reminder_count + 1, channel: "email" } });
-    }
-    return ok({ email, portalLink: portalLink(req.id) });
   },
 );
 

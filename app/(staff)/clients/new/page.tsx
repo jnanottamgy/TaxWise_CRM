@@ -183,7 +183,7 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
     <div className="flex min-w-0 flex-col">
       <PageGuide title="Add client">
         <p>Five steps, in order: basic information, services, configuration and team, the document checklist, then the compliance setup and a summary. Each step shows a tick when it is complete.</p>
-        <p className="mt-2">The draft is saved on this device every few seconds, so you can close the wizard and come back. Complete creates everything at once; notifications, the welcome email and the portal invite follow.</p>
+        <p className="mt-2">The draft is saved on this device every few seconds, so you can close the wizard and come back. Complete creates everything at once; the next screen has the welcome message and the portal login to send on WhatsApp.</p>
       </PageGuide>
       <PageHeader breadcrumbs={[{ label: "Clients", href: "/clients" }, { label: "Add client" }]} title="Add client" />
       <OnboardingWizard setup={loaded.setup} initial={loaded.initial} source={loaded.source} servicesLocked={loaded.locked} />

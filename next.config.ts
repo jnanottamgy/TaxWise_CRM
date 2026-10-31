@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 /**
  * Web hardening headers (§12). The CSP allows only this app, the Supabase project (API, Storage for
- * the logo, Realtime), Resend, self-hosted fonts (@fontsource, served from /_next/static), and
- * blob:/data: images (logo preview before upload, the UPI QR code). Nothing may frame the app.
+ * the logo, Realtime), self-hosted fonts (@fontsource, served from /_next/static), and blob:/data:
+ * images (logo preview before upload, the UPI QR code). Nothing may frame the app.
  *
  * Scripts and styles keep 'unsafe-inline' because pages are rendered without per-request nonces
  * (Next.js inlines its RSC payload scripts; Radix sets inline styles). The rest of the policy still
@@ -22,7 +22,6 @@ function contentSecurityPolicy(): string {
   const isDev = process.env.NODE_ENV === "development";
   const supabase = originOf(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const supabaseWs = supabase ? supabase.replace(/^http/, "ws") : null;
-  const resend = "https://api.resend.com";
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
@@ -30,7 +29,7 @@ function contentSecurityPolicy(): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "blob:", "data:", ...(supabase ? [supabase] : [])],
     "font-src": ["'self'", "data:"],
-    "connect-src": ["'self'", ...(supabase ? [supabase] : []), ...(supabaseWs ? [supabaseWs] : []), resend, ...(isDev ? ["ws:"] : [])],
+    "connect-src": ["'self'", ...(supabase ? [supabase] : []), ...(supabaseWs ? [supabaseWs] : []), ...(isDev ? ["ws:"] : [])],
     "media-src": ["'self'", "blob:"],
     "frame-src": ["'self'", "blob:", ...(supabase ? [supabase] : [])],
     "worker-src": ["'self'", "blob:"],

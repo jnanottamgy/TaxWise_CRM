@@ -22,6 +22,7 @@ import {
 import type { AuditDetail } from "@/lib/data/audits"
 import { assemblyWords } from "@/components/audits/audit-ui"
 import { AuditDialogButton } from "@/components/audits/audit-workspace"
+import { SendDocumentButton, type DocumentShare } from "@/components/comms/send-document"
 
 /**
  * The engagement page's side column (§7.15.5): materiality, the report and UDIN, the SA 230 file
@@ -158,7 +159,8 @@ export function DetailsCard({ d, canEdit, isPartner }: { d: AuditDetail; canEdit
   )
 }
 
-export function LinkedCard({ d }: { d: AuditDetail }) {
+/** The letters and exports, the vault and the linked tasks; the representation letter can go to the client on WhatsApp. */
+export function LinkedCard({ d, repLetterShare = null }: { d: AuditDetail; repLetterShare?: DocumentShare | null }) {
   const repLetter = `/api/pdf/management-representation/${d.engagement.id}`
   return (
     <SectionCard title="Documents and work" flush>
@@ -169,6 +171,7 @@ export function LinkedCard({ d }: { d: AuditDetail }) {
             Management representation letter (SA 580)
           </a>
         </Button>
+        {repLetterShare ? <SendDocumentButton share={repLetterShare} label="Send the letter on WhatsApp" className="justify-start" /> : null}
         <Button asChild variant="outline" size="sm" className="justify-start">
           <a href={`/api/exports/audit-checklist/${d.engagement.id}`}>
             <DownloadIcon aria-hidden="true" />

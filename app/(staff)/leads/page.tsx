@@ -107,7 +107,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     <div className="flex min-w-0 flex-col">
       <PageGuide title="Leads">
         <p>Every enquiry is a lead. Move it along the pipeline as you talk to them: drag a card to another stage, or use its menu. Moving a lead to Lost asks why, so the win/loss analysis is useful.</p>
-        <p className="mt-2">From a lead you can log calls and notes, send a WhatsApp or Gmail draft, run the conflict check, prepare a quotation and, once they agree, convert it to a client. A reminder comes up at the next follow-up time, and a lead nobody has touched for 14 days is flagged.</p>
+        <p className="mt-2">From a lead you can log calls and notes, send a WhatsApp draft, run the conflict check, prepare a quotation and, once they agree, convert it to a client. A reminder comes up at the next follow-up time, and a lead nobody has touched for 14 days is flagged.</p>
       </PageGuide>
       <GrowthSubnav
         active="leads"

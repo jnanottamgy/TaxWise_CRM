@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/app/empty-state"
 import { DateText } from "@/components/app/date-text"
 import { GRID_RETURN_TYPES, matchesReturnType } from "@/lib/schemas/compliance"
 import { getClientComplianceEvents, type ClientEventRow } from "@/lib/data/compliance"
+import { documentShare, getShareContextOrNull, type DocumentShare } from "@/lib/data/document-share"
 import { loadComplianceEngine } from "@/server/compliance/engine"
 import { clientCoverageGaps, type ClientGap } from "@/server/compliance/coverage-gaps"
 import { gridColumns, layoutRow } from "@/components/compliance/logic/grid"
@@ -31,8 +32,9 @@ import { EventSheetSlot } from "@/components/compliance/event-sheet-slot"
  * Client 360 → Compliance (§7.3.3 tab 5, §7.7): the client's status per period (GST, TDS, advance
  * tax and payroll returns across the FY's months; annual returns listed), coverage gaps with their
  * one-click fix, the calendar as a list by month, Generate deadlines (idempotent), and the
- * compliance report PDF. Every deadline opens its sheet (`?event=`). Under the viewer's RLS; no
- * fees. Never throws: a failed load shows its Ref in its own block.
+ * compliance report PDF (downloaded, or sent to the client on WhatsApp). Every deadline opens its
+ * sheet (`?event=`). Under the viewer's RLS; no fees. Never throws: a failed load shows its Ref in
+ * its own block.
  */
 export default async function ClientComplianceTab({ clientId, user, supabase, searchParams }: ClientTabProps) {
   const today = todayIST()
@@ -44,19 +46,31 @@ export default async function ClientComplianceTab({ clientId, user, supabase, se
   let events: ClientEventRow[] = []
   let gaps: ClientGap[] = []
   let client: { id: string; display_name: string; client_code: string } | null = null
+  let share: DocumentShare | null = null
   let reminderDays = 7
   let loadRef: string | null = null
   let gapsRef: string | null = null
   try {
-    const [rows, c, settings] = await Promise.all([
+    const [rows, c, settings, shareCtx] = await Promise.all([
       getClientComplianceEvents(supabase, clientId, fy),
       supabase.from("clients").select("id, display_name, client_code").eq("id", clientId).maybeSingle(),
       supabase.from("firm_settings").select("compliance_reminder_days").eq("id", 1).maybeSingle(),
+      getShareContextOrNull(supabase, user, clientId, { source: "client360:compliance:share" }),
     ])
     if (c.error) throw c.error
     events = rows
     client = c.data ? { id: c.data.id, display_name: c.data.display_name, client_code: String(c.data.client_code) } : null
     reminderDays = settings.data?.compliance_reminder_days ?? 7
+    // The report's period is chosen in the dialog, which sets the attachment (ReportButton).
+    share = shareCtx
+      ? documentShare(shareCtx, {
+          draft: (first) =>
+            `${first ? `Hi ${first}` : "Hello"}, please find the compliance report for ${shareCtx.client.name}: every return and filing in the period, its status, the date it was filed, the acknowledgement number and whether it was on time.`,
+          templateTypes: ["custom"],
+          attachment: { href: `/api/pdf/compliance-report/${clientId}?download=1`, filename: "Compliance report.pdf" },
+          related: { type: "compliance_report", id: clientId },
+        })
+      : null
   } catch (err) {
     unstable_rethrow(err)
     loadRef = logUnexpected(err, { source: "client360:compliance", userId: user.id, role: user.role, clientId })
@@ -73,7 +87,7 @@ export default async function ClientComplianceTab({ clientId, user, supabase, se
   const actions = (
     <div className="flex flex-none flex-wrap items-center gap-2 lg:justify-end">
       <GenerateButton clientIds={[clientId]} />
-      {client ? <ReportButton clientId={clientId} clientCode={client.client_code} fy={fy} /> : null}
+      {client ? <ReportButton clientId={clientId} clientCode={client.client_code} fy={fy} share={share} /> : null}
       {manager && client ? (
         <NewDeadlineButton
           variant="outline"

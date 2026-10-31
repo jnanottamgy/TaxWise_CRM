@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useWatch } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/server/actions/auth";
 import { SignInSchema, type SignInInput } from "@/lib/schemas/auth";
@@ -28,11 +27,8 @@ export function LoginForm({
   });
   const {
     register,
-    control,
     formState: { errors },
   } = form;
-  const email = useWatch({ control, name: "email" });
-  const forgotHref = email?.includes("@") ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : "/forgot-password";
 
   return (
     <form onSubmit={submit} noValidate aria-busy={busy} className="flex flex-col gap-4">
@@ -67,7 +63,7 @@ export function LoginForm({
 
       <div className="-mt-1 flex justify-end">
         <Link
-          href={forgotHref}
+          href="/forgot-password"
           className="rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:py-2"
         >
           Forgot password?

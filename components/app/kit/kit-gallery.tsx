@@ -5,7 +5,6 @@ import Link from "next/link"
 import { ChevronRightIcon, DownloadIcon, PlusIcon, ReceiptIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useTheme } from "next-themes"
-import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { cn } from "@/lib/utils"
 import { STATUS_VOCABULARY, statusOptions, type StatusKind } from "@/lib/status"
 import { Button } from "@/components/ui/button"
@@ -30,7 +29,6 @@ import { SkeletonCard, SkeletonDetailHeader, SkeletonKpiStrip, SkeletonPageHeade
 import { Keys, ShortcutSheet } from "@/components/app/shortcut-sheet"
 import { BarChartCard, LineChartCard, StackedBarCard } from "@/components/app/charts/chart-cards"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
 import { KitTable, KitTableStates } from "@/components/app/kit/kit-table"
 import { KitFormDemos } from "@/components/app/kit/kit-forms"
 import { KIT_BILLING_BY_SERVICE, KIT_COLLECTIONS, KIT_FILED, type KitClientRow } from "@/components/app/kit/sample-data"
@@ -53,12 +51,9 @@ const SECTIONS = [
   { id: "feedback", label: "Empty, error, loading" },
   { id: "forms", label: "Forms and dialogs" },
   { id: "charts", label: "Charts" },
-  { id: "messaging", label: "WhatsApp and Gmail" },
+  { id: "messaging", label: "WhatsApp" },
   { id: "keyboard", label: "Keyboard" },
 ]
-
-// The real hand-off builders (lib/domain/messaging.ts), so the kit shows exactly what features send.
-const kitGmailUrl = (f: { to: string; cc?: string; bcc?: string; subject: string; body: string }) => gmailComposeUrl(f)
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -534,7 +529,7 @@ export function KitGallery({
                   <Button size="sm" variant="outline" onClick={() => toast.success("Client saved")}>
                     Success toast
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => toast.warning("Saved. The welcome email didn't go through, so send it by hand. (Ref 3HF8WQ2L)")}>
+                  <Button size="sm" variant="outline" onClick={() => toast.warning("Saved, but the portal invite wasn't created. Invite them from the Overview tab. (Ref 3HF8WQ2L)")}>
                     Warning toast
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => toast.error("Couldn't refresh the inbox. (Ref P9D3X1VB)")}>
@@ -605,7 +600,7 @@ export function KitGallery({
             </div>
           </Section>
 
-          <Section id="messaging" title="WhatsApp and Gmail" description="Hand-off only: the app opens WhatsApp or Gmail with the draft, and records “Handed off”, never “Delivered”.">
+          <Section id="messaging" title="WhatsApp" description="Hand-off only: the app opens WhatsApp with the draft (and downloads the document, if any), and records “Handed off”, never “Delivered”.">
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4">
               <WhatsAppButton
                 recipientName="Rakesh Sharma · Sharma Traders"
@@ -622,14 +617,6 @@ export function KitGallery({
               <WhatsAppButton recipientName="Malnad Coffee Estates" number={null} draft="" />
               <WhatsAppButton recipientName="Rakesh Sharma" number="919845012345" draft="Hi Rakesh," iconOnly variant="outline" />
               <WhatsAppButton recipientName="Malnad Coffee Estates" number={null} draft="" iconOnly />
-              <GmailButton
-                to="accounts@sharmatraders.in"
-                subject="Invoice TW/26-27/0142 from TaxWise Consultants"
-                body={"Dear Rakesh,\n\nPlease find invoice TW/26-27/0142 for ₹14,750.00, due on 31 Oct 2026:\nhttps://app.twchartered.com/portal/invoices\n\nRegards,\nAnita Rao\nTaxWise Consultants"}
-                buildUrl={kitGmailUrl}
-                pdfHref="#messaging"
-              />
-              <GmailButton to={null} subject="" body="" buildUrl={kitGmailUrl} />
             </div>
           </Section>
 

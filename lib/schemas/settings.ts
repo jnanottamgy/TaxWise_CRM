@@ -618,12 +618,11 @@ export const RemindersSchema = z.object({
   invoice_reminder_after_days: dayListField("the overdue reminders", { min: 1, max: 365, maxItems: 6 }),
   document_request_reminder_every_days: intField("the document request cadence", 1, 60),
   quotation_follow_up_days: dayListField("the quotation follow-ups", { min: 1, max: 90, maxItems: 6, allowEmpty: true }),
-  digest_enabled: z.boolean(),
-  /** The "Notify the client by" defaults for new clients (§7.3.2 step 5): email, the WhatsApp hand-off, the portal. */
+  /** The "Notify the client by" defaults for new clients (§7.3.2 step 5): the WhatsApp hand-off, the portal. */
   client_notify_channels: z
     .array(z.string())
     .superRefine((v, ctx) => {
-      if (v.some((c) => !(NOTIFY_CHANNELS as readonly string[]).includes(c))) ctx.addIssue({ code: "custom", message: "Choose email, WhatsApp or the portal." });
+      if (v.some((c) => !(NOTIFY_CHANNELS as readonly string[]).includes(c))) ctx.addIssue({ code: "custom", message: "Choose WhatsApp or the portal." });
       else if (v.length === 0) ctx.addIssue({ code: "custom", message: "Choose at least one way to notify new clients." });
     })
     .transform((v) => NOTIFY_CHANNELS.filter((c) => v.includes(c))),
@@ -642,7 +641,6 @@ export const SETTINGS_SECTIONS = [
   { slug: "billing", label: "Billing", group: "Firm" },
   { slug: "working-hours", label: "Working hours", group: "Team" },
   { slug: "reminders", label: "Reminders", group: "Team" },
-  { slug: "email", label: "Email", group: "Communication" },
   { slug: "whatsapp", label: "WhatsApp", group: "Communication" },
   { slug: "templates", label: "Templates", group: "Communication" },
   { slug: "law", label: "Law & rules", group: "Compliance" },

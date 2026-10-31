@@ -6,7 +6,7 @@ import { useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormDialog } from "@/components/app/form-dialog"
 import { FormAlert } from "@/components/app/form/form-alert"
-import { DateField, MoneyField, SelectField, SwitchField, TextField, TextareaField } from "@/components/app/form/fields"
+import { DateField, MoneyField, SelectField, TextField, TextareaField } from "@/components/app/form/fields"
 import { Money } from "@/components/app/money"
 import { Button } from "@/components/ui/button"
 import { useActionForm } from "@/hooks/use-action-form"
@@ -14,7 +14,6 @@ import { formatINR, fromPaise, paiseToDecimalString, toPaise } from "@/lib/domai
 import { tdsRulesOn } from "@/lib/domain/tds"
 import { isDateString } from "@/lib/domain/fy"
 import { formatDate } from "@/lib/format"
-import { emailOutcomeNotice } from "@/lib/handoff"
 import {
   PAYMENT_METHOD_OPTIONS,
   RecordReceiptSchema,
@@ -63,27 +62,20 @@ export function ReceiptDialog({
       reference: claim?.reference ?? "",
       depositedTo: ctx.defaultDepositedTo,
       notes: claim?.note ? `Client's note on the portal: ${claim.note}` : "",
-      emailReceipt: false,
-      emailTo: ctx.defaultEmail ?? "",
       claimId: claim?.id ?? null,
     },
     onSuccess: (data) => {
       const settled = data.status === "paid" ? "The invoice is paid." : `${formatINR(toPaise(data.outstanding))} is still outstanding.`
-      toast.success(`Receipt ${data.receiptNumber} recorded. ${settled}`)
-      if (data.email) {
-        const n = emailOutcomeNotice(data.email, f.form.getValues("emailTo") ?? "the client")
-        if (n.tone === "success") toast.success(`Receipt ${n.message.charAt(0).toLowerCase()}${n.message.slice(1)}`)
-        else toast.warning(`The receipt email didn't go: ${n.message}`, { duration: 12_000 })
-      }
+      toast.success(`Receipt ${data.receiptNumber} recorded. ${settled} Send it on WhatsApp from the receipts list.`)
       onClose()
       router.refresh()
     },
   })
   const control = f.control
-  const [paymentDate, tdsSection, tdsAmount, amountReceived, method, emailReceipt] = useWatch({
+  const [paymentDate, tdsSection, tdsAmount, amountReceived, method] = useWatch({
     control,
-    name: ["paymentDate", "tdsSection", "tdsAmount", "amountReceived", "method", "emailReceipt"],
-  }) as [string, string, string, string, string, boolean]
+    name: ["paymentDate", "tdsSection", "tdsAmount", "amountReceived", "method"],
+  }) as [string, string, string, string, string]
 
   const rules = tdsRulesOn(isDateString(paymentDate ?? "") ? paymentDate : ctx.today, ctx.tdsRows)
   const options = tdsSectionOptions(rules)
@@ -184,11 +176,6 @@ export function ReceiptDialog({
         <TextField control={control} name="reference" label={referenceLabel(method as never)} autoComplete="off" />
         <TextField control={control} name="depositedTo" label="Deposited to" placeholder="Bank account" autoComplete="off" />
         <TextareaField control={control} name="notes" label="Notes" rows={2} className="sm:col-span-2" />
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
-        <SwitchField control={control} name="emailReceipt" label="Email the receipt to the client" description="The receipt PDF, from the firm's mailbox." />
-        {emailReceipt ? <TextField control={control} name="emailTo" label="Email to" required inputMode="email" autoComplete="off" /> : null}
       </div>
     </FormDialog>
   )

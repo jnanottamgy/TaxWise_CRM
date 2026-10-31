@@ -164,7 +164,7 @@ export function TemplatesTable({
       : []),
   ]
 
-  const used = viewing ? usedVariables(viewing.body, viewing.channel === "whatsapp" ? null : viewing.subject) : []
+  const used = viewing ? usedVariables(viewing.body, viewing.channel === "email" ? viewing.subject : null) : []
 
   return (
     <>
@@ -205,7 +205,7 @@ export function TemplatesTable({
         description={viewing ? `${TEMPLATE_TYPE_LABELS[viewing.type]} · ${TEMPLATE_CHANNEL_LABELS[viewing.channel]}` : undefined}
         footer={
           <>
-            {viewing ? <CopyButton value={viewing.channel === "whatsapp" || !viewing.subject ? viewing.body : `${viewing.subject}\n\n${viewing.body}`} label="the template text" showText className="mr-auto" /> : null}
+            {viewing ? <CopyButton value={viewing.channel !== "email" || !viewing.subject ? viewing.body : `${viewing.subject}\n\n${viewing.body}`} label="the template text" showText className="mr-auto" /> : null}
             <Button type="button" variant="outline" onClick={() => setViewing(null)}>
               Close
             </Button>

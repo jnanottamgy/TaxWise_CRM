@@ -34,7 +34,7 @@ type Dialog = { kind: "add" } | { kind: "edit"; contact: ContactRow } | { kind: 
 
 /**
  * Contacts (§7.3.3 Profile & contacts): each person with their role, the services they handle and
- * their own Call · WhatsApp · Email · Gmail buttons (per-contact buttons use that contact's own
+ * their own Call · WhatsApp buttons (per-contact buttons use that contact's own
  * number, §7.13.2); exactly one primary. Partners and Managers add, edit, delete and make primary;
  * everyone else reads.
  */
@@ -154,11 +154,9 @@ export function ContactsSection({ clientId, clientName, contacts, canManage, mes
                 <ContactButtons
                   compact
                   scope="contact"
-                  target={{ clientId, contactId: c.id, recipientName: `${c.name} · ${clientName}`, phone: c.phone, whatsapp: wa?.digits ?? null, email: c.email_bounced ? null : c.email }}
+                  target={{ clientId, contactId: c.id, recipientName: `${c.name} · ${clientName}`, phone: c.phone, whatsapp: wa?.digits ?? null }}
                   draft={sign(`Hi ${first},\n\n`)}
                   templates={templates}
-                  emailSubject={`${messaging.firmName} | ${clientName}`}
-                  emailBody={`Dear ${first},\n\n\n\nRegards,\n${messaging.senderName}\n${messaging.firmName}`}
                 />
               </li>
             )

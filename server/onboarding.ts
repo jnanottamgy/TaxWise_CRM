@@ -239,7 +239,7 @@ export function buildOnboardPayload(
   return payload as unknown as Json;
 }
 
-/** The services in words for the welcome email (§10.4): "GST returns (quarterly)". */
+/** The services in words for the welcome message (§10.4): "GST returns (quarterly)". */
 export function servicesInWords(values: Pick<OnboardingData, "services">): string[] {
   const freq: Record<string, string> = { monthly: "monthly", quarterly: "quarterly", annual: "yearly", one_time: "one-time" };
   return values.services.map((s) => `${serviceName(s)} (${freq[s.frequency] ?? s.frequency})`);

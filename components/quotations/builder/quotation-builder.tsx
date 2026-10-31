@@ -411,7 +411,7 @@ export function QuotationBuilder({
                   setLabels((l) => ({ ...l, client: o?.label ?? "" }))
                   void loadParty("client", o?.value ?? null)
                 }}
-                helper="For extra work: it goes to the client's primary contact unless you change the email."
+                helper="For extra work: it is addressed to the client's primary contact unless you change the details below."
               />
             ) : null}
             {loadingParty ? (
@@ -421,8 +421,8 @@ export function QuotationBuilder({
             ) : null}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <TextField control={control} name="client_name" label="Client name" required autoComplete="off" helper="The person it is addressed to." />
-              <TextField control={control} name="client_email" label="Email" required type="email" inputMode="email" autoComplete="off" helper="Where the quotation and its follow-ups go." />
-              <TextField control={control} name="client_phone" label="Phone" type="tel" inputMode="tel" autoComplete="off" />
+              <TextField control={control} name="client_email" label="Email" required type="email" inputMode="email" autoComplete="off" helper="Printed on the quotation. It goes out on WhatsApp, not by email." />
+              <TextField control={control} name="client_phone" label="Phone" type="tel" inputMode="tel" autoComplete="off" helper="The WhatsApp number it goes to when the lead or client has none." />
               <TextField control={control} name="client_company" label="Company" autoComplete="off" helper="Printed above the name, when there is one." />
               <TextField
                 control={control}

@@ -4,16 +4,14 @@ import Link from "next/link"
 import {
   CheckCircle2Icon,
   CircleAlertIcon,
+  HandshakeIcon,
   KeyRoundIcon,
-  MailIcon,
   MessageCircleIcon,
   PaperclipIcon,
   PlusIcon,
   RefreshCwIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { logHandoff } from "@/server/actions/messages"
 import type { OnboardingResult } from "@/server/actions/clients"
 import { Button } from "@/components/ui/button"
@@ -21,10 +19,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { CopyButton } from "@/components/app/copy-button"
 import { MonoId } from "@/components/app/mono-id"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton } from "@/components/app/messaging/gmail-button"
 import type { UploadJob } from "@/components/clients/onboarding/use-checklist-uploads"
-
-const gmailUrl = (f: { to: string; cc?: string; subject: string; body: string }) => gmailComposeUrl(f)
 
 /** The temporary password is shown once and never stored, so the logged copy of a hand-off leaves it out (§12). */
 function redactPassword(text: string, password: string): string {
@@ -33,9 +28,9 @@ function redactPassword(text: string, password: string): string {
 
 /**
  * The screen after Complete (§7.3.2): what was created, the after-effects that didn't go through
- * as warnings (never errors), the portal login handout shown once with WhatsApp / Gmail hand-offs,
- * the welcome email's outcome, the checklist files being filed, and "Set up the WhatsApp group"
- * (§7.25.2). Then Open client or Add another.
+ * as warnings (never errors), the portal login handout shown once with Share on WhatsApp, the
+ * welcome message ready to send on WhatsApp, the checklist files being filed, and "Set up the
+ * WhatsApp group" (§7.25.2). Then Open client or Add another.
  */
 export function OnboardingSuccess({
   result,
@@ -135,48 +130,21 @@ export function OnboardingSuccess({
                 <CopyButton value={portal.temporaryPassword} label="temporary password" />
               </dd>
             </dl>
-            <p className={cn("flex items-center gap-1.5 text-sm", portal.emailOutcome.status === "sent" ? "text-success-text" : "text-warning-text")}>
-              <MailIcon aria-hidden="true" className="size-3.5" />
-              {portal.emailOutcome.status === "sent"
-                ? `The invite was emailed to ${portal.email}.`
-                : portal.emailOutcome.status === "not_configured"
-                  ? "Email isn't set up for the firm, so the invite wasn't emailed. Hand the details over below."
-                  : "The invite email didn't go through. Hand the details over below."}
-            </p>
+            <p className="text-sm text-text-muted">Share the login on WhatsApp: the message has the sign-in page, the email to sign in with and the temporary password. Nothing is emailed.</p>
             <div className="flex flex-wrap gap-2">
               <WhatsAppButton
-                recipientName={portal.handoff.contactName}
+                recipientName={`${portal.handoff.contactName} · ${result.displayName}`}
                 number={portal.handoff.whatsappNumber}
                 draft={portal.handoff.whatsappText}
-                label="Send on WhatsApp"
+                label="Share on WhatsApp"
                 onHandedOff={({ number, text }) =>
                   logged(
                     logHandoff({
                       clientId: result.clientId,
-                      contactId: null,
+                      contactId: portal.handoff.contactId,
                       channel: "whatsapp_handoff",
                       recipient: number,
                       body: redactPassword(text, portal.temporaryPassword),
-                      related: { type: "client", id: result.clientId },
-                    }),
-                  )
-                }
-              />
-              <GmailButton
-                to={portal.handoff.gmail.to}
-                subject={portal.handoff.gmail.subject}
-                body={portal.handoff.gmail.body}
-                buildUrl={gmailUrl}
-                label="Send from Gmail"
-                onHandedOff={(f) =>
-                  logged(
-                    logHandoff({
-                      clientId: result.clientId,
-                      contactId: null,
-                      channel: "gmail_handoff",
-                      recipient: f.to,
-                      subject: f.subject,
-                      body: redactPassword(f.body, portal.temporaryPassword),
                       related: { type: "client", id: result.clientId },
                     }),
                   )
@@ -187,21 +155,27 @@ export function OnboardingSuccess({
         </section>
       ) : null}
 
-      {welcome && welcome.status !== "skipped" ? (
-        <p
-          role="status"
-          className={cn(
-            "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
-            welcome.status === "sent" ? "border-border bg-surface text-text-muted" : "border-warning/40 bg-warning-soft text-warning-text",
-          )}
-        >
-          <MailIcon aria-hidden="true" className="size-4 flex-none" />
-          {welcome.status === "sent"
-            ? `Welcome email sent to ${welcome.to}.`
-            : welcome.status === "not_configured"
-              ? "Email isn't set up for the firm, so the welcome email wasn't sent. Send it from the client's Communication tab."
-              : "The welcome email didn't go through. Send it from the client's Communication tab."}
-        </p>
+      {welcome ? (
+        <section aria-labelledby="success-welcome" className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+          <HandshakeIcon aria-hidden="true" className="size-4 flex-none text-text-muted" />
+          <div className="min-w-0 flex-1">
+            <h2 id="success-welcome" className="font-serif text-[19px] leading-7 font-medium tracking-[-0.005em] text-text">
+              Welcome message
+            </h2>
+            <p className="text-sm text-text-muted">Who looks after them, what the firm will do and how to share documents, ready to send on WhatsApp.</p>
+          </div>
+          <WhatsAppButton
+            recipientName={`${welcome.contactName} · ${result.displayName}`}
+            number={welcome.number}
+            draft={welcome.text}
+            templates={welcome.templates}
+            label="Send on WhatsApp"
+            variant="outline"
+            onHandedOff={({ number, text, templateId }) =>
+              logged(logHandoff({ clientId: result.clientId, contactId: null, channel: "whatsapp_handoff", recipient: number, body: text, templateId, related: { type: "client", id: result.clientId } }))
+            }
+          />
+        </section>
       ) : null}
 
       {uploads.length ? (

@@ -5,7 +5,7 @@ import {
   QuotationLineSchema,
   RespondSchema,
   ApprovalDecisionSchema,
-  SendQuotationEmailSchema,
+  QuotationHandoffSchema,
   contingentFeeProblem,
   defaultValidUntil,
   derivedPlaceOfSupply,
@@ -220,7 +220,6 @@ describe("quotationActions (§7.5.2 approval, §7.5.3 send, revise, convert)", (
     totalPaise: 5_900_000,
     limitPaise: 10_000_000,
     lineCount: 2,
-    hasEmail: true,
     convertedClientId: null,
     clientId: null,
     deleted: false,
@@ -256,10 +255,9 @@ describe("quotationActions (§7.5.2 approval, §7.5.3 send, revise, convert)", (
     expect(quotationActions(q({ status: "approved", totalPaise: 11_800_000 }), "manager")).toMatchObject({ send: true, edit: false, revise: true });
   });
 
-  it("explains why a Draft can't go: no lines, a passed date, no email", () => {
+  it("explains why a Draft can't go: no lines, a passed date", () => {
     expect(quotationActions(q({ lineCount: 0 }), "manager").sendBlockedReason).toBe("Add at least one line before sending it.");
     expect(quotationActions(q({ validUntil: "2026-10-22" }), "manager").sendBlockedReason).toMatch(/valid-until date has passed/);
-    expect(quotationActions(q({ hasEmail: false }), "manager").sendBlockedReason).toMatch(/email address/);
   });
 
   it("resends and follows up a Sent or Viewed one while it is in date; after that, only revise", () => {
@@ -378,8 +376,10 @@ describe("action inputs", () => {
     expect(ApprovalDecisionSchema.safeParse({ id, updatedAt: "2026-10-23T00:00:00Z", decision: "return", note: "Split the audit fee by quarter." }).success).toBe(true);
   });
 
-  it("checks every Cc address", () => {
-    expect(SendQuotationEmailSchema.safeParse({ id, updatedAt: "x", to: "ravi@sharmatraders.in", cc: "a@b.in, c@d.in" }).success).toBe(true);
-    expect(SendQuotationEmailSchema.safeParse({ id, updatedAt: "x", to: "ravi@sharmatraders.in", cc: "a@b.in, nope" }).success).toBe(false);
+  it("sends on WhatsApp or by a copied link, never by email or Gmail", () => {
+    expect(QuotationHandoffSchema.safeParse({ id, channel: "whatsapp_handoff", recipient: "919845012345", body: "Hi Ravi" }).success).toBe(true);
+    expect(QuotationHandoffSchema.safeParse({ id, channel: "internal_note", recipient: "Link copied" }).success).toBe(true);
+    expect(QuotationHandoffSchema.safeParse({ id, channel: "gmail_handoff", recipient: "ravi@sharmatraders.in", body: "x" }).success).toBe(false);
+    expect(QuotationHandoffSchema.safeParse({ id, channel: "email", recipient: "ravi@sharmatraders.in", body: "x" }).success).toBe(false);
   });
 });

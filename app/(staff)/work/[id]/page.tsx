@@ -205,7 +205,7 @@ export default async function TaskPage({ params }: Params) {
       <ShellTitle crumbs={[{ label: "Work tracker", href: "/work" }, { label: task.task_number }]} />
       <PageGuide title="Task">
         <p>Change status moves the task along; the menu shows only the moves open to you, and why the others are closed. Sending back, reopening and putting on hold need a reason.</p>
-        <p className="mt-2">Filing a return asks for the acknowledgement details and marks the client&apos;s deadline Filed. Ask client for data opens WhatsApp or Gmail with the open checklist items as the list of what&apos;s missing.</p>
+        <p className="mt-2">Filing a return asks for the acknowledgement details and marks the client&apos;s deadline Filed. Ask client for data opens WhatsApp with the open checklist items as the list of what&apos;s missing.</p>
       </PageGuide>
       <PageHeader
         breadcrumbs={[{ label: "Work tracker", href: "/work" }, { label: task.task_number }]}

@@ -21,7 +21,7 @@ import {
   type LetterAuditType,
 } from "@/lib/schemas/engagement-letters"
 import { getLetter, listLetterRecipients, type LetterRow } from "@/lib/data/engagement-letters"
-import { getEmailReadiness } from "@/server/email/readiness"
+import { getMessagingContext } from "@/lib/data/clients"
 import { PageHeader } from "@/components/app/page-header"
 import { SectionCard } from "@/components/app/section-card"
 import { DefinitionList } from "@/components/app/definition-list"
@@ -124,13 +124,14 @@ export default async function LetterPage({ params }: Params) {
   const l = letter
 
   let recipients: Awaited<ReturnType<typeof listLetterRecipients>> = []
+  let messaging: Awaited<ReturnType<typeof getMessagingContext>> | null = null
   try {
-    recipients = await listLetterRecipients(supabase, l.client_id, l.service_types)
+    messaging = await getMessagingContext(supabase, user)
+    recipients = await listLetterRecipients(supabase, l.client_id, l.service_types, { countryCode: messaging.countryCode })
   } catch (err) {
     unstable_rethrow(err)
     logUnexpected(err, { source: "page:/engagement-letters/[id]:recipients", userId: user.id })
   }
-  const email = await getEmailReadiness(supabase)
 
   const named = [{ label: "Engagement letters", href: "/engagement-letters" }, { label: `${l.client_name} · FY ${l.financial_year}` }]
   const audit = isAuditLetter(l.service_types)
@@ -141,7 +142,7 @@ export default async function LetterPage({ params }: Params) {
     <div className="flex min-w-0 flex-col">
       <ShellTitle crumbs={named} />
       <PageGuide title="Engagement letter">
-        <p>Issue and send emails the PDF for signature and moves a draft to Issued. Once issued, the terms are fixed: withdraw it to a draft to change them.</p>
+        <p>Issue and send moves a draft to Issued, then sends it on WhatsApp for signature: the message asks them to sign it, and the PDF downloads to attach. Once issued, the terms are fixed: withdraw it to a draft to change them.</p>
         <p className="mt-2">When the client signs, mark it signed and upload the signed copy; it is filed in the client&apos;s vault under Engagement. Expired is worked out from the expiry date; renew it for the next FY with one click.</p>
       </PageGuide>
       <PageHeader
@@ -170,9 +171,11 @@ export default async function LetterPage({ params }: Params) {
               hasSignedCopy: Boolean(l.document_id),
               renewed: Boolean(l.renewal_id),
               signatoryName: l.signatory_name,
+              clientCode: l.client_code,
             }}
             recipients={recipients}
-            emailReady={email.ready}
+            messaging={messaging}
+            today={today}
             expiring={expiring}
           />
         }

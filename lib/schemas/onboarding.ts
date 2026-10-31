@@ -25,6 +25,7 @@ import { addDays, compareDates, financialYearOf, fyStart, isDateString, isFinanc
 import { multiplyPaise, parseAmount, paiseToDecimalString, type Paise } from "@/lib/domain/money";
 import { gstSchemeDecision, taxAuditIndication, SCALE_DEFAULTS, type GstSchemeDecision, type IncomeNature, type TaxAuditIndication, type TaxAuditParams } from "@/lib/domain/scale";
 import type { CalendarClientProfile } from "@/lib/domain/statutory-calendar";
+import { firstNameOf } from "@/lib/domain/messaging";
 import { CLIENT_CODE_PATTERN, isWhatsAppNumber, validateIndianPhone } from "@/lib/schemas/clients";
 import type { KycCategory } from "@/lib/domain/ceiling";
 
@@ -250,10 +251,10 @@ const comboUuid = z
 const moneyOrEmpty = z.string().trim().default("");
 const pctOrEmpty = z.string().trim().default("");
 
-export const NOTIFY_CHANNELS = ["email", "whatsapp", "portal"] as const;
+/** How a client hears about deadlines and requests. There is no email: the app sends none. */
+export const NOTIFY_CHANNELS = ["whatsapp", "portal"] as const;
 export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
 export const NOTIFY_CHANNEL_LABELS: Record<NotifyChannel, string> = {
-  email: "Email",
   whatsapp: "WhatsApp (hand-off)",
   portal: "Portal",
 };
@@ -520,9 +521,7 @@ export function reviewIssues(v: Raw): FieldIssue[] {
   const out: FieldIssue[] = [];
   const days = Number(v.reminder_days);
   if (!/^\d{1,2}$/.test(v.reminder_days) || days < 1 || days > 60) out.push({ path: "reminder_days", message: "Enter a lead time from 1 to 60 days." });
-  if (v.invite_portal && !v.email) out.push({ path: "invite_portal", message: "A portal invite needs the client's email address (step 1)." });
-  if (v.send_welcome && !v.email) out.push({ path: "send_welcome", message: "The welcome email needs the client's email address (step 1)." });
-  if (v.notify_channels.includes("email") && !v.email) out.push({ path: "notify_channels", message: "Email reminders need the client's email address (step 1)." });
+  if (v.invite_portal && !v.email) out.push({ path: "invite_portal", message: "A portal invite needs the client's email address to sign in with (step 1)." });
   if (v.notify_channels.includes("portal") && !v.invite_portal) out.push({ path: "notify_channels", message: "Portal reminders need the portal invite turned on." });
   return out;
 }
@@ -732,6 +731,36 @@ export function initialTasks(v: OnboardingData, today: DateString): InitialTask[
       financial_year: fy,
     };
   });
+}
+
+/**
+ * The welcome message for a new client, sent on WhatsApp from the screen after onboarding
+ * (§7.3.2, §7.13.2): who looks after them, what the firm will do, and how to share documents
+ * (the portal when they have a login, else this chat). `services` come in words
+ * ("GST returns (monthly)").
+ */
+export function welcomeWhatsApp(d: {
+  contactName: string | null;
+  clientName: string;
+  firmName: string;
+  ownerName: string;
+  ownerPhone: string | null;
+  services: readonly string[];
+  portalUrl: string | null;
+}): string {
+  const first = firstNameOf(d.contactName);
+  const lines = [
+    `${first ? `Hi ${first}` : "Hello"}, welcome to ${d.firmName}. We're glad to be working with ${d.clientName}.`,
+    "",
+    `${d.ownerName} looks after you${d.ownerPhone ? ` (${d.ownerPhone})` : ""}.`,
+    ...(d.services.length ? [`What we'll do for you: ${d.services.join(", ")}.`] : []),
+    "",
+    d.portalUrl
+      ? `Share your documents in your client portal, against each request we send: ${d.portalUrl}`
+      : "Send your documents here on WhatsApp, and we'll confirm when we have everything.",
+    "Before each deadline we'll remind you what's due and what we need from you.",
+  ];
+  return lines.join("\n");
 }
 
 /** The ICAI KYC category for an entity type (§6.8): individuals and proprietors, companies, everyone else. */

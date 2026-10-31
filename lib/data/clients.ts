@@ -388,7 +388,7 @@ export async function getWizardContext(supabase: ServerSupabase, viewerRole: App
   ]);
   if (settings.error) throw settings.error;
   const fs = settings.data;
-  const channels = ((fs?.client_notify_channels as string[] | null) ?? ["email", "whatsapp"]).filter((c): c is NotifyChannel =>
+  const channels = ((fs?.client_notify_channels as string[] | null) ?? ["whatsapp"]).filter((c): c is NotifyChannel =>
     (NOTIFY_CHANNELS as readonly string[]).includes(c),
   );
   return {

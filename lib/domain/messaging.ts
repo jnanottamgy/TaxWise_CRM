@@ -1,9 +1,9 @@
 /**
- * Messaging hand-offs: WhatsApp click-to-chat, Gmail compose, mailto and the UPI pay link
- * (§7.13.1–§7.13.3, §7.22, §7.25.10).
+ * Messaging hand-offs: WhatsApp click-to-chat and the UPI pay link (§7.13.1–§7.13.2, §7.22,
+ * §7.25.10). The firm talks to clients on WhatsApp only; the app sends no email.
  *
  * Nothing here sends anything: each function builds the link a person opens and then presses Send
- * in WhatsApp or Gmail themselves, so the app may only ever claim "handed off" (§7.13.1).
+ * in WhatsApp themselves, so the app may only ever claim "handed off" (§7.13.1).
  *
  * Pure and client-safe.
  */
@@ -11,15 +11,13 @@
 import { paiseToDecimalString, type Paise } from "@/lib/domain/money";
 
 /**
- * Seed values (§5.2, §7.13.2, §7.13.3): the default country code (`firm_settings.whatsapp_country_code`),
- * the E.164 length bounds, Gmail's practical compose-URL cap, and the WhatsApp signature format
- * (`firm_settings.whatsapp_signature`).
+ * Seed values (§5.2, §7.13.2): the default country code (`firm_settings.whatsapp_country_code`),
+ * the E.164 length bounds, and the WhatsApp signature format (`firm_settings.whatsapp_signature`).
  */
 export const MESSAGING_DEFAULTS = {
   countryCode: "91",
   e164MinDigits: 8,
   e164MaxDigits: 15,
-  composeUrlMaxLength: 1900,
   whatsappSignature: "– {first_name}",
 } as const;
 
@@ -215,123 +213,6 @@ export function applySignature(draft: string, format: string = MESSAGING_DEFAULT
   const body = normaliseLineBreaks(draft).replace(/\s+$/, "");
   if (body.endsWith(signature)) return body;
   return body === "" ? signature : `${body}\n\n${signature}`;
-}
-
-// -------------------------------------------------------------------------------------------------
-// Gmail compose and mailto (§7.13.3)
-// -------------------------------------------------------------------------------------------------
-
-export type ComposeInput = {
-  to: string | readonly string[];
-  cc?: string | readonly string[] | null;
-  bcc?: string | readonly string[] | null;
-  subject?: string | null;
-  body?: string | null;
-};
-
-export type ComposeUrl = {
-  url: string;
-  /** True when the body was shortened to fit the cap. */
-  bodyTrimmed: boolean;
-};
-
-/** The marker added where a body was cut short. */
-export const TRIMMED_BODY_MARKER = "…";
-
-const GMAIL_COMPOSE_BASE = "https://mail.google.com/mail/?view=cm&fs=1&tf=1";
-
-function addressList(value: string | readonly string[] | null | undefined): string {
-  const list = typeof value === "string" ? value.split(/[,;]/) : value ?? [];
-  return list.map((a) => a.trim()).filter(Boolean).join(",");
-}
-
-/**
- * The longest prefix of `body` whose encoded form fits in `budget` URL characters, cut only between
- * code points (never inside a surrogate pair or a multi-byte percent-escape such as ₹ = `%E2%82%B9`).
- * When it has to cut, it appends `TRIMMED_BODY_MARKER` within the budget.
- */
-function fitBody(body: string, budget: number, encode: (s: string) => string): { encoded: string; trimmed: boolean } {
-  const full = encode(body);
-  if (full.length <= budget) return { encoded: full, trimmed: false };
-  const marker = encode(TRIMMED_BODY_MARKER);
-  const room = budget - marker.length;
-  if (room <= 0) return { encoded: "", trimmed: true };
-  let used = 0;
-  let out = "";
-  for (const ch of body) {
-    const piece = encode(ch);
-    if (used + piece.length > room) break;
-    out += piece;
-    used += piece.length;
-  }
-  return { encoded: out.replace(/(%20|%0A|%0D)+$/i, "") + marker, trimmed: true };
-}
-
-/**
- * The Gmail compose hand-off (§7.13.3):
- * `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=…&su=…&body=…` (plus `cc` / `bcc`). Gmail
- * drops very long compose URLs, so the URL is capped at about 1,900 characters by trimming **only
- * the body**, UTF-8 aware; the recipients and subject are never cut (if they alone exceed the cap,
- * the body is left empty).
- */
-export function buildGmailCompose(input: ComposeInput, opts: { maxLength?: number } = {}): ComposeUrl {
-  const max = opts.maxLength ?? MESSAGING_DEFAULTS.composeUrlMaxLength;
-  const params: string[] = [`to=${encodeURIComponent(addressList(input.to))}`];
-  const cc = addressList(input.cc);
-  const bcc = addressList(input.bcc);
-  if (cc) params.push(`cc=${encodeURIComponent(cc)}`);
-  if (bcc) params.push(`bcc=${encodeURIComponent(bcc)}`);
-  if (input.subject) params.push(`su=${encodeURIComponent(wellFormed(input.subject))}`);
-  const head = `${GMAIL_COMPOSE_BASE}&${params.join("&")}`;
-  const body = normaliseLineBreaks(input.body ?? "");
-  if (body === "") return { url: head, bodyTrimmed: false };
-  const prefix = `${head}&body=`;
-  const { encoded, trimmed } = fitBody(body, max - prefix.length, encodeURIComponent);
-  return { url: encoded === "" ? head : `${prefix}${encoded}`, bodyTrimmed: trimmed };
-}
-
-/** The Gmail compose URL string (§7.13.3); see `buildGmailCompose`. */
-export function gmailComposeUrl(input: ComposeInput, opts: { maxLength?: number } = {}): string {
-  return buildGmailCompose(input, opts).url;
-}
-
-function encodeAddressForMailto(address: string): string {
-  return encodeURIComponent(address).replace(/%40/g, "@");
-}
-
-/** RFC 6068 encoding for mailto fields: line breaks become `%0D%0A`. */
-function encodeMailtoText(text: string): string {
-  return encodeURIComponent(text).replace(/%0A/g, "%0D%0A");
-}
-
-/**
- * The `mailto:` fallback for people who don't use Gmail (§7.13.3, profile "I use Outlook / default
- * mail app"). Line breaks are `%0D%0A` (RFC 6068). The body is trimmed to the same cap as Gmail.
- */
-export function buildMailto(input: ComposeInput, opts: { maxLength?: number } = {}): ComposeUrl {
-  const max = opts.maxLength ?? MESSAGING_DEFAULTS.composeUrlMaxLength;
-  const to = addressList(input.to)
-    .split(",")
-    .filter(Boolean)
-    .map(encodeAddressForMailto)
-    .join(",");
-  const params: string[] = [];
-  const cc = addressList(input.cc);
-  const bcc = addressList(input.bcc);
-  if (cc) params.push(`cc=${cc.split(",").map(encodeAddressForMailto).join(",")}`);
-  if (bcc) params.push(`bcc=${bcc.split(",").map(encodeAddressForMailto).join(",")}`);
-  if (input.subject) params.push(`subject=${encodeMailtoText(normaliseLineBreaks(input.subject))}`);
-  const head = `mailto:${to}${params.length > 0 ? `?${params.join("&")}` : ""}`;
-  const body = normaliseLineBreaks(input.body ?? "");
-  if (body === "") return { url: head, bodyTrimmed: false };
-  const prefix = `${head}${params.length > 0 ? "&" : "?"}body=`;
-  const { encoded, trimmed } = fitBody(body, max - prefix.length, encodeMailtoText);
-  return { url: encoded === "" ? head : `${prefix}${encoded}`, bodyTrimmed: trimmed };
-}
-
-/** The `mailto:` URL string (§7.13.3); see `buildMailto`. */
-export function mailtoUrl(input: ComposeInput, opts: { maxLength?: number } = {}): string {
-  return buildMailto(input, opts).url;
 }
 
 // -------------------------------------------------------------------------------------------------

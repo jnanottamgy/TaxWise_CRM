@@ -19,9 +19,12 @@ export async function renderPdf(element: React.ReactElement<DocumentProps>): Pro
   return renderToBuffer(element);
 }
 
-/** Headers for streaming a PDF: inline (opens in the browser's viewer) or as a download; never cached. */
+/**
+ * Headers for streaming a PDF: inline (opens in the browser's viewer) or as a download; never cached.
+ * Spaces stay ("Invoice TW-26-27-0042.pdf"); anything else a file name can't carry becomes a hyphen.
+ */
 export function pdfResponseHeaders(fileName: string, opts: { download?: boolean } = {}): Record<string, string> {
-  const safe = fileName.replace(/[^A-Za-z0-9._-]+/g, "-") || "document.pdf";
+  const safe = fileName.replace(/[^A-Za-z0-9 ._-]+/g, "-").replace(/ {2,}/g, " ").trim() || "document.pdf";
   return {
     "Content-Type": "application/pdf",
     "Content-Disposition": `${opts.download ? "attachment" : "inline"}; filename="${safe}"`,

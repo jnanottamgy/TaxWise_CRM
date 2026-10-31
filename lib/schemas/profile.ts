@@ -1,17 +1,13 @@
 /**
- * Profile (§7.1, §7.17): your name and phone, photo, theme and density, notification preferences
- * per event and channel (in-app always on; email optional), and for Partners the ICAI membership
- * number and signature image. Client-safe.
- *
- * Notification preferences are stored in `profiles.preferences.notifications`:
- *   { "email": { "task_assigned": true, "leave_decided": false, … } }
- * A type that isn't listed uses its default (NOTIFICATION_EVENTS[].emailDefault). In-app is always on.
+ * Profile (§7.1, §7.17): your name and phone, photo, theme and density, the WhatsApp signature, and
+ * for Partners the ICAI membership number and signature image; and the notification events the
+ * Inbox groups by. Every notification is in-app (the Inbox and the bell): the app sends no email.
+ * Client-safe.
  */
 
 import { z } from "zod";
 import type { AppRole } from "@/lib/auth/roles";
 import type { NotificationType } from "@/lib/domain/enums";
-import { NOTIFICATION_TYPES } from "@/lib/domain/enums";
 import { normaliseMembershipNo } from "@/lib/domain/india-validators";
 import { phoneProblem } from "@/lib/schemas/people";
 
@@ -143,15 +139,13 @@ export const ImageRemoveSchema = z.object({ kind: z.enum(["avatar", "signature"]
 export type ImageRemoveInput = z.input<typeof ImageRemoveSchema>;
 
 // -------------------------------------------------------------------------------------------------
-// Notification preferences (§7.17: in-app always; email optional, per event type)
+// Notification events (§7.17): what reaches the Inbox, grouped as the Inbox filters show it
 // -------------------------------------------------------------------------------------------------
 
 export type NotificationEvent = {
   type: NotificationType;
   label: string;
   group: "Work" | "Clients and compliance" | "Money" | "Team" | "WhatsApp and security" | "General";
-  /** Email on by default. */
-  emailDefault: boolean;
   /** Who can receive it at all. Money notices never reach Employees (§4.1). */
   roles: readonly AppRole[];
 };
@@ -160,70 +154,37 @@ const STAFF: readonly AppRole[] = ["partner", "manager", "employee"];
 const PM: readonly AppRole[] = ["partner", "manager"];
 
 export const NOTIFICATION_EVENTS: readonly NotificationEvent[] = [
-  { type: "task_assigned", label: "A task is assigned to you", group: "Work", emailDefault: true, roles: STAFF },
-  { type: "task_declined", label: "A task is declined", group: "Work", emailDefault: false, roles: PM },
-  { type: "review_requested", label: "A task is submitted for your review", group: "Work", emailDefault: true, roles: STAFF },
-  { type: "task_sent_back", label: "A task is sent back to you", group: "Work", emailDefault: true, roles: STAFF },
-  { type: "task_approved", label: "A task is filed or approved", group: "Work", emailDefault: false, roles: STAFF },
-  { type: "task_overdue", label: "A task is overdue or escalated", group: "Work", emailDefault: true, roles: STAFF },
-  { type: "compliance_due", label: "A compliance deadline is coming up", group: "Clients and compliance", emailDefault: true, roles: STAFF },
-  { type: "document_uploaded", label: "A client uploads a document or sends a message", group: "Clients and compliance", emailDefault: false, roles: STAFF },
-  { type: "expiry_alert", label: "A DSC, registration or engagement letter is expiring", group: "Clients and compliance", emailDefault: true, roles: STAFF },
-  { type: "invoice_awaiting_approval", label: "An invoice is waiting for approval", group: "Money", emailDefault: true, roles: ["partner"] },
-  { type: "invoice_overdue", label: "An invoice becomes overdue", group: "Money", emailDefault: false, roles: PM },
-  { type: "payment_received", label: "A payment is received, or a client says they've paid", group: "Money", emailDefault: false, roles: PM },
-  { type: "quotation_viewed", label: "A client views a quotation", group: "Money", emailDefault: false, roles: PM },
-  { type: "quotation_responded", label: "A client accepts or declines a quotation", group: "Money", emailDefault: true, roles: PM },
-  { type: "leave_requested", label: "Someone asks for leave", group: "Team", emailDefault: true, roles: PM },
-  { type: "leave_decided", label: "Your leave is approved or declined", group: "Team", emailDefault: true, roles: STAFF },
-  { type: "cover_started", label: "A cover starts for you or your clients", group: "Team", emailDefault: true, roles: STAFF },
-  { type: "cover_ending", label: "A cover you granted ends tomorrow", group: "Team", emailDefault: false, roles: PM },
-  { type: "cover_ended", label: "A cover for you or by you ends", group: "Team", emailDefault: false, roles: STAFF },
-  { type: "whatsapp_group_missing", label: "A client has no WhatsApp group yet", group: "WhatsApp and security", emailDefault: false, roles: PM },
-  { type: "whatsapp_device_linked", label: "A PC links a firm WhatsApp number", group: "WhatsApp and security", emailDefault: true, roles: ["partner"] },
-  { type: "whatsapp_client_mode_down", label: "Client mode stops working on a PC", group: "WhatsApp and security", emailDefault: true, roles: ["partner"] },
-  { type: "security_alert", label: "A security alert", group: "WhatsApp and security", emailDefault: true, roles: ["partner"] },
-  { type: "info", label: "General updates", group: "General", emailDefault: false, roles: STAFF },
-  { type: "warning", label: "Warnings that need a look", group: "General", emailDefault: false, roles: STAFF },
+  { type: "task_assigned", label: "A task is assigned to you", group: "Work", roles: STAFF },
+  { type: "task_declined", label: "A task is declined", group: "Work", roles: PM },
+  { type: "review_requested", label: "A task is submitted for your review", group: "Work", roles: STAFF },
+  { type: "task_sent_back", label: "A task is sent back to you", group: "Work", roles: STAFF },
+  { type: "task_approved", label: "A task is filed or approved", group: "Work", roles: STAFF },
+  { type: "task_overdue", label: "A task is overdue or escalated", group: "Work", roles: STAFF },
+  { type: "compliance_due", label: "A compliance deadline is coming up", group: "Clients and compliance", roles: STAFF },
+  { type: "document_uploaded", label: "A client uploads a document or sends a message", group: "Clients and compliance", roles: STAFF },
+  { type: "expiry_alert", label: "A DSC, registration or engagement letter is expiring", group: "Clients and compliance", roles: STAFF },
+  { type: "invoice_awaiting_approval", label: "An invoice is waiting for approval", group: "Money", roles: ["partner"] },
+  { type: "invoice_overdue", label: "An invoice becomes overdue", group: "Money", roles: PM },
+  { type: "payment_received", label: "A payment is received, or a client says they've paid", group: "Money", roles: PM },
+  { type: "quotation_viewed", label: "A client views a quotation", group: "Money", roles: PM },
+  { type: "quotation_responded", label: "A client accepts or declines a quotation", group: "Money", roles: PM },
+  { type: "leave_requested", label: "Someone asks for leave", group: "Team", roles: PM },
+  { type: "leave_decided", label: "Your leave is approved or declined", group: "Team", roles: STAFF },
+  { type: "cover_started", label: "A cover starts for you or your clients", group: "Team", roles: STAFF },
+  { type: "cover_ending", label: "A cover you granted ends tomorrow", group: "Team", roles: PM },
+  { type: "cover_ended", label: "A cover for you or by you ends", group: "Team", roles: STAFF },
+  { type: "whatsapp_group_missing", label: "A client has no WhatsApp group yet", group: "WhatsApp and security", roles: PM },
+  { type: "whatsapp_device_linked", label: "A PC links a firm WhatsApp number", group: "WhatsApp and security", roles: ["partner"] },
+  { type: "whatsapp_client_mode_down", label: "Client mode stops working on a PC", group: "WhatsApp and security", roles: ["partner"] },
+  { type: "security_alert", label: "A security alert", group: "WhatsApp and security", roles: ["partner"] },
+  { type: "info", label: "General updates", group: "General", roles: STAFF },
+  { type: "warning", label: "Warnings that need a look", group: "General", roles: STAFF },
 ];
 
 /** The events a role can receive, in display order. */
 export function notificationEventsFor(role: AppRole): NotificationEvent[] {
   return NOTIFICATION_EVENTS.filter((e) => e.roles.includes(role));
 }
-
-export const NOTIFICATION_PREFS_KEY = "notifications";
-
-/** The email choice per event for a role, from `profiles.preferences` (defaults filled in). */
-export function readEmailPreferences(preferences: unknown, role: AppRole): Record<string, boolean> {
-  const p = preferences && typeof preferences === "object" && !Array.isArray(preferences) ? (preferences as Record<string, unknown>) : {};
-  const n = p[NOTIFICATION_PREFS_KEY];
-  const email = n && typeof n === "object" && !Array.isArray(n) ? (n as Record<string, unknown>).email : null;
-  const stored = email && typeof email === "object" && !Array.isArray(email) ? (email as Record<string, unknown>) : {};
-  const out: Record<string, boolean> = {};
-  for (const e of notificationEventsFor(role)) out[e.type] = typeof stored[e.type] === "boolean" ? (stored[e.type] as boolean) : e.emailDefault;
-  return out;
-}
-
-/**
- * Whether a Partner gets the 08:00 daily digest email (§7.17, §8), stored at
- * `profiles.preferences.notifications.digest`. On by default for Partners (the firm-wide switch is
- * Settings → Reminders); nobody else receives it, since it carries receivables (§4.1).
- */
-export function readDigestPreference(preferences: unknown, role: AppRole): boolean {
-  if (role !== "partner") return false;
-  const p = preferences && typeof preferences === "object" && !Array.isArray(preferences) ? (preferences as Record<string, unknown>) : {};
-  const n = p[NOTIFICATION_PREFS_KEY];
-  const digest = n && typeof n === "object" && !Array.isArray(n) ? (n as Record<string, unknown>).digest : undefined;
-  return typeof digest === "boolean" ? digest : true;
-}
-
-export const NotificationPrefsSchema = z.object({
-  email: z.partialRecord(z.enum(NOTIFICATION_TYPES), z.boolean()),
-  /** Partners only: the daily digest email. */
-  digest: z.boolean().optional(),
-});
-export type NotificationPrefsInput = z.input<typeof NotificationPrefsSchema>;
 
 // -------------------------------------------------------------------------------------------------
 // Messaging (§7.13.2, §7.25.10): "Add my signature to WhatsApp drafts"

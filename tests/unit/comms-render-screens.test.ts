@@ -44,8 +44,8 @@ describe("Composer", () => {
   it("starts on the portal for a portal client, offering portal-fit templates and Log a call", () => {
     const html = renderToStaticMarkup(
       React.createElement(Composer, {
-        client: { id: "c1", name: "Sharma Traders", code: "TW-C-0012", onPortal: true, email: "accounts@sharmatraders.in", phone: null, whatsapp: null },
-        contacts: [{ id: "k1", name: "Rakesh Sharma", role: "Director", email: "rakesh@sharmatraders.in", email_bounced: false, phone: "98450 12345", whatsapp: null, is_primary: true }],
+        client: { id: "c1", name: "Sharma Traders", code: "TW-C-0012", onPortal: true, phone: null, whatsapp: null },
+        contacts: [{ id: "k1", name: "Rakesh Sharma", role: "Director", phone: "98450 12345", whatsapp: null, is_primary: true }],
         messaging,
         portalLink: "https://crm.twchartered.com/portal",
       }),
@@ -59,7 +59,7 @@ describe("Composer", () => {
   it("explains a client who isn't on the portal and starts on WhatsApp", () => {
     const html = renderToStaticMarkup(
       React.createElement(Composer, {
-        client: { id: "c1", name: "Sharma Traders", code: "TW-C-0012", onPortal: false, email: null, phone: null, whatsapp: null },
+        client: { id: "c1", name: "Sharma Traders", code: "TW-C-0012", onPortal: false, phone: null, whatsapp: null },
         contacts: [],
         messaging,
         portalLink: "https://crm.twchartered.com/portal",

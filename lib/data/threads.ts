@@ -11,7 +11,7 @@ import { COMM_CHANNEL_FILTERS, THREAD_MAX_PAGES, THREAD_PAGE, type CommChannelFi
  * Staff message threads (§7.13.1, /messages, Client 360 → Communication), read under the caller's
  * RLS: an Employee reaches only the clients they can see, and never a message about fees,
  * invoices or quotations (0043); a Partner or Manager reaches every client. One thread per client:
- * every channel (email, WhatsApp and Gmail hand-offs, portal, calls and notes) in one history.
+ * every channel (WhatsApp hand-offs, portal, calls and notes, and any earlier emails) in one history.
  */
 
 // -------------------------------------------------------------------------------------------------

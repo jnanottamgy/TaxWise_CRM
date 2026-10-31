@@ -75,7 +75,7 @@ export default async function MessageTemplatesPage({ searchParams }: { searchPar
   return (
     <div className="flex min-w-0 flex-col">
       <PageGuide title="Message templates">
-        <p>A template is the starting wording for a reminder or update. When someone drafts a WhatsApp, Gmail or portal message, they pick a template and its variables are filled in for that client: {"{{contact_name}}"}, {"{{period}}"}, {"{{due_date}}"} and so on.</p>
+        <p>A template is the starting wording for a reminder or update. When someone drafts a WhatsApp or portal message, they pick a template and its variables are filled in for that client: {"{{contact_name}}"}, {"{{period}}"}, {"{{due_date}}"} and so on.</p>
         <p className="mt-2">Only the variables in the picker can be used; anything else is refused on save. The preview fills the template in for a sample client, with your own name as the sender.</p>
         <p className="mt-2">Payment reminders and quotations are seen by Partners and Managers only.</p>
       </PageGuide>

@@ -13,20 +13,17 @@ import {
   MESSAGING_PREFS_KEY,
   MembershipSchema,
   MessagingPrefsSchema,
-  NOTIFICATION_PREFS_KEY,
-  NotificationPrefsSchema,
   PROFILE_IMAGE_LIMITS,
   ProfileDetailsSchema,
   SignOutOthersSchema,
   checkProfileImage,
-  notificationEventsFor,
   profileImagePathPattern,
   type ProfileImageKind,
 } from "@/lib/schemas/profile";
 
 /**
  * Profile (§7.1, §7.17): every signed-in staff member edits their own name, phone and photo, their
- * notification preferences, and signs out their other sessions; Partners also keep their ICAI
+ * WhatsApp signature, and signs out their other sessions; Partners also keep their ICAI
  * membership number and signature image (used on PDFs). Everything runs under the person's own
  * session (profiles_update_own; the 0105 storage policies; update_my_contact, 0108).
  *
@@ -249,30 +246,6 @@ export const removeImage = defineAction(
       "The image is removed from your profile; the file couldn't be deleted from storage. It does no harm.",
     );
     return ok({ removed: true });
-  },
-);
-
-// -------------------------------------------------------------------------------------------------
-// Notification preferences (§7.17): in-app always; email per event
-// -------------------------------------------------------------------------------------------------
-
-export const saveNotificationPreferences = defineAction(
-  { name: "profile.notifications", schema: NotificationPrefsSchema, roles: STAFF },
-  async (input, ctx): Promise<ActionResult<{ saved: number }>> => {
-    const allowed = new Set(notificationEventsFor(ctx.user.role).map((e) => e.type as string));
-    const email: Record<string, boolean> = {};
-    for (const [type, on] of Object.entries(input.email)) if (allowed.has(type) && typeof on === "boolean") email[type] = on;
-    // The daily digest carries receivables: Partners only (§4.1, §7.17).
-    const digest = ctx.user.role === "partner" && typeof input.digest === "boolean" ? { digest: input.digest } : {};
-    await mergePreferenceKey(ctx, NOTIFICATION_PREFS_KEY, { email, ...digest });
-    await ctx.audit({
-      event: "user_update",
-      resourceType: "profiles",
-      resourceId: ctx.user.id,
-      action: "profile.notifications",
-      details: { email_on: Object.entries(email).filter(([, v]) => v).map(([k]) => k), ...digest },
-    });
-    return ok({ saved: Object.keys(email).length });
   },
 );
 

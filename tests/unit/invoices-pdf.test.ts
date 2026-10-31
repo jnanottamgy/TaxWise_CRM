@@ -81,7 +81,7 @@ describe("invoice PDF (§6.4 Rule 46, §11)", () => {
   it("renders an intra-state tax invoice with a reimbursement, the UPI QR and the signature block", async () => {
     const { bytes, fileName } = await buildInvoicePdf({ firm, doc: invoice(), firmStateCode: "29", eInvoicing: false });
     expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
-    expect(fileName).toBe("Invoice-TW-26-27-0042.pdf");
+    expect(fileName).toBe("Invoice TW-26-27-0042.pdf");
     out("invoice-intra.pdf", bytes);
   });
 
@@ -100,7 +100,7 @@ describe("invoice PDF (§6.4 Rule 46, §11)", () => {
     expect(inter.bytes.subarray(0, 5).toString()).toBe("%PDF-");
     out("invoice-inter.pdf", inter.bytes);
     const draft = await buildInvoicePdf({ firm, doc: invoice({ invoice_number: null, status: "draft" }), firmStateCode: "29", eInvoicing: false });
-    expect(draft.fileName).toMatch(/^Invoice-draft-/);
+    expect(draft.fileName).toMatch(/^Invoice draft-/);
     out("invoice-draft.pdf", draft.bytes);
   });
 
@@ -130,7 +130,7 @@ describe("receipt and credit-note PDFs (§7.9.4, §7.9.7, §11)", () => {
     };
     const { bytes, fileName } = await buildReceiptPdf({ firm, doc, signerName: "Anita Rao" });
     expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
-    expect(fileName).toBe("Receipt-TW-R-26-27-0007.pdf");
+    expect(fileName).toBe("Receipt TW-R-26-27-0007.pdf");
     out("receipt.pdf", bytes);
   });
 
@@ -154,7 +154,7 @@ describe("receipt and credit-note PDFs (§7.9.4, §7.9.7, §11)", () => {
       invoice: { id: "x", invoice_number: "TW/26-27/0042", issue_date: "2026-10-01", client_name: "Sharma Traders Private Limited", client_address: "12, MG Road, Bengaluru", client_gstin: "29AABCS1234C1Z5", client_state_code: "29", firm_gstin: "29AAXFT1811B1Z3" },
     };
     const gst = await buildCreditNotePdf({ firm, doc: base, signerName: "Asha Rao" });
-    expect(gst.fileName).toBe("Credit-note-TW-CN-26-27-0003.pdf");
+    expect(gst.fileName).toBe("Credit note TW-CN-26-27-0003.pdf");
     out("credit-note.pdf", gst.bytes);
     const commercial = await buildCreditNotePdf({ firm, doc: { ...base, reduces_gst: false, tax_rate: null, cgst_amount: 0, sgst_amount: 0, total_amount: 1000 }, signerName: null });
     expect(commercial.bytes.subarray(0, 5).toString()).toBe("%PDF-");

@@ -35,15 +35,17 @@ const optionalDate = (message: string) =>
 // Follow-ups (§7.9.5 "Follow-up log per invoice: channel, notes*, promised payment date, next follow-up")
 // -------------------------------------------------------------------------------------------------
 
-export const FOLLOW_UP_CHANNELS = ["call", "email", "whatsapp", "visit", "other"] as const;
+/** How someone followed up on an invoice. The firm sends no email, so email isn't one to log. */
+export const FOLLOW_UP_CHANNELS = ["call", "whatsapp", "visit", "other"] as const;
 export type FollowUpChannel = (typeof FOLLOW_UP_CHANNELS)[number];
 
-export const FOLLOW_UP_CHANNEL_LABEL: Record<FollowUpChannel, string> = {
+/** Labels for the log; older follow-ups can still say Email. */
+export const FOLLOW_UP_CHANNEL_LABEL: Record<string, string> = {
   call: "Call",
-  email: "Email",
   whatsapp: "WhatsApp",
   visit: "Visit",
   other: "Other",
+  email: "Email",
 };
 
 /** The hour (IST) a "next follow-up" date is set for. */

@@ -7,17 +7,20 @@ import { getSession } from "@/lib/auth/current-user"
 import { env } from "@/lib/env"
 import { logUnexpected } from "@/lib/log"
 import { todayIST } from "@/lib/domain/fy"
-import { fromPaise, toPaise } from "@/lib/domain/money"
+import { formatINR, fromPaise, toPaise } from "@/lib/domain/money"
 import { CREDIT_NOTE_REASON_LABELS, PAYMENT_METHOD_LABELS, isEnumValue } from "@/lib/domain/enums"
 import type { StatutoryParameterRow } from "@/lib/domain/gst"
 import { MESSAGE_CHANNEL_LABEL, messageStatusInfo } from "@/lib/handoff"
 import { invoiceActions, isReportedInGstr1, sentViaLabel } from "@/lib/schemas/invoices"
 import { TDS_STATUS_LABEL } from "@/lib/schemas/receipts"
-import { getAnnualReturn, getBillingSettings, getGstParams, getInvoiceDetail, invoiceFy, tdsAlreadyRecorded, type InvoiceDetail } from "@/lib/data/invoices"
+import { getAnnualReturn, getBillingSettings, getGstParams, getInvoiceDetail, invoiceFy, tdsAlreadyRecorded, type InvoiceCreditNoteRow, type InvoiceDetail, type InvoiceReceiptRow } from "@/lib/data/invoices"
 import { getTdsParameterRows } from "@/lib/data/receipts"
 import { getMessagingContext, type MessagingContext } from "@/lib/data/clients"
-import { getEmailReadiness } from "@/server/email/readiness"
+import { documentShare, type DocumentShare, type ShareContext } from "@/lib/data/document-share"
+import { formatDate, pdfFileName } from "@/lib/format"
+import { receiptShareText } from "@/lib/schemas/receipts"
 import { getFirmProfile, type FirmProfile } from "@/server/firm"
+import { SendDocumentButton } from "@/components/comms/send-document"
 import { PageHeader } from "@/components/app/page-header"
 import { SectionCard } from "@/components/app/section-card"
 import { DefinitionList } from "@/components/app/definition-list"
@@ -102,8 +105,7 @@ export default async function InvoicePage({ params }: Params) {
 
   const inv = detail.invoice
   const fy = invoiceFy(inv.issue_date)
-  const [readiness, messaging, firm, annual, tdsRows] = await Promise.all([
-    attempt("email", user.id, () => getEmailReadiness(supabase)),
+  const [messaging, firm, annual, tdsRows] = await Promise.all([
     attempt("messaging", user.id, () => getMessagingContext(supabase, user)),
     attempt("firm", user.id, () => getFirmProfile(supabase)),
     role === "partner" ? attempt("annual-return", user.id, () => getAnnualReturn(supabase, fy)) : Promise.resolve({ ok: true as const, data: null }),
@@ -140,11 +142,10 @@ export default async function InvoicePage({ params }: Params) {
   const firmProfile: FirmProfile | null = firm.ok ? firm.data : null
   const m: MessagingContext | null = messaging.ok ? messaging.data : null
   const recipients: SendRecipient[] = client?.contacts.length
-    ? client.contacts.map((c) => ({ contactId: c.id, name: c.name, email: c.email, phone: c.phone, whatsapp: c.whatsapp, primary: c.is_primary, bounced: c.email_bounced }))
+    ? client.contacts.map((c) => ({ contactId: c.id, name: c.name, phone: c.phone, whatsapp: c.whatsapp, primary: c.is_primary }))
     : client
-      ? [{ contactId: null, name: client.display_name, email: client.email, phone: client.phone, whatsapp: client.whatsapp, primary: true, bounced: false }]
+      ? [{ contactId: null, name: client.display_name, phone: client.phone, whatsapp: client.whatsapp, primary: true }]
       : []
-  const primaryEmail = recipients.find((r) => r.primary && r.email && !r.bounced)?.email ?? recipients.find((r) => r.email && !r.bounced)?.email ?? client?.email ?? null
 
   const detailInvoice: DetailInvoice = {
     id: inv.id,
@@ -165,20 +166,17 @@ export default async function InvoicePage({ params }: Params) {
     eInvoice: { irn: inv.irn, ackNo: inv.irn_ack_no, ackDate: inv.irn_ack_date, signedQr: inv.signed_qr },
   }
   const send: SendContext = {
-    emailReady: readiness.ok ? readiness.data.ready : false,
-    canSetUpEmail: role === "partner",
     recipients,
-    client: { email: client?.email ?? null, phone: client?.phone ?? null, whatsapp: client?.whatsapp ?? null },
+    client: { phone: client?.phone ?? null, whatsapp: client?.whatsapp ?? null },
     portalUrl: `${env.appUrl().replace(/\/+$/, "")}/portal/invoices/${inv.id}`,
     upi: firmProfile?.upi ? { id: firmProfile.upi.id, payee: firmProfile.upi.payeeName } : null,
-    bank: firmProfile?.bank ? { accountName: firmProfile.bank.accountName, accountNumber: firmProfile.bank.accountNumber, ifsc: firmProfile.bank.ifsc, bankName: firmProfile.bank.name } : null,
     firmName: m?.firmName ?? settings.firmName,
     firmPhone: m?.firmPhone ?? null,
     countryCode: m?.countryCode ?? "91",
     signatureFormat: m?.signatureFormat ?? "",
     addSignature: m?.addSignature ?? false,
     senderName: user.fullName,
-    templates: (m?.templates ?? []).filter((t) => t.type === "payment_reminder" || t.type === "custom").map((t) => ({ id: t.id, name: t.name, body: t.body, subject: t.subject, channel: t.channel })),
+    templates: (m?.templates ?? []).filter((t) => t.type === "payment_reminder" || t.type === "custom").map((t) => ({ id: t.id, name: t.name, body: t.body, channel: t.channel })),
   }
   const bankLabel = settings.bankName ? `${settings.bankName}${settings.bankAccountNumber ? ` ····${settings.bankAccountNumber.slice(-4)}` : ""}` : ""
   const receiptCtx: ReceiptContext = {
@@ -187,9 +185,53 @@ export default async function InvoicePage({ params }: Params) {
     tdsRows: tdsRows.ok ? (tdsRows.data as StatutoryParameterRow[]) : [],
     clientHasTan: Boolean(client?.tan),
     defaultDepositedTo: bankLabel,
-    defaultEmail: primaryEmail,
     today,
   }
+
+  // Receipts and credit notes go to the client on WhatsApp with their PDF (§7.13.2).
+  const shareCtx: ShareContext | null =
+    client && m
+      ? {
+          client: { id: client.id, name: client.display_name, code: client.client_code, phone: client.phone, whatsapp: client.whatsapp },
+          contacts: client.contacts.map((c) => ({ id: c.id, name: c.name, phone: c.phone, whatsapp: c.whatsapp, isPrimary: c.is_primary, handles: c.handles })),
+          messaging: m,
+          portalLink: send.portalUrl,
+        }
+      : null
+  const receiptShare = (r: InvoiceReceiptRow): DocumentShare | null =>
+    shareCtx && number && !r.reversed_at
+      ? documentShare(shareCtx, {
+          draft: (first) =>
+            receiptShareText({
+              contactName: first || null,
+              receiptNumber: r.receipt_number,
+              invoiceNumber: number,
+              paymentDate: formatDate(r.payment_date),
+              amount: formatINR(toPaise(r.amount_received)),
+              tds: Number(r.tds_amount) > 0 ? formatINR(toPaise(r.tds_amount)) : null,
+              balance: outstandingPaise > 0 ? formatINR(outstandingPaise) : null,
+              firmName: shareCtx.messaging.firmName,
+            }),
+          values: { invoice_number: number, amount: formatINR(toPaise(r.amount_received)) },
+          templateTypes: ["custom"],
+          attachment: { href: `/api/pdf/receipt/${r.id}?download=1`, filename: pdfFileName(r.receipt_number, "Receipt") },
+          related: { type: "receipt", id: r.id },
+        })
+      : null
+  const creditNoteShare = (c: InvoiceCreditNoteRow): DocumentShare | null =>
+    shareCtx && number
+      ? documentShare(shareCtx, {
+          draft: (first) =>
+            [
+              `${first ? `Hi ${first}` : "Hello"}, please find credit note ${c.credit_note_number} for ${formatINR(toPaise(c.total_amount))} against invoice ${number} from ${shareCtx.messaging.firmName}.`,
+              outstandingPaise > 0 ? `${formatINR(outstandingPaise)} is still to pay on the invoice.` : "Nothing is left to pay on the invoice.",
+            ].join("\n\n"),
+          values: { invoice_number: number, amount: formatINR(toPaise(c.total_amount)) },
+          templateTypes: ["custom"],
+          attachment: { href: `/api/pdf/credit-note/${c.id}?download=1`, filename: pdfFileName(c.credit_note_number, "Credit note") },
+          related: { type: "credit_note", id: c.id },
+        })
+      : null
   const credit: CreditContext | null =
     role === "partner"
       ? {
@@ -380,7 +422,7 @@ export default async function InvoicePage({ params }: Params) {
                               </span>
                             ) : null}
                           </div>
-                          <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} defaultEmail={primaryEmail} emailReady={send.emailReady} canSetUpEmail={send.canSetUpEmail} />
+                          <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} share={receiptShare(r)} />
                         </div>
                       </li>
                     ))}
@@ -434,7 +476,7 @@ export default async function InvoicePage({ params }: Params) {
                               )}
                             </td>
                             <td className="px-4 py-2 text-right md:pr-5">
-                              <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} defaultEmail={primaryEmail} emailReady={send.emailReady} canSetUpEmail={send.canSetUpEmail} />
+                              <ReceiptActions receipt={{ id: r.id, number: r.receipt_number, reversed: Boolean(r.reversed_at) }} share={receiptShare(r)} />
                             </td>
                           </tr>
                         ))}
@@ -468,8 +510,14 @@ export default async function InvoicePage({ params }: Params) {
                         {c.issued_by_name ? ` · ${c.issued_by_name}` : ""}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Money value={c.total_amount} />
+                    <div className="flex items-center gap-1">
+                      <span className="mr-2">
+                        <Money value={c.total_amount} />
+                      </span>
+                      {(() => {
+                        const share = creditNoteShare(c)
+                        return share ? <SendDocumentButton share={share} iconOnly label={`Send credit note ${c.credit_note_number} on WhatsApp to`} /> : null
+                      })()}
                       <a href={`/api/pdf/credit-note/${c.id}`} target="_blank" rel="noopener" className="inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-2 hover:text-text" aria-label={`Credit note ${c.credit_note_number} PDF`}>
                         <FileDownIcon aria-hidden="true" className="size-4" />
                       </a>
@@ -482,7 +530,7 @@ export default async function InvoicePage({ params }: Params) {
 
           <SectionCard id="sending" title="Sending history" flush>
             {detail.messages.length === 0 ? (
-              <EmptyState size="compact" message={unissued ? "Nothing sent yet. Issue it to send it." : "No email or hand-off recorded for this invoice."} />
+              <EmptyState size="compact" message={unissued ? "Nothing sent yet. Issue it to send it." : "Not sent yet. Send it on WhatsApp; each hand-off shows here."} />
             ) : (
               <ul className="flex flex-col">
                 {detail.messages.map((msg) => {
@@ -620,9 +668,9 @@ export default async function InvoicePage({ params }: Params) {
             </SectionCard>
           ) : null}
 
-          {!messaging.ok || !readiness.ok || !firm.ok || !tdsRows.ok ? (
+          {!messaging.ok || !firm.ok || !tdsRows.ok ? (
             <p className="text-sm text-text-muted">
-              Some sending details didn&apos;t load (Ref {[messaging, readiness, firm, tdsRows].map((r) => (r.ok ? null : r.ref)).filter(Boolean).join(", ")}). Reload the page before sending.
+              Some sending details didn&apos;t load (Ref {[messaging, firm, tdsRows].map((r) => (r.ok ? null : r.ref)).filter(Boolean).join(", ")}). Reload the page before sending.
             </p>
           ) : null}
         </aside>

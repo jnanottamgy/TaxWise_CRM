@@ -6,18 +6,16 @@ import { ActionError, ok, type ActionResult } from "@/lib/result";
 import { formatINR, toPaise } from "@/lib/domain/money";
 import { SubmitDraftsSchema } from "@/lib/schemas/collections";
 import { getIssueTargets, listWaitingDraftIds, type IssueTarget } from "@/lib/data/collections";
-import { getEmailReadiness } from "@/server/email/readiness";
 import { notify } from "@/server/notify";
 import { logActivity } from "@/server/activity";
 
 /**
  * The Retainer drafts queue (§7.9.6). Partners and Managers only (§4.1).
  *
- *   prepareRetainerIssue      for "Issue selected / Issue all": each draft's current version, who it
- *                             goes to by email (the client's primary contact with a working email,
- *                             else the client's email), and whether email can go at all (§7.13.5).
- *                             The page then issues each draft through the invoices module's
- *                             issueInvoice (server/actions/invoices.ts), one at a time.
+ *   prepareRetainerIssue      for "Issue selected / Issue all": each draft's current version. The
+ *                             page then issues each draft through the invoices module's
+ *                             issueInvoice (server/actions/invoices.ts), one at a time, and each
+ *                             is sent on WhatsApp from its invoice.
  *   submitDraftsForApproval   a Manager's drafts held over the invoice approval limit go to the
  *                             Partners (Awaiting approval, §7.9.2); Partners are told.
  */
@@ -38,11 +36,11 @@ const PrepareSchema = z
 
 export const prepareRetainerIssue = defineAction(
   { name: "retainer.prepare_issue", schema: PrepareSchema, roles: MONEY_ROLES },
-  async (input, ctx): Promise<ActionResult<{ emailReady: boolean; emailReason: string | null; targets: IssueTarget[] }>> => {
+  async (input, ctx): Promise<ActionResult<{ targets: IssueTarget[] }>> => {
     const ids = input.all ? await listWaitingDraftIds(ctx.supabase, input.runId, 200, { includeHeld: ctx.user.role === "partner" }) : input.invoiceIds;
-    const [targets, readiness] = await Promise.all([getIssueTargets(ctx.supabase, ids), getEmailReadiness(ctx.supabase)]);
+    const targets = await getIssueTargets(ctx.supabase, ids);
     if (!targets.length) throw new ActionError("None of the selected drafts is waiting any more. Reload to see the queue.", { code: "not_found" });
-    return ok({ emailReady: readiness.ready, emailReason: readiness.reason, targets });
+    return ok({ targets });
   },
 );
 

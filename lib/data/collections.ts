@@ -7,7 +7,7 @@ import { istDateOf, type DateString } from "@/lib/domain/fy";
 import { toPaise, type Paise } from "@/lib/domain/money";
 import { PAYMENT_METHOD_LABELS, isEnumValue, type ClientStatus, type InvoiceStatus, type ServiceFrequency, type ServiceType } from "@/lib/domain/enums";
 import { statementEvents, type StatementEvent } from "@/lib/domain/collections";
-import type { FollowUpChannel, RetainerQueueState } from "@/lib/schemas/collections";
+import type { RetainerQueueState } from "@/lib/schemas/collections";
 
 /**
  * Reads for collections (§7.9.5, §7.9.6, §11), under the caller's session: RLS gives Partners and
@@ -26,7 +26,8 @@ import type { FollowUpChannel, RetainerQueueState } from "@/lib/schemas/collecti
 
 export type FollowUpRow = {
   id: string;
-  channel: FollowUpChannel;
+  /** call · whatsapp · visit · other (older rows can say email). */
+  channel: string;
   notes: string;
   promisedPaymentDate: DateString | null;
   nextFollowUpAt: string | null;
@@ -136,7 +137,7 @@ export async function getInvoiceCollections(supabase: ServerSupabase, invoiceId:
     },
     followUps: (followUps.data ?? []).map((f) => ({
       id: f.id,
-      channel: f.channel as FollowUpChannel,
+      channel: f.channel,
       notes: f.notes,
       promisedPaymentDate: f.promised_payment_date,
       nextFollowUpAt: f.next_follow_up_at,
@@ -334,43 +335,27 @@ export type IssueTarget = {
   periodLabel: string;
   totalPaise: Paise;
   held: boolean;
-  email: { to: string; contactId: string | null; name: string } | null;
 };
 
 export async function getIssueTargets(supabase: ServerSupabase, invoiceIds: readonly string[]): Promise<IssueTarget[]> {
   if (!invoiceIds.length) return [];
   const { data, error } = await supabase
     .from("retainer_draft_queue")
-    .select("invoice_id, invoice_updated_at, client_id, client_name, client_email, period_label, total_amount, requires_approval, approved_at, status")
+    .select("invoice_id, invoice_updated_at, client_id, client_name, period_label, total_amount, requires_approval, approved_at, status")
     .in("invoice_id", invoiceIds as string[])
     .is("deleted_at", null);
   if (error) throw error;
-  const rows = data ?? [];
-  const clientIds = [...new Set(rows.map((r) => r.client_id).filter((v): v is string => !!v))];
-  const { data: contacts, error: cErr } = clientIds.length
-    ? await supabase.from("client_contacts").select("id, client_id, name, email, email_bounced, is_primary, created_at").in("client_id", clientIds).not("email", "is", null).order("is_primary", { ascending: false }).order("created_at", { ascending: true })
-    : { data: [], error: null };
-  if (cErr) throw cErr;
-  const byClient = new Map<string, { id: string; name: string; email: string }>();
-  for (const c of contacts ?? []) {
-    if (c.email && !c.email_bounced && !byClient.has(c.client_id)) byClient.set(c.client_id, { id: c.id, name: c.name, email: c.email });
-  }
-  return rows
+  return (data ?? [])
     .filter((r) => r.invoice_id && r.client_id)
-    .map((r) => {
-      const contact = byClient.get(r.client_id!);
-      const email = contact ? { to: contact.email, contactId: contact.id, name: contact.name } : r.client_email ? { to: r.client_email, contactId: null, name: r.client_name ?? "" } : null;
-      return {
-        invoiceId: r.invoice_id!,
-        updatedAt: r.invoice_updated_at ?? "",
-        clientId: r.client_id!,
-        clientName: r.client_name ?? "",
-        periodLabel: r.period_label ?? "",
-        totalPaise: toPaise(r.total_amount ?? 0),
-        held: Boolean(r.requires_approval && !r.approved_at),
-        email,
-      };
-    });
+    .map((r) => ({
+      invoiceId: r.invoice_id!,
+      updatedAt: r.invoice_updated_at ?? "",
+      clientId: r.client_id!,
+      clientName: r.client_name ?? "",
+      periodLabel: r.period_label ?? "",
+      totalPaise: toPaise(r.total_amount ?? 0),
+      held: Boolean(r.requires_approval && !r.approved_at),
+    }));
 }
 
 // =================================================================================================

@@ -3,58 +3,44 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { MailIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
 import { StatusChip } from "@/components/app/status-chip"
-import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
-import { GmailButton, type ComposeFields } from "@/components/app/messaging/gmail-button"
+import { WhatsAppButton, type MessageTemplateOption } from "@/components/app/messaging/whatsapp-button"
 import { cn } from "@/lib/utils"
 import { formatDate, formatDateTime } from "@/lib/format"
-import { emailOutcomeNotice } from "@/lib/handoff"
-import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { CHANNEL_SEND_LABELS, followUpStatusInfo } from "@/lib/schemas/quotations"
-import { logQuotationHandoff, sendQuotationFollowUp } from "@/server/actions/quotations"
+import { logQuotationHandoff } from "@/server/actions/quotations"
 import type { FollowUpView } from "@/components/quotations/detail/types"
-
-const gmailUrl = (f: ComposeFields) => gmailComposeUrl(f)
 
 /**
  * The quotation's follow-ups (§7.5.3 "day 3, 7 and 14 after sending, while it is still Sent/Viewed
- * and not expired"): each day's date and status. One that is due (or whose email failed) can be
- * emailed now, or handed off by WhatsApp or Gmail with its draft; the job's "hand it off" notice
- * links here with `?followup=<day>`, which is highlighted.
+ * and not expired"): each day's date and status. One that is due (or an older one whose email
+ * failed) is sent on WhatsApp with its draft, or one of the firm's quotation templates; the job's
+ * notice links here with `?followup=<day>`, which is highlighted.
  */
 export function FollowUpsPanel({
   quotationId,
   rows,
   open,
-  emailReady,
   highlightDay,
   whatsappNumber,
-  email,
   who,
-  recipientName,
-  pdfHref,
   plannedDays,
   now,
+  templates,
 }: {
   quotationId: string
   rows: FollowUpView[]
   open: boolean
-  emailReady: boolean
   highlightDay: number | null
   whatsappNumber: string | null
-  email: string
   who: string
-  recipientName: string
-  pdfHref: string
   plannedDays: number[]
   now: string
+  /** The firm's quotation templates, filled in, to switch the draft to. */
+  templates?: MessageTemplateOption[]
 }) {
   const router = useRouter()
   const nowDate = React.useMemo(() => new Date(now), [now])
-  const [busyDay, setBusyDay] = React.useState<number | null>(null)
   const highlightRef = React.useRef<HTMLLIElement | null>(null)
 
   React.useEffect(() => {
@@ -71,25 +57,8 @@ export function FollowUpsPanel({
     )
   }
 
-  const emailNow = async (day: number) => {
-    setBusyDay(day)
-    try {
-      const r = await sendQuotationFollowUp({ id: quotationId, day })
-      if (!r.ok) {
-        toast.error(r.ref ? `${r.error} (Ref ${r.ref})` : r.error)
-        return
-      }
-      const notice = emailOutcomeNotice(r.data.outcome, recipientName)
-      if (notice.tone === "success") toast.success(`Day-${day} follow-up emailed to ${recipientName}.`)
-      else toast.warning(notice.message, { duration: 12_000 })
-      router.refresh()
-    } finally {
-      setBusyDay(null)
-    }
-  }
-
-  const handOff = async (day: number, input: { channel: "whatsapp_handoff" | "gmail_handoff"; recipient: string; subject?: string; body: string }) => {
-    const r = await logQuotationHandoff({ id: quotationId, updatedAt: null, channel: input.channel, recipient: input.recipient, subject: input.subject ?? "", body: input.body, followUpDay: day })
+  const handOff = async (day: number, input: { recipient: string; body: string }) => {
+    const r = await logQuotationHandoff({ id: quotationId, updatedAt: null, channel: "whatsapp_handoff", recipient: input.recipient, body: input.body, followUpDay: day })
     if (!r.ok) {
       toast.error(r.ref ? `${r.error} (Ref ${r.ref})` : r.error)
       return
@@ -121,27 +90,15 @@ export function FollowUpsPanel({
             </div>
             {actionable ? (
               <div className="flex flex-wrap items-center gap-2">
-                {emailReady ? (
-                  <Button type="button" size="sm" variant="outline" disabled={busyDay !== null} onClick={() => void emailNow(r.day)}>
-                    {busyDay === r.day ? <Spinner /> : <MailIcon aria-hidden="true" />}
-                    Email now
-                  </Button>
-                ) : null}
                 <WhatsAppButton
                   recipientName={who}
                   number={whatsappNumber}
                   draft={r.whatsapp}
+                  templates={templates}
+                  label="Send on WhatsApp"
                   variant="outline"
                   disabledReason="No WhatsApp number on the quotation's lead or client."
-                  onHandedOff={({ number, text }) => handOff(r.day, { channel: "whatsapp_handoff", recipient: number, body: text })}
-                />
-                <GmailButton
-                  to={email}
-                  subject={r.emailSubject}
-                  body={r.emailBody}
-                  buildUrl={gmailUrl}
-                  pdfHref={pdfHref}
-                  onHandedOff={(f) => handOff(r.day, { channel: "gmail_handoff", recipient: f.to, subject: f.subject, body: f.body })}
+                  onHandedOff={({ number, text }) => handOff(r.day, { recipient: number, body: text })}
                 />
               </div>
             ) : null}

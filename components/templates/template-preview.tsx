@@ -87,7 +87,7 @@ export function TemplatePreview({
   senderName: string
   className?: string
 }) {
-  const showSubject = channel !== "whatsapp"
+  const showSubject = channel === "email"
   const showSignature = channel !== "email" && signature !== null && body.trim().length > 0
   const signed = showSignature ? applySignature("", signature, firstNameOf(senderName)) : ""
   return (

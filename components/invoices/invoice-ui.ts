@@ -42,9 +42,3 @@ export function clientLabel(c: { client_code: string; display_name: string }): s
   return `${c.client_code} · ${c.display_name}`;
 }
 
-/** A one-time key for an email dialog (idempotency, §13). */
-export function newNonce(): string {
-  const bytes = new Uint8Array(12);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}

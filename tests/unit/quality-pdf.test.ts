@@ -46,7 +46,7 @@ describe("management representation letter (SA 580)", () => {
     const out = await render(data(), "statutory");
     expect(out.bytes.subarray(0, 5).toString()).toBe("%PDF-");
     expect(out.bytes.length).toBeGreaterThan(5000);
-    expect(out.fileName).toBe("Management-representation-TW-C-0042-FY-2025-26.pdf");
+    expect(out.fileName).toBe("Management representation TW-C-0042-FY-2025-26.pdf");
   });
 
   it("renders a tax audit under the 2025 Act and a GST engagement", async () => {

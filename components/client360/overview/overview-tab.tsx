@@ -146,7 +146,7 @@ export async function OverviewTab({ data, user, supabase }: { data: Client360; u
 
           <SectionCard
             title="Latest messages"
-            description="Every channel: email, WhatsApp and Gmail hand-offs, portal, calls and notes"
+            description="Every channel: WhatsApp hand-offs, portal, calls and notes"
             flush
             viewAll={{ href: `${base}?tab=communication`, label: "Open communication" }}
           >

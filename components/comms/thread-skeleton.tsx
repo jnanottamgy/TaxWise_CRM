@@ -10,7 +10,7 @@ export function CommunicationTabSkeleton() {
     <div aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2 md:px-5">
         <div className="flex gap-1">
-          {["All", "Email", "WhatsApp", "Gmail", "Portal"].map((label) => (
+          {["All", "WhatsApp", "Portal", "Calls and notes"].map((label) => (
             <span key={label} className="inline-flex h-7 items-center rounded-full border border-border px-2.5 text-sm text-text-muted">
               {label}
             </span>

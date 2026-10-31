@@ -17,16 +17,13 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { destinationFor } from "@/lib/supabase/proxy";
 import {
   ChangePasswordSchema,
-  ForgotPasswordSchema,
   MfaCodeSchema,
   NewPasswordSchema,
   SignInSchema,
-  type ForgotPasswordInput,
   type SignInInput,
 } from "@/lib/schemas/auth";
 import {
   auditAuthEvent,
-  cameFromEmailLink,
   clearActivityClock,
   clearMustChangePassword,
   loadProfileForSignIn,
@@ -39,13 +36,15 @@ import { presenceOnSignIn, presenceOnSignOut } from "@/server/presence";
 /**
  * Sign-in, sign-out, password and two-step sign-in actions (§4.4, §12, §13).
  *
- * `signIn`, `requestPasswordReset` and `signOut` run without a profile (or without a session at
- * all), so they can't use defineAction; they follow the same contract by hand: a plain sentence,
- * field errors, a Ref for anything unexpected, and redirect signals re-thrown.
+ * `signIn` and `signOut` run without a profile (or without a session at all), so they can't use
+ * defineAction; they follow the same contract by hand: a plain sentence, field errors, a Ref for
+ * anything unexpected, and redirect signals re-thrown. There is no "email me a reset link": the app
+ * sends no email, so a Partner or Manager resets a forgotten password (a temporary one, shared on
+ * WhatsApp; server/actions/people.ts resetPassword).
  */
 
 const WRONG_CREDENTIALS = "Email or password is incorrect.";
-const TOO_MANY_SIGN_INS = "Too many attempts. Try again in 15 minutes, or reset your password.";
+const TOO_MANY_SIGN_INS = "Too many attempts. Try again in 15 minutes, or ask a Partner or Manager to reset your password.";
 const CHECK_FIELDS = "Please check the highlighted fields.";
 
 function fieldErrorsOf(error: z.ZodError): FieldErrors {
@@ -219,58 +218,7 @@ export async function signIn(input: SignInInput): Promise<ActionResult<{ redirec
 }
 
 // -------------------------------------------------------------------------------------------------
-// Forgot password (§4.4): Supabase sends the reset link
-// -------------------------------------------------------------------------------------------------
-
-export async function requestPasswordReset(input: ForgotPasswordInput): Promise<ActionResult<{ email: string }>> {
-  try {
-    const meta = await requestMeta();
-    const parsed = ForgotPasswordSchema.safeParse(input);
-    if (!parsed.success) {
-      return fail(CHECK_FIELDS, { code: "validation", fieldErrors: fieldErrorsOf(parsed.error) });
-    }
-    const { email } = parsed.data;
-
-    // §13: 3 per hour per email.
-    const limit = await checkRateLimit({
-      scope: "password_reset",
-      identity: [email],
-      ...RATE_LIMITS.passwordReset,
-      audit: { email, ip: meta.ip, userAgent: meta.userAgent },
-    });
-    if (!limit.allowed) {
-      return fail("Too many reset requests for this email. Try again in an hour.", { code: "rate_limited" });
-    }
-
-    const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${env.appUrl().replace(/\/$/, "")}/auth/confirm?next=/reset-password`,
-    });
-    if (error) {
-      if (error.status === 429 || error.code === "over_email_send_rate_limit") {
-        return fail("We couldn't send the email just now. Try again in a few minutes.", { code: "rate_limited" });
-      }
-      if (isServiceFailure(error)) return unexpected(error, "action:auth.password_reset");
-      // Any other refusal is answered like a success, so the form never reveals who has a login.
-      log("warn", "password reset refused", { source: "action:auth.password_reset", err: error });
-    }
-
-    await auditAuthEvent({
-      event: "user_update",
-      action: "auth.password_reset_requested",
-      success: !error,
-      error: error?.code ?? null,
-      email,
-      meta,
-    });
-    return ok({ email });
-  } catch (err) {
-    return unexpected(err, "action:auth.password_reset");
-  }
-}
-
-// -------------------------------------------------------------------------------------------------
-// New password: the reset link's page and the forced change after a temporary password (§4.4)
+// New password: the forced change after a temporary password (§4.4)
 // -------------------------------------------------------------------------------------------------
 
 function passwordErrorResult(error: AuthError): ActionResult<never> | null {
@@ -300,9 +248,9 @@ export const setNewPassword = defineAction(
   { name: "auth.set_password", schema: NewPasswordSchema, allowMustChangePassword: true, allowPendingMfa: true },
   async ({ password }, ctx) => {
     const forced = ctx.user.mustChangePassword;
-    // Without the current password, only a forced change or a fresh reset-link session may do this.
-    if (!forced && !(await cameFromEmailLink(ctx.supabase))) {
-      return fail("To change your password, open the reset link from your email, or use Profile.", { code: "blocked" });
+    // Without the current password, only the forced change after a temporary password may do this.
+    if (!forced) {
+      return fail("To change your password, use Profile.", { code: "blocked" });
     }
     const { error } = await ctx.supabase.auth.updateUser({ password });
     if (error) {

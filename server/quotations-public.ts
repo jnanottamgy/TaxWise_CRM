@@ -3,10 +3,8 @@ import "server-only";
 import { createElement } from "react";
 import { after } from "next/server";
 import type { Json } from "@/lib/database.types";
-import { env } from "@/lib/env";
 import { log, logUnexpected } from "@/lib/log";
 import { todayIST } from "@/lib/domain/fy";
-import { toPaise } from "@/lib/domain/money";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isQuotationToken, publicState, RespondSchema, type PublicState, type QuotationDocument, type RespondInput, type RespondResult } from "@/lib/schemas/quotations";
 import { toQuotationDocument, type QuotationItemRow } from "@/lib/data/quotations";
@@ -14,8 +12,6 @@ import { createAdminClient, type AdminSupabase } from "@/server/admin";
 import { logActivity, sessionActor } from "@/server/activity";
 import { getFirmProfile, type FirmProfile } from "@/server/firm";
 import { notify, type NotifyInput } from "@/server/notify";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm, quotationAcceptedEmail, quotationDeclinedEmail, quotationResponseAlertEmail } from "@/server/email/templates";
 import { loadFirmLogo, pdfFileName, pdfResponseHeaders, renderPdf } from "@/server/pdf";
 import { QuotationPdf } from "@/server/pdf/quotation";
 
@@ -30,8 +26,8 @@ import { QuotationPdf } from "@/server/pdf/quotation";
  *                                Partners on the first one
  *   respondPublic(token, input, ip)  Accept (typed full name, optional note) or Decline (reason),
  *                                rate-limited to 10 an hour per token + IP (§13); then tells the
- *                                author, the lead's owner and the Partners, emails the client a
- *                                confirmation and the author an alert (§10.7)
+ *                                author, the lead's owner and the Partners in-app (the link itself
+ *                                shows the client their answer; nothing is emailed)
  *   publicQuotationPdf(token)    the same PDF staff download
  *
  * Tokens are 32 random bytes; anything not shaped like one is "not found" without a database
@@ -268,7 +264,7 @@ export async function respondPublic(token: string, input: RespondInput, ip: stri
   }
 }
 
-/** Notifications and the two §10.7 emails after a response. Each step stands alone. */
+/** The history and the in-app notices after a response. */
 async function afterResponse(admin: AdminSupabase, token: string, id: string, outcome: "accepted" | "declined", v: ReturnType<typeof RespondSchema.parse>): Promise<void> {
   const row = await readRow(admin, token);
   if (!row) return;
@@ -282,10 +278,7 @@ async function afterResponse(admin: AdminSupabase, token: string, id: string, ou
       ? `Accepted electronically by ${row.accepted_by_name ?? row.client_name} on the client's link${v.response === "accept" && v.note ? `: "${v.note}"` : ""}`
       : `Declined on the client's link${v.response === "decline" ? `: "${v.reason}"` : ""}`,
   });
-  const [{ data: lead }, { data: author }] = await Promise.all([
-    row.lead_id ? admin.from("leads").select("assigned_to").eq("id", row.lead_id).maybeSingle() : Promise.resolve({ data: null }),
-    admin.from("profiles").select("full_name, email, is_active").eq("id", row.created_by).maybeSingle(),
-  ]);
+  const { data: lead } = row.lead_id ? await admin.from("leads").select("assigned_to").eq("id", row.lead_id).maybeSingle() : { data: null };
 
   await notifyFromPublic({
     to: { userIds: [row.created_by], roles: ["partner"], employeeIds: lead?.assigned_to ? [lead.assigned_to] : [] },
@@ -299,77 +292,6 @@ async function afterResponse(admin: AdminSupabase, token: string, id: string, ou
     clientId: row.client_id,
     dedupeKey: `quotation_responded:${id}`,
   });
-
-  const profile = await getFirmProfile(admin);
-  const firm = emailFirm(profile);
-  const totalPaise = toPaise(row.total);
-
-  // §10.7 confirmation to the client.
-  try {
-    const mail = accepted
-      ? quotationAcceptedEmail(
-          { recipientName: row.client_name, quotationNumber: row.quotation_number, totalPaise, acceptedByName: row.accepted_by_name ?? row.client_name, acceptedAt: row.responded_at ?? new Date().toISOString(), ownerName: author?.full_name ?? profile.firmName },
-          firm,
-        )
-      : quotationDeclinedEmail({ recipientName: row.client_name, quotationNumber: row.quotation_number, reason: v.response === "decline" ? v.reason : null, senderName: author?.full_name ?? null }, firm);
-    const sent = await sendEmail({
-      to: row.client_email,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: accepted ? "quotation_accepted" : "quotation_declined",
-      clientId: row.client_id,
-      related: { type: "quotation", id },
-      idempotencyKey: `quotation:${id}:response`,
-    });
-    if (accepted && sent.status !== "not_configured") {
-      await admin.from("quotation_email_logs").insert({
-        quotation_id: id,
-        channel: "email",
-        email_type: "acceptance_confirmation",
-        to: row.client_email,
-        subject: mail.subject,
-        status: sent.status === "sent" ? "sent" : "failed",
-        provider_message_id: sent.providerMessageId ?? null,
-        error: sent.status === "failed" ? (sent.error ?? null) : null,
-        sent_at: sent.status === "sent" ? new Date().toISOString() : null,
-      });
-    }
-  } catch (err) {
-    log("error", "quotation response confirmation not sent", { source: "quotations-public:confirm", err });
-  }
-
-  // §10.7 alert to the firm: the quotation's author (Partners have the in-app notice, with email if they asked for it).
-  try {
-    if (author?.email && author.is_active) {
-      const alert = quotationResponseAlertEmail(
-        {
-          recipientName: author.full_name,
-          response: outcome,
-          quotationNumber: row.quotation_number,
-          clientName: who,
-          totalPaise,
-          respondedAt: row.responded_at ?? new Date().toISOString(),
-          acceptedByName: row.accepted_by_name,
-          reason: v.response === "decline" ? v.reason : null,
-          note: v.response === "accept" ? v.note || null : null,
-          quotationUrl: `${env.appUrl().replace(/\/+$/, "")}/quotations/${id}`,
-        },
-        firm,
-      );
-      await sendEmail({
-        to: String(author.email),
-        subject: alert.subject,
-        text: alert.text,
-        html: alert.html,
-        kind: "quotation_response_alert",
-        related: { type: "quotation", id },
-        idempotencyKey: `quotation:${id}:response_alert`,
-      });
-    }
-  } catch (err) {
-    log("error", "quotation response alert not sent", { source: "quotations-public:alert", err });
-  }
 }
 
 /** The PDF behind the link's "Download PDF", or null when the link can't show one. Throws on a rendering or database error. */

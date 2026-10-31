@@ -154,5 +154,5 @@ export function ManagementRepresentationPdf({ firm, data, preparedBy }: { firm: 
 
 export async function buildManagementRepresentationPdf(input: { firm: FirmProfile; data: RepresentationLetterData; preparedBy: string }): Promise<{ bytes: Buffer; fileName: string }> {
   const bytes = await renderPdf(<ManagementRepresentationPdf firm={input.firm} data={input.data} preparedBy={input.preparedBy} />);
-  return { bytes, fileName: pdfFileName(`${input.data.client.code} FY ${input.data.financialYear}`, "Management-representation") };
+  return { bytes, fileName: pdfFileName(`${input.data.client.code} FY ${input.data.financialYear}`, "Management representation") };
 }

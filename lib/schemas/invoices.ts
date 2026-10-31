@@ -45,20 +45,27 @@ export const INVOICE_LIMITS = {
   maxQuantity: 99_999_999,
 } as const;
 
-/** How an issued invoice reaches the client (invoices.sent_channels). */
-export const SEND_CHANNELS = ["email", "whatsapp", "gmail", "in_person"] as const;
-export type SendChannel = (typeof SEND_CHANNELS)[number];
+/**
+ * How an issued invoice reached the client, as invoices.sent_channels records it. Email and Gmail
+ * aren't used any more (the firm sends on WhatsApp), but older invoices can carry them.
+ */
+export const SENT_CHANNELS = ["email", "whatsapp", "gmail", "in_person"] as const;
+export type SentChannel = (typeof SENT_CHANNELS)[number];
 
-export const SEND_CHANNEL_LABEL: Record<SendChannel, string> = {
+export const SEND_CHANNEL_LABEL: Record<SentChannel, string> = {
   email: "Email",
   whatsapp: "WhatsApp",
   gmail: "Gmail",
   in_person: "By hand",
 };
 
+/** How an invoice is sent when it is issued: on WhatsApp (with the PDF), or handed over in person. */
+export const SEND_CHANNELS = ["whatsapp", "in_person"] as const;
+export type SendChannel = (typeof SEND_CHANNELS)[number];
+
 /** "Email · WhatsApp", or null when it hasn't gone out yet. */
 export function sentViaLabel(channels: readonly string[] | null | undefined): string | null {
-  const known = (channels ?? []).filter((c): c is SendChannel => (SEND_CHANNELS as readonly string[]).includes(c));
+  const known = (channels ?? []).filter((c): c is SentChannel => (SENT_CHANNELS as readonly string[]).includes(c));
   return known.length ? known.map((c) => SEND_CHANNEL_LABEL[c]).join(" · ") : null;
 }
 
@@ -574,41 +581,15 @@ export const DisputeSchema = InvoiceRefSchema.extend({ reason: reason("Say what 
 export const WaiveSchema = InvoiceRefSchema.extend({ reason: reason("Say why the invoice is being waived.") });
 export const DebitNoteSchema = z.object({ invoiceId: uuid("invoice"), reason: reason("Say what the debit note is for.") });
 
-const emailList = z
-  .array(z.email({ error: "Enter a valid email address." }))
-  .min(1, { error: "Choose at least one email address." })
-  .max(10, { error: "Send to at most 10 addresses." });
-
-/** The email part of Issue / Send again: who it goes to, a covering note, and a one-time key. */
-export const InvoiceEmailSchema = z.object({
-  to: emailList,
-  cc: z
-    .string()
-    .trim()
-    .max(320)
-    .optional()
-    .default("")
-    .refine((v) => v === "" || z.email().safeParse(v).success, { error: "Enter a valid email address." }),
-  contactId: optionalUuid,
-  note: trimmed(1000, "note"),
-  /** One per dialog: the same click never sends twice (§13 idempotency). */
-  nonce: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, { error: "Reload the page and try again." }),
-});
-
+/** Issue: the invoice takes its number and is marked Sent; then it goes on WhatsApp, or by hand. */
 export const IssueInvoiceSchema = InvoiceRefSchema.extend({
   channel: z.enum(SEND_CHANNELS),
-  email: InvoiceEmailSchema.nullish().transform((v) => v ?? null),
-}).superRefine((v, ctx) => {
-  if (v.channel === "email" && !v.email) ctx.addIssue({ code: "custom", path: ["email", "to"], message: "Choose who the invoice goes to." });
 });
 export type IssueInvoiceInput = z.input<typeof IssueInvoiceSchema>;
 
-export const SendInvoiceEmailSchema = InvoiceEmailSchema.extend({ invoiceId: uuid("invoice") });
-export type SendInvoiceEmailInput = z.input<typeof SendInvoiceEmailSchema>;
-
 export const InvoiceHandoffSchema = z.object({
   invoiceId: uuid("invoice"),
-  channel: z.enum(["whatsapp_handoff", "gmail_handoff"]),
+  channel: z.enum(["whatsapp_handoff"]),
   contactId: optionalUuid,
   recipient: z.string().trim().min(1, { error: "There's no recipient." }).max(320),
   subject: z
@@ -836,13 +817,12 @@ export function toCsv(header: readonly string[], rows: ReadonlyArray<readonly st
 }
 
 // -------------------------------------------------------------------------------------------------
-// The WhatsApp and Gmail hand-off drafts (§7.13.2 "Invoice: amount, due date, portal link, UPI pay
-// link"; §7.13.3 a link in the body, never an attachment; §10 subject "TaxWise Consultants | Invoice …")
+// The WhatsApp message that goes with the invoice PDF (§7.13.2 "Invoice: amount, due date, portal
+// link, UPI pay link")
 // -------------------------------------------------------------------------------------------------
 
 export type InvoiceShareInput = {
   contactName: string | null;
-  clientName: string;
   invoiceNumber: string;
   periodLabel: string | null;
   totalPaise: Paise;
@@ -853,8 +833,6 @@ export type InvoiceShareInput = {
   /** upi://pay… with the amount due, or null without a UPI ID. */
   upiUrl: string | null;
   firmName: string;
-  senderName: string | null;
-  bank?: { accountName: string | null; accountNumber: string | null; ifsc: string | null; bankName: string | null } | null;
 };
 
 function day(date: DateString): string {
@@ -863,47 +841,18 @@ function day(date: DateString): string {
   return `${String(d).padStart(2, "0")} ${months[m - 1]} ${y}`;
 }
 
-export function invoiceShareText(i: InvoiceShareInput): { whatsapp: string; subject: string; emailBody: string } {
+/** The suggested WhatsApp message for an invoice: the amount, the due date, the portal link and the UPI link. */
+export function invoiceShareText(i: InvoiceShareInput): string {
   const hi = i.contactName?.trim() ? `Hi ${i.contactName.trim().split(/\s+/)[0]}` : "Hello";
   const what = `invoice ${i.invoiceNumber}${i.periodLabel ? ` for ${i.periodLabel}` : ""}`;
   const amount = formatINR(i.duePaise);
   const partly = i.duePaise !== i.totalPaise;
-  const lines = [
+  return [
     `${hi}, please find ${what} from ${i.firmName}: ${amount}${partly ? " still to pay" : ""}, due by ${day(i.dueDate)}.`,
     "",
     `View and pay: ${i.portalUrl}`,
     ...(i.upiUrl ? [`Pay by UPI: ${i.upiUrl}`] : []),
     "",
     "Please quote the invoice number with your payment. Thank you.",
-  ];
-  const bank = i.bank && (i.bank.accountNumber || i.bank.ifsc)
-    ? [
-        "",
-        "Bank transfer:",
-        ...(i.bank.accountName ? [`Account name: ${i.bank.accountName}`] : []),
-        ...(i.bank.accountNumber ? [`Account number: ${i.bank.accountNumber}`] : []),
-        ...(i.bank.ifsc ? [`IFSC: ${i.bank.ifsc}`] : []),
-        ...(i.bank.bankName ? [`Bank: ${i.bank.bankName}`] : []),
-      ]
-    : [];
-  const greeting = i.contactName?.trim() ? `Dear ${i.contactName.trim().split(/\s+/)[0]},` : "Hello,";
-  const emailBody = [
-    greeting,
-    "",
-    `Please find our ${what} to ${i.clientName}: ${amount}${partly ? " still to pay" : ""}, due by ${day(i.dueDate)}.`,
-    "",
-    `You can view the invoice, download the PDF and pay here: ${i.portalUrl}`,
-    ...bank,
-    "",
-    "Please quote the invoice number with your payment. If you deduct TDS, kindly send us the TDS certificate when it is issued.",
-    "",
-    "Regards,",
-    ...(i.senderName ? [i.senderName] : []),
-    i.firmName,
   ].join("\n");
-  return {
-    whatsapp: lines.join("\n"),
-    subject: `${i.firmName} | Invoice ${i.invoiceNumber}${i.periodLabel ? ` for ${i.periodLabel}` : ""}`,
-    emailBody,
-  };
 }

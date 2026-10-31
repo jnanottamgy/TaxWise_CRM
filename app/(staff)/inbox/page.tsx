@@ -70,7 +70,6 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       <PageGuide title="Inbox">
         <p>Needs your action lists what is waiting for you right now: approvals, work to review, tasks to accept or reassign, client messages and data requests. An item leaves the list as soon as it is dealt with, by you or anyone else.</p>
         <p className="mt-2">Updates is everything else the app told you. Open one to go to the record. Archive what you&apos;re done with; delete what you don&apos;t need.</p>
-        <p className="mt-2">Notices always appear here. Choose which ones also come by email in Profile → Notifications.</p>
       </PageGuide>
       <PageHeader
         title="Inbox"

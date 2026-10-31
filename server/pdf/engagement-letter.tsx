@@ -47,7 +47,7 @@ import {
  *     and personal data, how long the letter runs;
  *   - signature blocks for the firm (the signing Partner, membership no., FRN) and for the client.
  * A draft prints "Draft" in the letterhead and a line saying it isn't issued. Rendered on demand
- * (app/api/pdf/engagement-letter/[id]) and attached to the email for signature.
+ * (app/api/pdf/engagement-letter/[id]) and downloaded to attach to the WhatsApp message for signature.
  */
 
 function Section({ section }: { section: LetterSection }) {

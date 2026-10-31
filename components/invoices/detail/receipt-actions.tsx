@@ -2,44 +2,29 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { FileDownIcon, ImageIcon, MailIcon, MoreHorizontalIcon, Undo2Icon } from "lucide-react"
+import { FileDownIcon, ImageIcon, MoreHorizontalIcon, Undo2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { FormDialog } from "@/components/app/form-dialog"
-import { FormAlert } from "@/components/app/form/form-alert"
-import { TextField } from "@/components/app/form/fields"
 import { DateText } from "@/components/app/date-text"
-import { EmailSetupBanner } from "@/components/settings/email/email-setup-banner"
-import { useActionForm } from "@/hooks/use-action-form"
-import { emailOutcomeNotice } from "@/lib/handoff"
-import { EmailReceiptSchema, RejectPaymentClaimSchema, ReverseReceiptSchema } from "@/lib/schemas/receipts"
-import { emailReceipt, rejectPaymentClaim, reverseReceipt } from "@/server/actions/receipts"
+import { SendDocumentButton, type DocumentShare } from "@/components/comms/send-document"
+import { RejectPaymentClaimSchema, ReverseReceiptSchema } from "@/lib/schemas/receipts"
+import { rejectPaymentClaim, reverseReceipt } from "@/server/actions/receipts"
 import { ReasonDialog } from "@/components/invoices/detail/reason-dialog"
 import { ReceiptDialog } from "@/components/invoices/detail/receipt-dialog"
-import { newNonce } from "@/components/invoices/invoice-ui"
 import type { DetailInvoice, PendingClaim, ReceiptContext } from "@/components/invoices/detail/types"
 
 /**
- * A receipt's actions (§7.9.4): its PDF, email it to the client (§10.9), and reverse it with a
- * reason (a bounced cheque, a wrong entry). Receipts are never deleted; a reversal puts the amount
- * back on the invoice and the status follows.
+ * A receipt's actions (§7.9.4): Send on WhatsApp (the message with the receipt PDF, downloaded in
+ * the same click to attach), its PDF, and reverse it with a reason (a bounced cheque, a wrong
+ * entry). Receipts are never deleted; a reversal puts the amount back on the invoice and the
+ * status follows.
  */
-export function ReceiptActions({
-  receipt,
-  defaultEmail,
-  emailReady,
-  canSetUpEmail,
-}: {
-  receipt: { id: string; number: string; reversed: boolean }
-  defaultEmail: string | null
-  emailReady: boolean
-  canSetUpEmail: boolean
-}) {
+export function ReceiptActions({ receipt, share }: { receipt: { id: string; number: string; reversed: boolean }; share: DocumentShare | null }) {
   const router = useRouter()
-  const [dialog, setDialog] = React.useState<"email" | "reverse" | null>(null)
+  const [dialog, setDialog] = React.useState<"reverse" | null>(null)
   return (
-    <>
+    <span className="inline-flex items-center">
+      {share && !receipt.reversed ? <SendDocumentButton share={share} iconOnly label={`Send receipt ${receipt.number} on WhatsApp to`} /> : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label={`Actions for receipt ${receipt.number}`}>
@@ -54,20 +39,13 @@ export function ReceiptActions({
             </a>
           </DropdownMenuItem>
           {!receipt.reversed ? (
-            <>
-              <DropdownMenuItem onSelect={() => setDialog("email")}>
-                <MailIcon aria-hidden="true" />
-                Email receipt
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setDialog("reverse")} className="text-danger-text focus:text-danger-text">
-                <Undo2Icon aria-hidden="true" />
-                Reverse receipt
-              </DropdownMenuItem>
-            </>
+            <DropdownMenuItem onSelect={() => setDialog("reverse")} className="text-danger-text focus:text-danger-text">
+              <Undo2Icon aria-hidden="true" />
+              Reverse receipt
+            </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      {dialog === "email" ? <EmailReceiptDialog receipt={receipt} defaultEmail={defaultEmail} emailReady={emailReady} canSetUpEmail={canSetUpEmail} onClose={() => setDialog(null)} /> : null}
       {dialog === "reverse" ? (
         <ReasonDialog
           onClose={() => setDialog(null)}
@@ -83,41 +61,7 @@ export function ReceiptActions({
           onDone={() => router.refresh()}
         />
       ) : null}
-    </>
-  )
-}
-
-function EmailReceiptDialog({
-  receipt,
-  defaultEmail,
-  emailReady,
-  canSetUpEmail,
-  onClose,
-}: {
-  receipt: { id: string; number: string }
-  defaultEmail: string | null
-  emailReady: boolean
-  canSetUpEmail: boolean
-  onClose: () => void
-}) {
-  const router = useRouter()
-  const [nonce] = React.useState(newNonce)
-  const f = useActionForm(EmailReceiptSchema, emailReceipt, {
-    defaultValues: { receiptId: receipt.id, to: defaultEmail ?? "", nonce },
-    onSuccess: (data, values) => {
-      const n = emailOutcomeNotice(data.email, values.to)
-      if (n.tone === "success") toast.success(n.message)
-      else toast.warning(n.detail ? `${n.message} ${n.detail}` : n.message, { duration: 12_000 })
-      onClose()
-      router.refresh()
-    },
-  })
-  return (
-    <FormDialog open onOpenChange={(o) => (!o ? onClose() : undefined)} size="sm" title={`Email receipt ${receipt.number}`} description="The receipt PDF, from the firm's mailbox." onSubmit={f.onSubmit} pending={f.pending} submitLabel="Send receipt">
-      <FormAlert state={f} />
-      {!emailReady ? <EmailSetupBanner canSetUp={canSetUpEmail} className="mb-4" /> : null}
-      <TextField control={f.control} name="to" label="Email to" required inputMode="email" autoComplete="off" />
-    </FormDialog>
+    </span>
   )
 }
 

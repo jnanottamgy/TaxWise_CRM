@@ -24,7 +24,7 @@ export default async function DiagnosticsPage() {
     <div className="flex min-w-0 flex-col gap-4 md:gap-5">
       <SectionHeader
         title="Diagnostics"
-        description="Whether this deployment's database, schema, storage, email, environment and scheduled jobs are as the code expects."
+        description="Whether this deployment's database, schema, storage, environment and scheduled jobs are as the code expects."
       />
       {access.ok ? (
         <DiagnosticsRunner checks={DIAGNOSTIC_CHECKS.map((c) => ({ id: c.id, label: c.label, description: c.description }))} context={diagnosticsContext()} />

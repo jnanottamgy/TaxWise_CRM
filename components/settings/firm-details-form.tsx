@@ -104,7 +104,7 @@ export function FirmDetailsForm({
       </SettingsCard>
 
       <SettingsForm state={f} lastChange={lastChange} conflict={f.conflict} submitLabel="Save firm details">
-        <SettingsCard title="Identity" description="The name on every invoice, quotation, email and portal page.">
+        <SettingsCard title="Identity" description="The name on every invoice, quotation, message and portal page.">
           <TextField control={f.control} name="firm_name" label="Display name" required autoComplete="organization" />
           <TextField control={f.control} name="legal_name" label="Legal name" helper="As registered, if it differs from the display name." />
           <Wide>

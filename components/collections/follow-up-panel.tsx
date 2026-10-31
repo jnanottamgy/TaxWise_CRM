@@ -3,12 +3,13 @@ import { getSession, type CurrentUser } from "@/lib/auth/current-user"
 import type { ServerSupabase } from "@/lib/supabase/server"
 import { env } from "@/lib/env"
 import { logUnexpected } from "@/lib/log"
-import { formatDate } from "@/lib/format"
+import { formatDate, pdfFileName } from "@/lib/format"
 import { compareDates, diffDays, todayIST } from "@/lib/domain/fy"
 import { formatINR } from "@/lib/domain/money"
 import { applySignature, firstNameOf, pickWhatsAppNumber, upiPayUrl } from "@/lib/domain/messaging"
 import { renderTemplate } from "@/lib/domain/templates"
 import { defaultReminderDraft, pickReminderTemplate } from "@/lib/domain/collections"
+import { whatsAppTemplateOptions } from "@/lib/schemas/message-templates"
 import { getInvoiceCollections, type CollectionsContact } from "@/lib/data/collections"
 import { getMessagingContext } from "@/lib/data/clients"
 import { getFirmProfile } from "@/server/firm"
@@ -22,11 +23,11 @@ import { FollowUpPanelBody, type PendingReminderView } from "@/components/collec
  *   <InvoiceFollowUpPanel invoiceId={invoice.id} />
  *
  * The follow-up log (channel, notes, promised payment date, next follow-up) with "Log follow-up",
- * the latest promise and whether it was kept, the payment reminders the daily job sent, and any it
- * couldn't email, waiting as hand-off tasks with the WhatsApp and Gmail drafts ready. Partners and
- * Managers only: anyone else gets nothing (and RLS returns nothing anyway). Its section is
- * `#collections`, which the job's notifications link to. Never throws: a failed load shows in the
- * panel with its Ref.
+ * the latest promise and whether it was kept, the payment reminders that went, and the ones the
+ * daily job has put up to send, each with Send on WhatsApp ready (the reminder template filled in,
+ * and the invoice PDF downloaded to attach). Partners and Managers only: anyone else gets nothing
+ * (and RLS returns nothing anyway). Its section is `#collections`, which the job's notifications
+ * link to. Never throws: a failed load shows in the panel with its Ref.
  */
 export async function InvoiceFollowUpPanel({ invoiceId }: { invoiceId: string }) {
   const session = await getSession()
@@ -67,7 +68,7 @@ export async function InvoiceFollowUpPanel({ invoiceId }: { invoiceId: string })
         followUps={data.followUps}
         reminders={data.reminders.filter((r) => r.status !== "handoff_pending")}
         pending={pending}
-        pdfHref={`/api/pdf/invoice/${inv.id}?download=1`}
+        attachment={inv.number ? { href: `/api/pdf/invoice/${inv.id}?download=1`, filename: pdfFileName(inv.number, "Invoice") } : undefined}
       />
     </SectionCard>
   )
@@ -127,10 +128,8 @@ async function loadPanelView(supabase: ServerSupabase, user: CurrentUser, invoic
         upiLink,
         firmName: messaging.firmName,
       })
-      const wa = pickReminderTemplate(messaging.templates, "whatsapp", stage)
-      const em = pickReminderTemplate(messaging.templates, "email", stage)
+      const wa = pickReminderTemplate(messaging.templates, stage)
       const number = pickWhatsAppNumber(billing, { whatsapp: inv.clientWhatsapp, phone: inv.clientPhone }, { countryCode: messaging.countryCode })
-      const email = data.contacts.find((c) => c.email && !c.bounced)?.email ?? inv.clientEmail
       return {
         id: r.id,
         key: r.reminderKey,
@@ -142,10 +141,7 @@ async function loadPanelView(supabase: ServerSupabase, user: CurrentUser, invoic
         whatsappNumber: number?.digits ?? null,
         whatsappTemplateId: wa?.id ?? null,
         whatsappDraft: sign(wa ? renderTemplate(wa.body, values) : fallback.body),
-        email: email ?? null,
-        emailTemplateId: em?.id ?? null,
-        emailSubject: em?.subject ? renderTemplate(em.subject, values) : fallback.subject,
-        emailBody: em ? renderTemplate(em.body, values) : fallback.body,
+        templates: whatsAppTemplateOptions(messaging.templates, values, { types: ["payment_reminder"], sign }),
       }
     })
 

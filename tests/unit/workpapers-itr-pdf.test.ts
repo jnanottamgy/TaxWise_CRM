@@ -55,7 +55,7 @@ describe("ITR computation sheet PDF (§11)", () => {
       });
       expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
       expect(bytes.length).toBeGreaterThan(5000);
-      expect(fileName).toBe(fy === "2025-26" ? "ITR-computation-TW-C-0042-AY-2026-27.pdf" : "ITR-computation-TW-C-0042-Tax-year-2026-27.pdf");
+      expect(fileName).toBe(fy === "2025-26" ? "ITR computation TW-C-0042-AY-2026-27.pdf" : "ITR computation TW-C-0042-Tax-year-2026-27.pdf");
     }, 30_000);
   }
 });

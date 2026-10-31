@@ -4,13 +4,14 @@ import { notFound, unstable_rethrow } from "next/navigation"
 import { requireStaff } from "@/lib/auth/guards"
 import { getSession } from "@/lib/auth/current-user"
 import { logUnexpected } from "@/lib/log"
-import { formatDate, formatDateTime } from "@/lib/format"
+import { formatDate, formatDateTime, pdfFileName } from "@/lib/format"
 import { taxYearLabel } from "@/lib/domain/fy"
 import { parseRuleSet } from "@/lib/domain/itr-rulesets"
 import type { ItrResult } from "@/lib/domain/itr"
 import { readParam } from "@/components/app/data-table/params"
 import { REGIME_LABEL, computeStored, sameResult, storedToForm } from "@/lib/schemas/itr"
 import { getItrClientFacts, getItrComputation, getItrEditorContext, ruleSetFor, type ItrClientFacts, type ItrDetail, type ItrEditorContext } from "@/lib/data/itr"
+import { documentShare, getShareContextOrNull, type DocumentShare, type ShareContext } from "@/lib/data/document-share"
 import { PageHeader } from "@/components/app/page-header"
 import { ErrorBlock } from "@/components/app/error-block"
 import { SectionCard } from "@/components/app/section-card"
@@ -63,9 +64,15 @@ export default async function ItrPage({ params, searchParams }: Params) {
   let detail: ItrDetail | null = null
   let ctx: ItrEditorContext | null = null
   let client: ItrClientFacts | null = null
+  let shareCtx: ShareContext | null = null
   try {
     ;[detail, ctx] = await Promise.all([getItrComputation(supabase, id), getItrEditorContext(supabase)])
-    if (detail) client = await getItrClientFacts(supabase, detail.row.client_id)
+    if (detail) {
+      ;[client, shareCtx] = await Promise.all([
+        getItrClientFacts(supabase, detail.row.client_id),
+        getShareContextOrNull(supabase, user, detail.row.client_id, { source: "page:/workpapers/itr/[id]:share" }),
+      ])
+    }
   } catch (err) {
     unstable_rethrow(err)
     const ref = logUnexpected(err, { source: "page:/workpapers/itr/[id]", userId: user.id })
@@ -110,6 +117,20 @@ export default async function ItrPage({ params, searchParams }: Params) {
   const canEditClient = Boolean(client && client.eligible)
   const hasBusiness = (detail.inputs?.engine.income.businessProfession ?? 0) > 0
 
+  // The computation goes to the client on WhatsApp with its PDF (§7.13.2).
+  const regime = row.regime_chosen ?? result?.recommendedRegime ?? null
+  const share: DocumentShare | null = shareCtx
+    ? documentShare(shareCtx, {
+        serviceType: "income_tax",
+        draft: (first) =>
+          `${first ? `Hi ${first}` : "Hello"}, please find the income tax computation for ${yearLabel}${regime ? ` (${REGIME_LABEL[regime].toLowerCase()})` : ""}. Please go through it and tell us if anything needs to change before we file the return.`,
+        values: { compliance_type: "ITR", service_type: "Income tax", period: yearLabel, due_date: row.due_date ? formatDate(row.due_date) : "" },
+        templateTypes: ["custom"],
+        attachment: { href: `/api/pdf/itr/${row.id}?download=1`, filename: pdfFileName(`${row.client_code} ${yearLabel}`, "ITR computation") },
+        related: { type: "itr_computation", id: row.id },
+      })
+    : null
+
   const actions = (
     <ItrStatusActions
       id={row.id}
@@ -122,6 +143,7 @@ export default async function ItrPage({ params, searchParams }: Params) {
       totals={result ? { new: result.regimes.new.totalTaxAndInterest, old: result.regimes.old.totalTaxAndInterest } : null}
       view={view}
       hasBusiness={hasBusiness}
+      share={share}
     />
   )
 

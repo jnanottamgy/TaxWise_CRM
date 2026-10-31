@@ -5,7 +5,7 @@ import { Text, View } from "@react-pdf/renderer";
 import { formatINR, type Paise } from "@/lib/domain/money";
 import { ENTITY_TYPE_LABELS, type EntityType } from "@/lib/domain/enums";
 import type { StatementLine, StatementNote, Statements } from "@/lib/domain/schedule3";
-import { FS_STATUS_META, comparativeYear, yearEndedLabel } from "@/lib/schemas/financial-statements";
+import { FS_STATUS_META, comparativeYear, financialStatementsFileName, yearEndedLabel } from "@/lib/schemas/financial-statements";
 import type { StatementDetail } from "@/lib/data/financial-statements";
 import type { FirmProfile } from "@/server/firm";
 import { PdfDocument, PdfFacts, PdfSection, loadFirmLogo, pdfDate, renderPdf } from "@/server/pdf";
@@ -212,5 +212,5 @@ export async function buildFinancialStatementsPdf(input: { firm: FirmProfile; de
       </View>
     </PdfDocument>,
   );
-  return { bytes, fileName: `Financial-statements-${detail.client.code.replace(/[^A-Za-z0-9-]+/g, "-")}-${fy}.pdf` };
+  return { bytes, fileName: financialStatementsFileName(detail.client.code, fy) };
 }

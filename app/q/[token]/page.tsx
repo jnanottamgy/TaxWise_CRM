@@ -79,7 +79,7 @@ export default async function PublicQuotationPage({ params }: Params) {
         </PublicNotice>
       ) : state.kind === "superseded" ? (
         <PublicNotice tone="muted" icon={<ReplaceIcon className="text-text-muted" />} title="Replaced">
-          {SUPERSEDED_MESSAGE}. Please use the link in our latest email{contact ? `, or contact us on ${contact}` : ""}.
+          {SUPERSEDED_MESSAGE}. Please use the link in our latest message{contact ? `, or contact us on ${contact}` : ""}.
         </PublicNotice>
       ) : null}
 
@@ -106,7 +106,7 @@ export default async function PublicQuotationPage({ params }: Params) {
 
       {state.kind === "open" && !data.staffPreview ? (
         <p className="text-sm text-text-muted">
-          Questions about the scope or the fees? {contact ? `Contact us on ${contact}.` : "Reply to our email."} Accept or decline above when you&apos;re ready.
+          Questions about the scope or the fees? {contact ? `Contact us on ${contact}.` : "Reply to our message."} Accept or decline above when you&apos;re ready.
         </p>
       ) : null}
     </div>

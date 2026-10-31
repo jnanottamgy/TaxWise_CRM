@@ -16,7 +16,7 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
  *
  *   <Toaster />
  *   toast.success("Client saved")
- *   toast.warning("Welcome email didn't go through. Send it by hand. (Ref 7KQ2M9)")
+ *   toast.warning("Saved, but the portal invite wasn't created. Invite them from the Overview tab. (Ref 7KQ2M9)")
  */
 const Toaster = ({ ...props }: ToasterProps) => {
   const { resolvedTheme } = useTheme()

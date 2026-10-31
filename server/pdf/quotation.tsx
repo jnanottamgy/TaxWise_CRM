@@ -18,8 +18,8 @@ import { lineMeta, placeOfSupplyLabel, quotationTotals, recipientHeading, totalR
  * the line table · totals with the CGST/SGST or IGST split · the total in words · notes · terms ·
  * the acceptance block (a signature line, or "Accepted electronically by <name> on <date>") · the
  * footer "TaxWise Consultants · Powered by J-TACS". The same document is rendered for staff
- * (app/api/pdf/quotation/[id]) and for the client's link (app/api/q/[token]/pdf), and attached to
- * the quotation email.
+ * (app/api/pdf/quotation/[id]) and for the client's link (app/api/q/[token]/pdf), and downloaded to
+ * attach to the WhatsApp message.
  *
  *   const bytes = await renderPdf(<QuotationPdf firm={firm} logo={logo} doc={doc} />);
  */
@@ -109,7 +109,7 @@ export function QuotationPdf({ firm, logo, doc }: { firm: FirmProfile; logo?: Pd
           ) : (
             <View>
               <Text style={{ fontSize: PDF.size.label, color: PDF.colour.textMuted, marginBottom: 22 }}>
-                We accept this quotation on the terms above. (Or accept it online from the link in our email.)
+                We accept this quotation on the terms above. (Or accept it online from the link in our message.)
               </Text>
               <View style={{ flexDirection: "row" }}>
                 <View style={{ flexGrow: 1, marginRight: 12, borderTopWidth: PDF.hairline, borderTopColor: PDF.colour.text, paddingTop: 2 }}>

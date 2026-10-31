@@ -16,7 +16,7 @@ import { toastResult } from "@/components/registers/shared"
 
 export type DialogLetter = { id: string; updatedAt: string; clientId: string; clientName: string; financialYear: string; issuedAt: string | null }
 
-/** Issue a draft on a date (not in the future), without emailing it (handed over in person, or sent another way). */
+/** Issue a draft on a date (not in the future), without sending it (handed over in person, or sent later). */
 export function IssueLetterDialog({ open, onOpenChange, letter }: { open: boolean; onOpenChange: (o: boolean) => void; letter: DialogLetter }) {
   const router = useRouter()
   const f = useActionForm(IssueLetterSchema, issueLetter, {
@@ -28,7 +28,7 @@ export function IssueLetterDialog({ open, onOpenChange, letter }: { open: boolea
     },
   })
   return (
-    <FormDialog open={open} onOpenChange={onOpenChange} size="sm" title="Issue the letter" description="Once issued, what the client signs is fixed. To email it for signature, use Send instead." onSubmit={f.onSubmit} pending={f.pending} submitLabel="Issue letter">
+    <FormDialog open={open} onOpenChange={onOpenChange} size="sm" title="Issue the letter" description="Once issued, what the client signs is fixed. To send it for signature on WhatsApp, use Issue and send instead." onSubmit={f.onSubmit} pending={f.pending} submitLabel="Issue letter">
       <FormAlert state={f} />
       <DateField control={f.control} name="issuedOn" label="Issued on" required max={todayIST()} />
     </FormDialog>

@@ -12,16 +12,17 @@ export type ControlsData = {
   recipientName: string
   /** The company, else the person: "for Sharma Traders". */
   who: string
-  email: string
   /** The client's link, absolute (/q/<token>). */
   link: string
   pdfHref: string
+  /** The PDF that downloads as WhatsApp opens: "Quotation TW-Q-26-27-0007.pdf". */
+  attachment: { href: string; filename: string }
   actions: QuotationActions
   viewerRole: "partner" | "manager"
-  emailReady: boolean
   /** Normalised WhatsApp digits, or null when there is no usable number. */
   whatsappNumber: string | null
-  drafts: { whatsapp: string; emailSubject: string; emailBody: string }
+  /** The suggested WhatsApp message (signed), and the firm's Quotation templates filled in. */
+  drafts: { whatsapp: string; templates: Array<{ id: string; name: string; body: string }> }
   createClientHref: string | null
   approval: { requestedAt: string | null; requestedByName: string | null } | null
   /** "₹56,050.54". */
@@ -37,8 +38,6 @@ export type FollowUpView = {
   status: string
   sentAt: string | null
   channel: string | null
-  /** The hand-off drafts for this day. */
+  /** The WhatsApp draft for this day. */
   whatsapp: string
-  emailSubject: string
-  emailBody: string
 }

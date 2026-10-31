@@ -3,6 +3,7 @@ import "server-only";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { addDays, type DateString, type FinancialYear } from "@/lib/domain/fy";
 import type { EngagementStatus, EntityType, ServiceFrequency, ServiceType } from "@/lib/domain/enums";
+import { normalizeWhatsAppNumber } from "@/lib/domain/messaging";
 import { escapeLike, type TableParams } from "@/components/app/data-table/params";
 import { LETTER_EXPIRY_WINDOW_DAYS, parseSchedule, type ScheduleRow } from "@/lib/schemas/engagement-letters";
 
@@ -250,24 +251,35 @@ export async function getLetterDocument(supabase: ServerSupabase, id: string): P
 }
 
 /** The contacts a letter can be emailed to (the primary first, then whoever handles audit or the services). */
-export async function listLetterRecipients(supabase: ServerSupabase, clientId: string, services: readonly ServiceType[]): Promise<Array<{ id: string; name: string; role: string | null; email: string; primary: boolean; handles: boolean }>> {
-  const { data, error } = await supabase
-    .from("client_contacts")
-    .select("id, name, role, email, is_primary, handles, email_bounced")
-    .eq("client_id", clientId)
-    .not("email", "is", null)
-    .order("is_primary", { ascending: false })
-    .order("name")
-    .limit(30);
-  if (error) throw error;
-  return (data ?? [])
-    .filter((c) => c.email && !c.email_bounced)
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      role: c.role,
-      email: String(c.email),
-      primary: c.is_primary,
-      handles: (c.handles ?? []).some((h: string) => services.includes(h as ServiceType)),
-    }));
+/**
+ * Who a letter can go to for signature on WhatsApp (§7.15.3, §7.13.2): the client's contacts with a
+ * usable WhatsApp (or mobile) number, the primary first, each marked when it handles one of the
+ * letter's services; then the client's own number when no contact has it. `id` is null for the
+ * client's own number.
+ */
+export async function listLetterRecipients(
+  supabase: ServerSupabase,
+  clientId: string,
+  services: readonly ServiceType[],
+  opts: { countryCode?: string } = {},
+): Promise<Array<{ id: string | null; name: string; role: string | null; number: string; primary: boolean; handles: boolean }>> {
+  const [contacts, client] = await Promise.all([
+    supabase.from("client_contacts").select("id, name, role, phone, whatsapp, is_primary, handles").eq("client_id", clientId).order("is_primary", { ascending: false }).order("name").limit(30),
+    supabase.from("clients").select("display_name, phone, whatsapp").eq("id", clientId).maybeSingle(),
+  ]);
+  if (contacts.error) throw contacts.error;
+  if (client.error) throw client.error;
+  const numberOf = (n: { whatsapp: string | null; phone: string | null }) =>
+    normalizeWhatsAppNumber(n.whatsapp, { countryCode: opts.countryCode }) ?? normalizeWhatsAppNumber(n.phone, { countryCode: opts.countryCode });
+  const out: Array<{ id: string | null; name: string; role: string | null; number: string; primary: boolean; handles: boolean }> = [];
+  for (const c of contacts.data ?? []) {
+    const number = numberOf(c);
+    if (!number) continue;
+    out.push({ id: c.id, name: c.name, role: c.role, number, primary: c.is_primary, handles: (c.handles ?? []).some((h: string) => services.includes(h as ServiceType)) });
+  }
+  const own = client.data ? numberOf(client.data) : null;
+  if (client.data && own && !out.some((r) => r.number === own)) {
+    out.push({ id: null, name: client.data.display_name, role: null, number: own, primary: out.length === 0, handles: false });
+  }
+  return out;
 }

@@ -17,14 +17,15 @@ import type { Regime } from "@/lib/domain/itr-rulesets"
 import { ItrStatusSchema, REGIME_LABEL, itrActions, type ItrStatus } from "@/lib/schemas/itr"
 import { setItrStatus } from "@/server/actions/itr"
 import { taxAmount } from "@/components/workpapers/itr/itr-ui"
+import { SendDocumentButton, type DocumentShare } from "@/components/comms/send-document"
 
 type Totals = Record<Regime, number>
 
 /**
  * The computation's next steps (§7.8.2): Mark reviewed (the reviewer records the regime chosen,
  * defaulting to the recommended one), Mark final (Manager/Partner), Send back to Draft with a note,
- * Reopen a final one (Manager/Partner), Edit inputs and the PDF. The buttons follow itrActions; the
- * database decides again.
+ * Reopen a final one (Manager/Partner), Edit inputs, the PDF, and Send on WhatsApp (the message with
+ * the PDF to attach, §7.13.2). The buttons follow itrActions; the database decides again.
  */
 export function ItrStatusActions({
   id,
@@ -37,6 +38,7 @@ export function ItrStatusActions({
   totals,
   view,
   hasBusiness = false,
+  share = null,
 }: {
   id: string
   updatedAt: string
@@ -48,6 +50,8 @@ export function ItrStatusActions({
   totals: Totals | null
   view: "sheet" | "inputs"
   hasBusiness?: boolean
+  /** Send on WhatsApp with the PDF; null when the client's contacts couldn't be loaded. */
+  share?: DocumentShare | null
 }) {
   const router = useRouter()
   const a = itrActions({ status, preparedBy }, viewer)
@@ -72,6 +76,7 @@ export function ItrStatusActions({
           PDF
         </a>
       </Button>
+      {share ? <SendDocumentButton share={share} size="default" /> : null}
       {a.edit && view === "sheet" ? (
         <Button variant="outline" asChild>
           <Link href={`/workpapers/itr/${id}?view=inputs`}>

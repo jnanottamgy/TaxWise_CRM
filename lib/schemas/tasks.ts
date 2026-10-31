@@ -567,7 +567,7 @@ export function taskRef(task: { task_number: string | null; title: string }): st
 }
 
 // =================================================================================================
-// "Ask client for data" (§7.6.6, §7.6.4 Data awaited): the drafts handed to WhatsApp or Gmail
+// "Ask client for data" (§7.6.6, §7.6.4 Data awaited): the draft handed to WhatsApp
 // =================================================================================================
 
 export type AskClientFacts = {
@@ -598,10 +598,6 @@ export function askClientDraft(f: AskClientFacts): string {
   const work = f.period ? `${f.taskTitle} (${f.period})` : f.taskTitle;
   const by = f.dueDateText ? ` by ${f.dueDateText}` : "";
   return [hello, "", `To complete ${work} for ${f.clientName}, we need the following${by}:`, ...missingLines(f.missing, f.taskTitle), "", `You can upload them here: ${f.portalLink}`].join("\n");
-}
-
-export function askClientSubject(f: Pick<AskClientFacts, "firmName" | "taskTitle" | "period">): string {
-  return `${f.firmName} | Data needed for ${f.period ? `${f.taskTitle} (${f.period})` : f.taskTitle}`;
 }
 
 /** Values for the document-reminder templates' {{variables}} (§7.13.4). */

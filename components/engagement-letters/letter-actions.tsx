@@ -11,7 +11,7 @@ import type { EngagementStatus } from "@/lib/domain/enums"
 import { deleteLetterDraft, withdrawLetter } from "@/server/actions/engagement-letters"
 import { RenewButton } from "@/components/engagement-letters/renew-button"
 import { AttachCopyDialog, DeclineLetterDialog, IssueLetterDialog, SignLetterDialog, type DialogLetter } from "@/components/engagement-letters/letter-dialogs"
-import { SendLetterDialog, type LetterRecipient } from "@/components/engagement-letters/send-letter-dialog"
+import { SendLetterDialog, type LetterMessaging, type LetterRecipient } from "@/components/engagement-letters/send-letter-dialog"
 import { toastResult } from "@/components/registers/shared"
 
 type DialogName = "issue" | "send" | "sign" | "copy" | "decline" | "withdraw" | "delete"
@@ -22,6 +22,7 @@ export type ActionLetter = DialogLetter & {
   hasSignedCopy: boolean
   renewed: boolean
   signatoryName: string | null
+  clientCode: string
 }
 
 /**
@@ -30,7 +31,19 @@ export type ActionLetter = DialogLetter & {
  * gets it uploaded; an expiring or expired one is renewed for the next FY. The PDF is always there;
  * the rest is under More. The database refuses any move the lifecycle doesn't allow.
  */
-export function LetterActions({ letter, recipients, emailReady, expiring }: { letter: ActionLetter; recipients: LetterRecipient[]; emailReady: boolean; expiring: boolean }) {
+export function LetterActions({
+  letter,
+  recipients,
+  messaging,
+  today,
+  expiring,
+}: {
+  letter: ActionLetter
+  recipients: LetterRecipient[]
+  messaging: LetterMessaging | null
+  today: string
+  expiring: boolean
+}) {
   const router = useRouter()
   const [dialog, setDialog] = React.useState<DialogName | null>(null)
   const close = () => setDialog(null)
@@ -39,7 +52,7 @@ export function LetterActions({ letter, recipients, emailReady, expiring }: { le
 
   const more: Array<{ key: string; label: string; icon: React.ReactNode; onSelect: () => void; danger?: boolean }> = []
   if (s === "draft") {
-    more.push({ key: "issue", label: "Issue without emailing", icon: <StampIcon aria-hidden="true" />, onSelect: () => setDialog("issue") })
+    more.push({ key: "issue", label: "Issue without sending", icon: <StampIcon aria-hidden="true" />, onSelect: () => setDialog("issue") })
     more.push({ key: "edit", label: "Edit draft", icon: <PencilIcon aria-hidden="true" />, onSelect: () => router.push(`/engagement-letters/${letter.id}/edit`) })
     more.push({ key: "delete", label: "Delete draft", icon: <Trash2Icon aria-hidden="true" />, onSelect: () => setDialog("delete"), danger: true })
   }
@@ -115,7 +128,16 @@ export function LetterActions({ letter, recipients, emailReady, expiring }: { le
       </div>
 
       {dialog === "issue" ? <IssueLetterDialog open onOpenChange={(o) => !o && close()} letter={letter} /> : null}
-      {dialog === "send" ? <SendLetterDialog open onOpenChange={(o) => !o && close()} letter={{ id: letter.id, updatedAt: letter.updatedAt, status: letter.status, clientName: letter.clientName, financialYear: letter.financialYear, signatoryName: letter.signatoryName }} recipients={recipients} emailReady={emailReady} /> : null}
+      {dialog === "send" ? (
+        <SendLetterDialog
+          open
+          onOpenChange={(o) => !o && close()}
+          letter={{ id: letter.id, updatedAt: letter.updatedAt, status: letter.status, clientName: letter.clientName, clientCode: letter.clientCode, financialYear: letter.financialYear, signatoryName: letter.signatoryName }}
+          recipients={recipients}
+          messaging={messaging}
+          today={today}
+        />
+      ) : null}
       {dialog === "sign" ? <SignLetterDialog open onOpenChange={(o) => !o && close()} letter={letter} /> : null}
       {dialog === "copy" ? <AttachCopyDialog open onOpenChange={(o) => !o && close()} letter={letter} /> : null}
       {dialog === "decline" ? <DeclineLetterDialog open onOpenChange={(o) => !o && close()} letter={letter} /> : null}

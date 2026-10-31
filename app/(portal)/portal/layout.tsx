@@ -81,7 +81,7 @@ export default async function PortalLayout({ children }: { children: React.React
   if (frame.needsWelcome) {
     // Without the path we can't tell whether this already is the welcome page, so don't risk a loop.
     if (pathname && pathname !== "/portal/welcome" && !pathname.startsWith("/portal/welcome/")) {
-      // Come back to where they were going (an emailed link to a request, say) once acknowledged.
+      // Come back to where they were going (a link to a request sent on WhatsApp, say) once acknowledged.
       redirect(pathname === "/portal" || !path ? "/portal/welcome" : `/portal/welcome?next=${encodeURIComponent(path)}`)
     }
   }

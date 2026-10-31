@@ -3,7 +3,7 @@ import "server-only";
 import type { Json } from "@/lib/database.types";
 import { createAdminClient } from "@/server/admin";
 import { scrubMoneyMetadata, sessionActor } from "@/server/activity";
-import { isMoneySideKind } from "@/server/email/policy";
+import { isMoneySideKind } from "@/lib/handoff";
 import { log } from "@/lib/log";
 
 /**

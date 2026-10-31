@@ -65,7 +65,7 @@ import { logActivity, logEmployeeActivity } from "@/server/activity";
  *   resolveReconLines      mark lines settled / following up / ignored / open with a note
  *   decideImsAction        accept / reject / keep pending a 2B document, with the reason
  *   supplierFollowUp       the lines to put in a supplier follow-up draft (§7.13.2)
- *   markSupplierFollowedUp after a WhatsApp/Gmail hand-off, the supplier's open lines are "Following up"
+ *   markSupplierFollowedUp after a WhatsApp hand-off, the supplier's open lines are "Following up"
  *   gstr2bSourceUrl        a 60-second link to the stored GSTR-2B file
  *
  * Every mutation writes an audit row; the client timeline and the person's activity follow in
@@ -577,8 +577,7 @@ export const markSupplierFollowedUp = defineAction(
     const run = await runClient(ctx, input.runId);
     const f = await followUpLines(ctx.supabase, input.runId, input.supplierGstin);
     if (f.lineIds.length === 0) return ok({ updated: 0 });
-    const channel = input.channel === "whatsapp_handoff" ? "WhatsApp" : "Gmail";
-    const note = `Follow-up handed off on ${channel}, ${formatDate(todayIST())}.`;
+    const note = `Follow-up handed off on WhatsApp, ${formatDate(todayIST())}.`;
     const { data, error } = await ctx.supabase.rpc("set_gst_recon_resolution", {
       p_run_id: input.runId,
       p_entries: f.lineIds.map((l) => ({ id: l.id, updated_at: l.updatedAt })) as unknown as Json,

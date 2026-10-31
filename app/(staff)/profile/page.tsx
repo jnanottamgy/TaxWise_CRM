@@ -5,14 +5,14 @@ import { mfaRequiredFor } from "@/lib/auth/mfa"
 import { logUnexpected } from "@/lib/log"
 import { parsePreferences } from "@/lib/preferences"
 import { applySignature, firstNameOf, MESSAGING_DEFAULTS } from "@/lib/domain/messaging"
-import { readDigestPreference, readEmailPreferences, readWhatsAppSignaturePreference } from "@/lib/schemas/profile"
+import { readWhatsAppSignaturePreference } from "@/lib/schemas/profile"
 import { deviceLabel } from "@/lib/schemas/people"
 import { getRecentSessions } from "@/lib/data/attendance"
 import { PageHeader } from "@/components/app/page-header"
 import { ErrorBlock } from "@/components/app/error-block"
 import { PageGuide } from "@/components/shell/page-slots"
 import { PartnerDetailsCard, ProfileDetailsCard, type StoredImage } from "@/components/people/profile-details"
-import { AppearanceCard, MessagingCard, NotificationsCard } from "@/components/people/profile-preferences"
+import { AppearanceCard, MessagingCard } from "@/components/people/profile-preferences"
 import { ChangePasswordCard, SessionsCard, TwoStepCard, type ProfileSession } from "@/components/people/profile-security"
 
 export const metadata: Metadata = { title: "Profile" }
@@ -91,9 +91,9 @@ export default async function ProfilePage() {
     <div className="flex min-w-0 flex-col">
       <PageGuide title="Profile">
         <p>Your name and phone show to the team. Your sign-in email, role and job are changed by a Partner or Manager from People.</p>
-        <p className="mt-2">Everything reaches your Inbox; choose here what also comes by email. Changing your password signs out your other devices.</p>
+        <p className="mt-2">Every notification reaches your Inbox and the bell; the app sends no email. Changing your password signs out your other devices.</p>
       </PageGuide>
-      <PageHeader title="Profile" description="Your details, how TaxWise looks for you, what we email you, and how you sign in." />
+      <PageHeader title="Profile" description="Your details, how TaxWise looks for you, your WhatsApp signature, and how you sign in." />
       <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-4">
         {loaded.ok ? (
           <>
@@ -117,11 +117,6 @@ export default async function ProfilePage() {
           </div>
         )}
         <AppearanceCard initialDensity={prefs.density} />
-        <NotificationsCard
-          role={user.role}
-          email={readEmailPreferences(loaded.ok ? loaded.data.profile.preferences : user.preferences, user.role)}
-          digest={readDigestPreference(loaded.ok ? loaded.data.profile.preferences : user.preferences, user.role)}
-        />
         <MessagingCard
           whatsappSignature={readWhatsAppSignaturePreference(loaded.ok ? loaded.data.profile.preferences : user.preferences, user.role)}
           example={applySignature("", loaded.ok ? loaded.data.signatureFormat : MESSAGING_DEFAULTS.whatsappSignature, firstNameOf(user.fullName)) || "your first name"}

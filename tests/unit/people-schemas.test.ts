@@ -18,7 +18,6 @@ import {
   daysLate,
   deviceLabel,
   isStaffRole,
-  loginInviteEmail,
   loginShareMessage,
   manageRefusal,
   missingImportColumns,
@@ -211,7 +210,7 @@ describe("bulk import (§4.5 point 8)", () => {
   });
 });
 
-describe("Login created (§4.5 point 2, §10 item 1)", () => {
+describe("Login created (§4.5 points 2–3): shared on WhatsApp", () => {
   const share = { fullName: "Ravi Kumar", email: "ravi@twchartered.com", temporaryPassword: "Tw!x9Kp2qL", loginUrl: "https://app.twchartered.com/login", firmName: "TaxWise Consultants" };
 
   it("the WhatsApp draft has the login link, email and temporary password", () => {
@@ -223,15 +222,11 @@ describe("Login created (§4.5 point 2, §10 item 1)", () => {
     expect(m).toContain("set your own password");
   });
 
-  it("the invite email names the firm in the subject and says they set their own password", () => {
-    const invite = loginInviteEmail(share, "invite");
-    expect(invite.subject).toBe("TaxWise Consultants | Your login to the practice app");
-    expect(invite.text).toContain("A login has been created for you");
-    expect(invite.text).toContain("Temporary password: Tw!x9Kp2qL");
-    expect(invite.text).toContain("You'll set your own password when you first sign in.");
-    const reset = loginInviteEmail(share, "reset");
-    expect(reset.subject).toBe("TaxWise Consultants | Your password has been reset");
-    expect(reset.text).toContain("has been reset");
+  it("a reset says so, and still carries the new temporary password", () => {
+    const reset = loginShareMessage(share, "reset");
+    expect(reset).toContain("Hi Ravi, your TaxWise Consultants password has been reset.");
+    expect(reset).toContain("Temporary password: Tw!x9Kp2qL");
+    expect(reset).toContain("You'll set your own password when you first sign in.");
   });
 });
 

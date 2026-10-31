@@ -2,12 +2,9 @@
 
 import { defineAction, throwIfDbError, type ActionContext } from "@/lib/action";
 import { ActionError, fail, ok, type ActionResult } from "@/lib/result";
-import { env } from "@/lib/env";
-import { log } from "@/lib/log";
 import { formatINR, toPaise } from "@/lib/domain/money";
 import { formatDate } from "@/lib/format";
-import { firstNameOf } from "@/lib/domain/messaging";
-import { MESSAGE_CHANNEL_LABEL, type EmailSendOutcome } from "@/lib/handoff";
+import { MESSAGE_CHANNEL_LABEL } from "@/lib/handoff";
 import {
   CancelReissueSchema,
   ExportInvoicesSchema,
@@ -28,22 +25,16 @@ import {
   ReturnInvoiceSchema,
   SEND_CHANNEL_LABEL,
   SaveInvoiceSchema,
-  SendInvoiceEmailSchema,
   WaiveSchema,
   draftPayload,
   type SendChannel,
 } from "@/lib/schemas/invoices";
-import { getBillingSettings, getClientBillingFacts, getInvoiceDocument, listInvoices, searchBillableClients, type ClientBillingFacts, type InvoiceListRow } from "@/lib/data/invoices";
+import { getClientBillingFacts, listInvoices, searchBillableClients, type ClientBillingFacts, type InvoiceListRow } from "@/lib/data/invoices";
 import { parseTableParams, readParam } from "@/components/app/data-table/params";
 import { getSelectedFy } from "@/lib/fy-context";
 import { todayIST } from "@/lib/domain/fy";
 import type { ComboOption } from "@/components/app/form/combobox";
 import type { Json } from "@/lib/database.types";
-import { getFirmProfile } from "@/server/firm";
-import { sendEmail } from "@/server/email/send";
-import { emailFirm } from "@/server/email/templates/layout";
-import { invoiceEmail } from "@/server/email/templates/invoice";
-import { buildInvoicePdf } from "@/server/pdf/invoice";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
 import { logActivity, logEmployeeActivity } from "@/server/activity";
@@ -57,9 +48,9 @@ import { logActivity, logEmployeeActivity } from "@/server/activity";
  *   deleteInvoiceDraft    soft delete of a draft
  *   approveInvoice        Partner: a held invoice can be sent; the raiser is told (§9)
  *   returnInvoice         Partner: back to the raiser with a note (§9)
- *   issueInvoice          Draft → Sent with its number, then the first send: email with the PDF and
- *                         the portal "View & pay" link, a WhatsApp / Gmail hand-off, or by hand
- *   sendInvoiceEmail      email it again; recordInvoiceHandoff logs a WhatsApp / Gmail hand-off
+ *   issueInvoice          Draft → Sent with its number; then it goes on WhatsApp (the PDF downloads to
+ *                         attach, the message carries the portal "View & pay" and UPI links), or by hand
+ *   recordInvoiceHandoff  logs a WhatsApp hand-off (the first send or a later one)
  *   cancelAndReissue      before GSTR-1 reporting; a new draft copy opens
  *   createDebitNote       a draft debit note / supplementary invoice against an issued invoice
  *   markDisputed / resolveDispute / waiveInvoice (Partner) / saveEInvoiceDetails
@@ -75,15 +66,6 @@ const MONEY_ROLES = ["partner", "manager"] as const;
 function throwDb(error: { code?: string; message?: string } | null): void {
   if (error?.message?.startsWith("USER: Changed by ")) throw new ActionError(error.message.slice(6), { code: "conflict" });
   throwIfDbError(error);
-}
-
-function appBase(): string {
-  return env.appUrl().replace(/\/+$/, "");
-}
-
-/** The portal page the client views and pays the invoice from (§7.9.3 "portal 'View & pay' link"). */
-function portalInvoiceUrl(id: string): string {
-  return `${appBase()}/portal/invoices/${id}`;
 }
 
 type InvoiceHead = {
@@ -281,65 +263,7 @@ export type IssueResult = {
   invoiceNumber: string;
   updatedAt: string;
   channel: SendChannel;
-  email: EmailSendOutcome | null;
 };
-
-/** Emails the invoice with its PDF and the portal link (§10.8). Never throws: the outcome says what happened. */
-async function emailInvoice(
-  ctx: ActionContext,
-  p: { invoiceId: string; to: string[]; cc: string; contactId: string | null; note: string; key: string },
-): Promise<EmailSendOutcome> {
-  try {
-    const [doc, firmProfile, settings] = await Promise.all([getInvoiceDocument(ctx.supabase, p.invoiceId, "staff"), getFirmProfile(ctx.supabase), getBillingSettings(ctx.supabase)]);
-    if (!doc || !doc.invoice_number) return { status: "failed", error: "The invoice isn't issued yet." };
-    let recipientName = doc.recipient.name;
-    if (p.contactId) {
-      const { data: contact } = await ctx.supabase.from("client_contacts").select("name, client_id").eq("id", p.contactId).maybeSingle();
-      if (contact && contact.client_id === doc.client_id) recipientName = contact.name;
-    }
-    const firm = emailFirm(firmProfile);
-    const mail = invoiceEmail(
-      {
-        recipientName: firstNameOf(recipientName) || recipientName,
-        clientName: doc.recipient.name,
-        invoiceNumber: doc.invoice_number,
-        invoiceDate: doc.issue_date,
-        dueDate: doc.due_date,
-        periodLabel: doc.billing_period_label,
-        totalPaise: toPaise(doc.totals.total_amount),
-        outstandingPaise: toPaise(doc.totals.outstanding_amount),
-        viewPayUrl: portalInvoiceUrl(doc.id),
-        note: p.note || null,
-        senderName: ctx.user.fullName,
-        bank: firmProfile.bank,
-        upi: firmProfile.upi ? { id: firmProfile.upi.id, payeeName: firmProfile.upi.payeeName } : null,
-      },
-      firm,
-    );
-    const pdf = await buildInvoicePdf({ firm: firmProfile, doc, firmStateCode: settings.firmStateCode, eInvoicing: settings.eInvoicingApplies });
-    const recipients = p.cc ? [...p.to, p.cc] : p.to;
-    const r = await sendEmail({
-      to: [...new Set(recipients)],
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      kind: "invoice",
-      clientId: doc.client_id,
-      contactId: p.contactId,
-      related: { type: "invoice", id: doc.id },
-      attachments: [{ filename: pdf.fileName, content: pdf.bytes, contentType: "application/pdf" }],
-      idempotencyKey: p.key,
-    });
-    if (r.status === "sent") {
-      const { error } = await ctx.supabase.rpc("record_invoice_send", { p_invoice_id: doc.id, p_channel: "email" });
-      if (error) log("error", "invoice email not recorded on the invoice", { source: "action:invoices.email", userId: ctx.user.id, invoiceId: doc.id, err: error });
-    }
-    return { status: r.status, error: r.error };
-  } catch (err) {
-    log("error", "invoice email failed", { source: "action:invoices.email", userId: ctx.user.id, invoiceId: p.invoiceId, err });
-    return { status: "failed", error: "The invoice email couldn't be prepared. Send it from your own mailbox or WhatsApp instead." };
-  }
-}
 
 export const issueInvoice = defineAction(
   { name: "invoices.issue", schema: IssueInvoiceSchema, roles: MONEY_ROLES },
@@ -360,20 +284,8 @@ export const issueInvoice = defineAction(
       details: { invoice_number: r.invoice_number, channel: input.channel, total_amount: r.total_amount, time_entries_billed: r.time_entries_billed },
     });
 
-    let email: EmailSendOutcome | null = null;
-    if (input.channel === "email" && input.email) {
-      email = await emailInvoice(ctx, {
-        invoiceId: input.invoiceId,
-        to: input.email.to,
-        cc: input.email.cc,
-        contactId: input.email.contactId,
-        note: input.email.note,
-        key: `invoice:${input.invoiceId}:issue`,
-      });
-    }
-
-    const via =
-      input.channel === "email" ? (email?.status === "sent" ? "by email" : "(email not sent)") : input.channel === "in_person" ? "by hand" : `for a ${SEND_CHANNEL_LABEL[input.channel]} hand-off`;
+    // Issuing sends nothing: the person sends it on WhatsApp next (recordInvoiceHandoff), or handed it over.
+    const via = input.channel === "in_person" ? "by hand" : `for a ${SEND_CHANNEL_LABEL[input.channel]} hand-off`;
     ctx.after("Add the invoice to the client's timeline", () =>
       addTimelineEvent({
         clientId: r.client_id,
@@ -386,31 +298,7 @@ export const issueInvoice = defineAction(
     ctx.after("Add to your activity", () =>
       logEmployeeActivity({ activityType: "invoice_updated", description: `Issued invoice ${r.invoice_number}`, entityType: "invoice", entityId: input.invoiceId, entityName: r.invoice_number }),
     );
-    return ok({ invoiceNumber: r.invoice_number, updatedAt: r.updated_at, channel: input.channel, email });
-  },
-);
-
-export const sendInvoiceEmail = defineAction(
-  { name: "invoices.send_email", schema: SendInvoiceEmailSchema, roles: MONEY_ROLES },
-  async (input, ctx): Promise<ActionResult<{ email: EmailSendOutcome }>> => {
-    const head = await invoiceHead(ctx, input.invoiceId);
-    if (!head.invoice_number || head.status === "draft" || head.status === "awaiting_approval") {
-      throw new ActionError("Issue the invoice before sending it.", { code: "blocked" });
-    }
-    const email = await emailInvoice(ctx, { invoiceId: input.invoiceId, to: input.to, cc: input.cc, contactId: input.contactId, note: input.note, key: `invoice:${input.invoiceId}:send:${input.nonce}` });
-    await ctx.audit({
-      event: "data_update",
-      resourceType: "invoice",
-      resourceId: input.invoiceId,
-      action: "invoices.send_email",
-      details: { invoice_number: head.invoice_number, to: input.to, outcome: email.status },
-      success: email.status === "sent",
-      error: email.status === "sent" ? undefined : email.error,
-    });
-    if (email.status === "sent") {
-      ctx.after("Record the email in the invoice's history", history(input.invoiceId, "invoice_emailed", `Emailed to ${input.to.join(", ")}`));
-    }
-    return ok({ email });
+    return ok({ invoiceNumber: r.invoice_number, updatedAt: r.updated_at, channel: input.channel });
   },
 );
 
@@ -445,8 +333,7 @@ export const recordInvoiceHandoff = defineAction(
       .single();
     throwIfDbError(error);
     const messageId = (data as { id: string }).id;
-    const channel = input.channel === "whatsapp_handoff" ? "whatsapp" : "gmail";
-    const { error: sendError } = await ctx.supabase.rpc("record_invoice_send", { p_invoice_id: head.id, p_channel: channel });
+    const { error: sendError } = await ctx.supabase.rpc("record_invoice_send", { p_invoice_id: head.id, p_channel: "whatsapp" });
     throwDb(sendError);
 
     await ctx.audit({ event: "data_create", resourceType: "message", resourceId: messageId, action: "invoices.handoff", details: { channel: input.channel, invoice_id: head.id, invoice_number: head.invoice_number } });
@@ -460,7 +347,7 @@ export const recordInvoiceHandoff = defineAction(
     );
     ctx.after("Record the hand-off in the invoice's history", history(head.id, "invoice_handed_off", `${name} handed off to ${input.recipient}`));
     ctx.after("Add to your activity", () =>
-      logEmployeeActivity({ activityType: channel === "whatsapp" ? "whatsapp_sent" : "email_sent", description: `${name} handed off for invoice ${head.invoice_number}`, entityType: "invoice", entityId: head.id }),
+      logEmployeeActivity({ activityType: "whatsapp_sent", description: `${name} handed off for invoice ${head.invoice_number}`, entityType: "invoice", entityId: head.id }),
     );
     return ok({ messageId });
   },

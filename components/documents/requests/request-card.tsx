@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { BellRingIcon, CheckIcon, EllipsisIcon, EyeIcon, FileUpIcon, LinkIcon, PencilIcon, PlusIcon, RotateCcwIcon, Trash2Icon, XIcon } from "lucide-react"
+import { CheckIcon, EllipsisIcon, EyeIcon, FileUpIcon, LinkIcon, PencilIcon, PlusIcon, RotateCcwIcon, Trash2Icon, XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,11 +12,10 @@ import { StatusChip } from "@/components/app/status-chip"
 import { DateText } from "@/components/app/date-text"
 import { ConfirmDialog } from "@/components/app/confirm-dialog"
 import { formatDate } from "@/lib/format"
-import { EMAIL_NOT_SET_UP_MESSAGE } from "@/lib/handoff"
 import { progressLabel } from "@/lib/schemas/document-requests"
 import type { RequestRow, RequestItemRow, RequestContact } from "@/lib/data/document-requests"
 import type { DocumentOption } from "@/lib/data/documents"
-import { cancelDocumentRequest, removeRequestItem, reopenDocumentRequest, reviewRequestItem, sendRequestReminder } from "@/server/actions/document-requests"
+import { cancelDocumentRequest, removeRequestItem, reopenDocumentRequest, reviewRequestItem } from "@/server/actions/document-requests"
 import { UploadDialog } from "@/components/documents/uploader"
 import { fileHref } from "@/components/documents/doc-urls"
 import { RequestHandoff, type HandoffMessaging } from "@/components/documents/requests/request-handoff"
@@ -25,7 +24,7 @@ import { AddItemDialog, EditItemDialog, LinkFromVaultDialog, RejectItemDialog } 
 
 /**
  * One document request (§7.14): its items with their state, Accept / Send back for what the client
- * uploaded, upload or link a file on the client's behalf, reminders and hand-offs, edit, cancel and
+ * uploaded, upload or link a file on the client's behalf, reminders on WhatsApp, edit, cancel and
  * reopen. Items are listed in the order the client sees them.
  */
 
@@ -33,12 +32,11 @@ export interface RequestCardContext {
   clientId: string
   clientName: string
   clientCode: string
-  client: { phone: string | null; whatsapp: string | null; email: string | null; has_portal: boolean }
+  client: { phone: string | null; whatsapp: string | null; has_portal: boolean }
   contacts: RequestContact[]
   documents: DocumentOption[]
   messaging: HandoffMessaging
   portalBase: string
-  emailReady: boolean
   /** Partner or Manager: remove items. */
   canManage: boolean
   today: string
@@ -84,25 +82,6 @@ export function RequestCard({ request, ctx, focused }: { request: RequestRow; ct
 
   const accept = (item: RequestItemRow) =>
     run(`accept:${item.id}`, () => reviewRequestItem({ id: item.id, requestId: request.id, clientId: ctx.clientId, decision: "accept", updatedAt: item.updated_at }), `${item.title} accepted.`)
-
-  const remind = async () => {
-    setBusy("remind")
-    try {
-      const r = await sendRequestReminder({ id: request.id, clientId: ctx.clientId, updatedAt: request.updated_at })
-      if (!r.ok) {
-        toast.error(r.ref ? `${r.error} (Ref ${r.ref})` : r.error)
-        return
-      }
-      const e = r.data.email
-      if (e.status === "sent") toast.success(`Reminder emailed to ${e.recipientName ?? ctx.clientName}.`)
-      else if (e.status === "not_configured") toast.warning(`${EMAIL_NOT_SET_UP_MESSAGE}`, { duration: 10_000 })
-      else if (e.status === "no_recipient") toast.warning("There's no email address for this client. Use WhatsApp instead.", { duration: 10_000 })
-      else toast.warning(`The reminder email didn't go${e.error ? `: ${e.error}` : "."} Use WhatsApp or Gmail instead.`, { duration: 12_000 })
-      router.refresh()
-    } finally {
-      setBusy(null)
-    }
-  }
 
   const meta: string[] = []
   if (request.contact_name) meta.push(`To ${request.contact_name}`)
@@ -258,30 +237,24 @@ export function RequestCard({ request, ctx, focused }: { request: RequestRow; ct
         <footer className="flex flex-wrap items-center gap-2 border-t border-border/70 px-4 py-3 md:px-5">
           <p className="mr-auto text-sm text-text-muted">{request.progress.outstanding ? `Chase the ${request.progress.outstanding} outstanding ${request.progress.outstanding === 1 ? "item" : "items"}:` : "Nothing is pending from the client."}</p>
           {request.progress.outstanding ? (
-            <>
-              <Button type="button" variant="outline" size="sm" disabled={busy !== null || !ctx.emailReady} title={ctx.emailReady ? undefined : EMAIL_NOT_SET_UP_MESSAGE} onClick={() => void remind()}>
-                <BellRingIcon aria-hidden="true" />
-                Email reminder
-              </Button>
-              <RequestHandoff
-                clientId={ctx.clientId}
-                clientName={ctx.clientName}
-                clientCode={ctx.clientCode}
-                client={ctx.client}
-                recipient={contact ? { contactId: contact.id, name: contact.name, email: contact.email, phone: contact.phone, whatsapp: contact.whatsapp } : null}
-                request={{ id: request.id, title: request.title, due_date: request.due_date }}
-                items={request.items}
-                portalLink={portalLink}
-                messaging={ctx.messaging}
-                reminder={request.reminder_count > 0 || request.last_reminded_at !== null}
-              />
-            </>
+            <RequestHandoff
+              clientId={ctx.clientId}
+              clientName={ctx.clientName}
+              clientCode={ctx.clientCode}
+              client={ctx.client}
+              recipient={contact ? { contactId: contact.id, name: contact.name, phone: contact.phone, whatsapp: contact.whatsapp } : null}
+              request={{ id: request.id, title: request.title, due_date: request.due_date }}
+              items={request.items}
+              portalLink={portalLink}
+              messaging={ctx.messaging}
+              reminder={request.reminder_count > 0 || request.last_reminded_at !== null}
+            />
           ) : null}
         </footer>
       ) : null}
 
       {dialog?.kind === "reject" ? (
-        <RejectItemDialog open onOpenChange={(o) => !o && setDialog(null)} clientId={ctx.clientId} clientName={ctx.clientName} requestId={request.id} item={dialog.item} emailReady={ctx.emailReady} />
+        <RejectItemDialog open onOpenChange={(o) => !o && setDialog(null)} clientId={ctx.clientId} clientName={ctx.clientName} requestId={request.id} item={dialog.item} />
       ) : null}
       {dialog?.kind === "link" ? (
         <LinkFromVaultDialog open onOpenChange={(o) => !o && setDialog(null)} clientId={ctx.clientId} requestId={request.id} item={dialog.item} documents={ctx.documents} />
@@ -301,7 +274,7 @@ export function RequestCard({ request, ctx, focused }: { request: RequestRow; ct
           single
           allowConfidential={false}
           title={`Upload for the client: ${dialog.item.title}`}
-          description="The file goes into the vault and the item is accepted. Use this when the client sent it by email, WhatsApp or in person."
+          description="The file goes into the vault and the item is accepted. Use this when the client sent it on WhatsApp or in person."
           defaults={{ title: dialog.item.title }}
           onUploaded={() => {
             toast.success(`${dialog.item.title} uploaded and accepted.`)

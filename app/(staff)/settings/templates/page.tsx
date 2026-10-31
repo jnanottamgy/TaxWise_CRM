@@ -74,7 +74,7 @@ export default async function TemplatesSettingsPage() {
 
       <SectionCard
         title="Message templates"
-        description={`Email and WhatsApp wording, with variables filled in when sent: ${types.slice(0, -1).join(", ").toLowerCase()} and ${types[types.length - 1].toLowerCase()}.`}
+        description={`WhatsApp and portal wording, with variables filled in when sent: ${types.slice(0, -1).join(", ").toLowerCase()} and ${types[types.length - 1].toLowerCase()}.`}
         viewAll={{ href: "/templates/messages", label: "Open message templates" }}
         flush
       >

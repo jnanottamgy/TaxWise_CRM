@@ -14,9 +14,9 @@ function iconFor(type: string) {
 
 /**
  * The lead's story (§7.5.1 "timeline (calls, notes, stage changes, quotations)"), newest first:
- * calls and notes with what was discussed, WhatsApp and Gmail hand-offs, stage moves with the
- * lost reason, quotations sent, opened, accepted or declined, conflict checks, the conversion.
- * Server-safe.
+ * calls and notes with what was discussed, WhatsApp hand-offs (and Gmail ones logged before the
+ * app stopped using email), stage moves with the lost reason, quotations sent, opened, accepted or
+ * declined, conflict checks, the conversion. Server-safe.
  */
 export function LeadTimeline({ events }: { events: LeadTimelineRow[] }) {
   return (

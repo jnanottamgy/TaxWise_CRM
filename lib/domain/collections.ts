@@ -112,11 +112,6 @@ export function reminderSettingsFrom(row: { invoice_reminder_before_days?: numbe
   };
 }
 
-/** The Resend idempotency key of a reminder: `invoice:<id>:reminder:after_due:7` (one send per slot, ever). */
-export function reminderIdempotencyKey(invoiceId: string, slot: Pick<ReminderSlot, "kind" | "offsetDays">): string {
-  return `invoice:${invoiceId}:reminder:${slot.kind}:${Math.abs(slot.offsetDays)}`;
-}
-
 /** "3 days before the due date", "1 day after the due date". */
 export function reminderSlotLabel(key: string | null | undefined): string {
   const m = /^(before_due|after_due):(\d+)$/.exec(key ?? "");
@@ -855,9 +850,9 @@ function shortDate(date: DateString | null): string {
 }
 
 /**
- * The WhatsApp / email draft asking a client to correct their TDS statement (§7.9.9): which
- * deductions don't show in our Form 26AS / AIS (or show a different amount), and what to check in
- * their 26Q / Form 140 filing: our PAN, the amount, the section and the quarter.
+ * The WhatsApp draft asking a client to correct their TDS statement (§7.9.9): which deductions
+ * don't show in our Form 26AS / AIS (or show a different amount), and what to check in their 26Q /
+ * Form 140 filing: our PAN, the amount, the section and the quarter.
  */
 export function tdsCorrectionDraft(input: {
   contactName: string | null;
@@ -866,7 +861,7 @@ export function tdsCorrectionDraft(input: {
   firmPan: string | null;
   senderName?: string | null;
   items: readonly TdsCorrectionItem[];
-}): { subject: string; body: string } {
+}): { body: string } {
   const greeting = input.contactName?.trim() ? `Dear ${input.contactName.trim()},` : "Dear Sir / Madam,";
   const list = input.items
     .map((i) => {
@@ -878,7 +873,6 @@ export function tdsCorrectionDraft(input: {
     })
     .join("\n");
   const total = input.items.reduce((s, i) => s + i.tdsPaise, 0);
-  const subject = `${input.firmName} | TDS deducted on our invoices: correction needed`;
   const body = [
     greeting,
     "",
@@ -897,7 +891,7 @@ export function tdsCorrectionDraft(input: {
     .filter((l, i, a) => !(l === "" && a[i - 1] === ""))
     .join("\n")
     .trim();
-  return { subject, body };
+  return { body };
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -905,13 +899,14 @@ export function tdsCorrectionDraft(input: {
 // -------------------------------------------------------------------------------------------------
 
 /**
- * The payment-reminder template for a hand-off (§7.13.4 type "Payment reminder"): for the channel
- * (or "any"), preferring the one whose name says "before" or "after" to match the reminder's stage.
+ * The payment-reminder template for a WhatsApp hand-off (§7.13.4 type "Payment reminder"): a
+ * WhatsApp (or "any") one, preferring the one whose name says "before" or "after" to match the
+ * reminder's stage.
  */
-export function pickReminderTemplate<T extends { name: string; type: string; channel: string }>(templates: readonly T[], channel: "whatsapp" | "email", stage: "before" | "after"): T | null {
-  const usable = templates.filter((t) => t.type === "payment_reminder" && (t.channel === channel || t.channel === "any"));
+export function pickReminderTemplate<T extends { name: string; type: string; channel: string }>(templates: readonly T[], stage: "before" | "after"): T | null {
+  const usable = templates.filter((t) => t.type === "payment_reminder" && (t.channel === "whatsapp" || t.channel === "any"));
   const word = stage === "before" ? /before/i : /after|overdue/i;
-  return usable.find((t) => t.channel === channel && word.test(t.name)) ?? usable.find((t) => word.test(t.name)) ?? usable.find((t) => t.channel === channel) ?? usable[0] ?? null;
+  return usable.find((t) => t.channel === "whatsapp" && word.test(t.name)) ?? usable.find((t) => word.test(t.name)) ?? usable.find((t) => t.channel === "whatsapp") ?? usable[0] ?? null;
 }
 
 /** The draft used when no payment-reminder template is set up: short, firm after the due date. */
@@ -925,7 +920,7 @@ export function defaultReminderDraft(input: {
   payLink: string;
   upiLink: string | null;
   firmName: string;
-}): { subject: string; body: string } {
+}): { body: string } {
   const hi = input.contactName ? `Hi ${input.contactName},` : "Hello,";
   const line =
     input.stage === "before"
@@ -934,6 +929,5 @@ export function defaultReminderDraft(input: {
   const body = [`${hi} ${line}`, "", `View and pay: ${input.payLink}`, input.upiLink ? `Pay by UPI: ${input.upiLink}` : null, "", "If it is already paid, please share the reference so that we can match it. Thank you!"]
     .filter((l) => l !== null)
     .join("\n");
-  const subject = input.stage === "before" ? `${input.firmName} | Invoice ${input.invoiceNumber} is due on ${input.dueDate}` : `${input.firmName} | Invoice ${input.invoiceNumber} is overdue`;
-  return { subject, body };
+  return { body };
 }

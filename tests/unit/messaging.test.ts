@@ -1,19 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   applySignature,
-  buildGmailCompose,
-  buildMailto,
   firstNameOf,
   formatWhatsAppNumber,
-  gmailComposeUrl,
   isValidUpiId,
-  mailtoUrl,
   MESSAGING_DEFAULTS,
   NO_WHATSAPP_NUMBER_MESSAGE,
   normalizeWhatsAppNumber,
   pickContactForService,
   pickWhatsAppNumber,
-  TRIMMED_BODY_MARKER,
   upiPayUrl,
   waMeUrl,
 } from "@/lib/domain/messaging";
@@ -268,112 +263,6 @@ describe("applySignature (§7.13.2, §7.25.10)", () => {
     expect(firstNameOf("Priya")).toBe("Priya");
     expect(firstNameOf("")).toBe("");
     expect(firstNameOf(null)).toBe("");
-  });
-});
-
-// -------------------------------------------------------------------------------------------------
-// Gmail compose and mailto (§7.13.3)
-// -------------------------------------------------------------------------------------------------
-
-/** The decoded body of a compose URL. */
-function bodyOf(url: string): string {
-  const m = /[?&]body=([^&]*)$/.exec(url);
-  return m ? decodeURIComponent(m[1]) : "";
-}
-
-describe("gmailComposeUrl (§7.13.3)", () => {
-  it("builds the compose URL with to, su and body", () => {
-    expect(gmailComposeUrl({ to: "priya@acme.in", subject: "Invoice TW/26-27/0042", body: "Hi Priya,\nPlease find the link." })).toBe(
-      "https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=priya%40acme.in&su=Invoice%20TW%2F26-27%2F0042&body=Hi%20Priya%2C%0APlease%20find%20the%20link.",
-    );
-  });
-
-  it("adds cc and bcc, and joins several recipients", () => {
-    const url = gmailComposeUrl({ to: ["a@x.in", " b@x.in "], cc: "c@x.in; d@x.in", bcc: ["e@x.in"], subject: "S" });
-    expect(url).toBe("https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=a%40x.in%2Cb%40x.in&cc=c%40x.in%2Cd%40x.in&bcc=e%40x.in&su=S");
-    expect(gmailComposeUrl({ to: "a@x.in", cc: null, bcc: [] })).toBe("https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=a%40x.in");
-  });
-
-  it("leaves a short body alone", () => {
-    const r = buildGmailCompose({ to: "a@x.in", subject: "S", body: "Short" });
-    expect(r.bodyTrimmed).toBe(false);
-    expect(bodyOf(r.url)).toBe("Short");
-  });
-
-  it("caps the URL at about 1,900 characters by trimming only the body", () => {
-    const subject = "Your GSTR-3B for September 2026: documents we still need";
-    const body = "Please upload the sales register. ".repeat(200);
-    const r = buildGmailCompose({ to: "priya@acme.in", cc: "ravi@acme.in", subject, body });
-    expect(r.bodyTrimmed).toBe(true);
-    expect(r.url.length).toBeLessThanOrEqual(1900);
-    expect(r.url.length).toBeGreaterThan(1880);
-    expect(r.url).toContain(`su=${encodeURIComponent(subject)}`);
-    expect(r.url).toContain("to=priya%40acme.in&cc=ravi%40acme.in");
-    const decoded = bodyOf(r.url);
-    expect(decoded.endsWith(TRIMMED_BODY_MARKER)).toBe(true);
-    expect(body.startsWith(decoded.slice(0, -1).trimEnd())).toBe(true);
-  });
-
-  it("is UTF-8 aware: never splits ₹ (3 bytes) or an emoji (surrogate pair) or a percent-escape", () => {
-    for (const unit of ["₹", "₹1,23,456.00 due. ", "😀", "नमस्ते "]) {
-      const r = buildGmailCompose({ to: "a@x.in", subject: "Dues", body: unit.repeat(800) });
-      expect(r.bodyTrimmed).toBe(true);
-      expect(r.url.length).toBeLessThanOrEqual(1900);
-      const encodedBody = /&body=(.*)$/.exec(r.url)?.[1] ?? "";
-      expect(encodedBody).toMatch(/^(?:%[0-9A-F]{2}|[A-Za-z0-9\-_.!~*'()])*$/);
-      expect(() => decodeURIComponent(encodedBody)).not.toThrow();
-      const decoded = decodeURIComponent(encodedBody);
-      expect(decoded.endsWith(TRIMMED_BODY_MARKER)).toBe(true);
-      expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(decoded)).toBe(false);
-    }
-  });
-
-  it("fits a body exactly at the cap without trimming", () => {
-    const head = gmailComposeUrl({ to: "a@x.in", subject: "S" });
-    const room = 1900 - `${head}&body=`.length;
-    const exact = buildGmailCompose({ to: "a@x.in", subject: "S", body: "x".repeat(room) });
-    expect(exact.bodyTrimmed).toBe(false);
-    expect(exact.url.length).toBe(1900);
-    const over = buildGmailCompose({ to: "a@x.in", subject: "S", body: "x".repeat(room + 1) });
-    expect(over.bodyTrimmed).toBe(true);
-    expect(over.url.length).toBeLessThanOrEqual(1900);
-  });
-
-  it("never trims the recipients or subject, even when they alone exceed the cap", () => {
-    const subject = "S".repeat(2000);
-    const r = buildGmailCompose({ to: "a@x.in", subject, body: "Body" });
-    expect(r.url).toContain(`su=${subject}`);
-    expect(r.url).not.toContain("&body=");
-    expect(r.bodyTrimmed).toBe(true);
-  });
-
-  it("honours a custom cap and survives a broken surrogate in the input", () => {
-    const r = buildGmailCompose({ to: "a@x.in", body: "y".repeat(500) }, { maxLength: 200 });
-    expect(r.url.length).toBeLessThanOrEqual(200);
-    expect(() => gmailComposeUrl({ to: "a@x.in", subject: "bad \uD800", body: "lone \uDC00 surrogate" })).not.toThrow();
-  });
-});
-
-describe("mailtoUrl (§7.13.3 fallback)", () => {
-  it("builds an RFC 6068 mailto with CRLF line breaks", () => {
-    expect(mailtoUrl({ to: "priya@acme.in", subject: "Invoice 42", body: "Hi,\nThanks" })).toBe(
-      "mailto:priya@acme.in?subject=Invoice%2042&body=Hi%2C%0D%0AThanks",
-    );
-  });
-
-  it("handles cc, bcc, several recipients and no fields", () => {
-    expect(mailtoUrl({ to: ["a@x.in", "b@x.in"], cc: "c@x.in", bcc: "d@x.in" })).toBe("mailto:a@x.in,b@x.in?cc=c@x.in&bcc=d@x.in");
-    expect(mailtoUrl({ to: "a@x.in" })).toBe("mailto:a@x.in");
-    expect(mailtoUrl({ to: "a@x.in", body: "Only body" })).toBe("mailto:a@x.in?body=Only%20body");
-  });
-
-  it("trims a long body to the same cap, without splitting a line break", () => {
-    const r = buildMailto({ to: "a@x.in", subject: "S", body: "Line ₹\n".repeat(400) });
-    expect(r.bodyTrimmed).toBe(true);
-    expect(r.url.length).toBeLessThanOrEqual(1900);
-    const encodedBody = /body=(.*)$/.exec(r.url)?.[1] ?? "";
-    expect(encodedBody).not.toMatch(/%0D$/);
-    expect(() => decodeURIComponent(encodedBody)).not.toThrow();
   });
 });
 

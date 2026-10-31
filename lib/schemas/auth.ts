@@ -48,8 +48,6 @@ export const SignInSchema = z.object({
 });
 export type SignInInput = z.input<typeof SignInSchema>;
 
-export const ForgotPasswordSchema = z.object({ email: emailField });
-export type ForgotPasswordInput = z.input<typeof ForgotPasswordSchema>;
 
 export const NewPasswordSchema = z
   .object({

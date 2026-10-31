@@ -15,8 +15,8 @@ import { QuotationPdf } from "@/server/pdf/quotation";
  *
  * The quotation PDF (§7.5.3 layout, §11) for the firm: Partners and Managers only (quotations are
  * money, §4.1; RLS returns nothing to anyone else), at two-step sign-in (§12, the same gate as
- * server actions). Used by the quotation page's Download PDF and beside the Gmail hand-off ("No
- * compose URL can attach a file, so the PDF is downloaded separately"). Each download writes an
+ * server actions). Used by the quotation page's Download PDF and by Send on WhatsApp, which
+ * downloads it (`?download=1`) as WhatsApp opens, to attach in the chat. Each download writes an
  * export_run audit row. Errors answer with the JSON contract and a Ref (CONVENTIONS §3.5).
  */
 export const dynamic = "force-dynamic";

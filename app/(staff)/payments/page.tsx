@@ -45,7 +45,7 @@ export default async function PaymentsPage() {
         The collection rate is what came in this financial year (received plus TDS) out of what there was to collect: receivables open on 1 April, plus billing since, less credit notes and
         write-offs. Days sales outstanding compares what is owed with the last 90 days&apos; billing.
       </p>
-      <p className="mt-2">Promises come from the follow-up log on each invoice. A reminder that couldn&apos;t go by email waits below with its WhatsApp and Gmail drafts.</p>
+      <p className="mt-2">Promises come from the follow-up log on each invoice. Payment reminders that are due wait below until someone sends them on WhatsApp from the invoice.</p>
     </PageGuide>
   )
 
