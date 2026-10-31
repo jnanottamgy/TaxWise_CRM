@@ -421,8 +421,8 @@ export function QuotationBuilder({
             ) : null}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <TextField control={control} name="client_name" label="Client name" required autoComplete="off" helper="The person it is addressed to." />
-              <TextField control={control} name="client_email" label="Email" required type="email" inputMode="email" autoComplete="off" helper="Printed on the quotation. It goes out on WhatsApp, not by email." />
-              <TextField control={control} name="client_phone" label="Phone" type="tel" inputMode="tel" autoComplete="off" helper="The WhatsApp number it goes to when the lead or client has none." />
+              <TextField control={control} name="client_phone" label="WhatsApp number" type="tel" inputMode="tel" autoComplete="off" helper="The quotation goes to this number on WhatsApp, unless the lead or client has their own." />
+              <TextField control={control} name="client_email" label="Email" type="email" inputMode="email" autoComplete="off" helper="Optional. Printed on the quotation." />
               <TextField control={control} name="client_company" label="Company" autoComplete="off" helper="Printed above the name, when there is one." />
               <TextField
                 control={control}

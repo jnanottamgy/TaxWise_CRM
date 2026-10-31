@@ -56,7 +56,7 @@ type Row = {
   revised_from_id: string | null;
   client_name: string;
   client_company: string | null;
-  client_email: string;
+  client_email: string | null;
   client_phone: string | null;
   client_gstin: string | null;
   place_of_supply_code: string | null;

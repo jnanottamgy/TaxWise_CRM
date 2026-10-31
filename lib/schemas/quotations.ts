@@ -160,12 +160,13 @@ const QuotationFields = z.object({
   lead_id: optionalUuid,
   client_id: optionalUuid,
   client_name: z.string().trim().min(2, { error: "Enter the name of the person it's for." }).max(160, { error: "Keep the name under 160 characters." }),
+  /** Optional: printed on the quotation. The quotation goes out on WhatsApp (0241). */
   client_email: z
     .string()
     .trim()
-    .min(1, { error: "Enter the client's email address." })
     .max(254)
-    .refine((v) => z.email().safeParse(v).success, { error: "Enter a valid email address, like name@company.in." }),
+    .default("")
+    .refine((v) => v === "" || z.email().safeParse(v).success, { error: "Enter a valid email address, like name@company.in, or leave it blank." }),
   client_phone: z
     .string()
     .trim()
@@ -192,6 +193,10 @@ const QuotationFields = z.object({
 });
 
 function builderRules(v: z.output<typeof QuotationFields>, ctx: z.RefinementCtx) {
+  // The same rule as save_quotation (0241): some way to reach the client, WhatsApp first.
+  if (!v.client_phone && !v.client_email) {
+    ctx.addIssue({ code: "custom", path: ["client_phone"], message: "Enter the client's WhatsApp number (or an email), so the quotation can reach them." });
+  }
   if (compareDates(v.valid_until, v.issue_date) < 0) {
     ctx.addIssue({ code: "custom", path: ["valid_until"], message: "Valid until can't be before the issue date." });
   }

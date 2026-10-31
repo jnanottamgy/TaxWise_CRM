@@ -139,7 +139,7 @@ describe("save_quotation (§7.5.2)", () => {
     });
   });
 
-  it("refuses a stale save, a missing name or email, and anyone but Partners and Managers", async () => {
+  it("refuses a stale save, a missing name or way to reach the client, and anyone but Partners and Managers", async () => {
     await db.asRole(U.M1, async (s) => {
       const q = await save(s, null);
       const ok = await save(s, q.id, header({ notes: "Updated" }), LINES, q.updated_at);
@@ -148,9 +148,20 @@ describe("save_quotation (§7.5.2)", () => {
       const stale = await save(s, q.id, header({ notes: "Lost update" }), LINES, "2026-01-01T00:00:00Z");
       expect(stale.conflict).toBe(true);
       expect(await s.value("select notes from quotations where id = $1", [q.id])).toBe("Updated");
-      expect(userMessage(await s.fails("select * from save_quotation(null, null, $1::jsonb, '[]'::jsonb)", [JSON.stringify(header({ client_email: "" }))]))).toMatch(
-        /name and email/,
-      );
+      expect(userMessage(await s.fails("select * from save_quotation(null, null, $1::jsonb, '[]'::jsonb)", [JSON.stringify(header({ client_name: "" }))]))).toMatch(/client's name/);
+      expect(userMessage(await s.fails("select * from save_quotation(null, null, $1::jsonb, '[]'::jsonb)", [JSON.stringify(header({ client_email: "", client_phone: "" }))]))).toMatch(/WhatsApp number/);
+    });
+  });
+
+  it("saves and hands off a quotation with a WhatsApp number and no email (0241)", async () => {
+    // A Partner's quotation needs no approval, so it can go straight out.
+    await db.asRole(U.P1, async (s) => {
+      const small = [{ description: "Income tax return", service_type: "income_tax", frequency: "annual", quantity: 1, unit_price: 2000, tax_rate: 18 }];
+      const q = await save(s, null, header({ client_email: "" }), small);
+      expect(await s.value("select client_email from quotations where id = $1", [q.id])).toBeNull();
+      const sent = await s.one<{ status: string }>("select * from mark_quotation_sent($1, null, 'whatsapp_handoff', null, null, null, 'initial')", [q.id]);
+      expect(sent.status).toBe("sent");
+      expect(await s.value("select \"to\" from quotation_email_logs where quotation_id = $1", [q.id])).toBe("9845012345");
     });
     await db.asRole(U.E1, async (s) => {
       expect(userMessage(await s.fails("select * from save_quotation(null, null, $1::jsonb, '[]'::jsonb)", [JSON.stringify(header())]))).toMatch(/Partners and Managers/);

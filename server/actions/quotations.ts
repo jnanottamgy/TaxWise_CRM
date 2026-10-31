@@ -94,7 +94,7 @@ async function load(supabase: ServerSupabase, id: string): Promise<Loaded> {
     .maybeSingle();
   throwIfDbError(error);
   if (!data || data.deleted_at) throw new ActionError("This quotation no longer exists. It may have been deleted.", { code: "not_found" });
-  return { ...data, client_email: String(data.client_email), total: Number(data.total) } as Loaded;
+  return { ...data, client_email: data.client_email ?? "", total: Number(data.total) } as Loaded;
 }
 
 function stale(updatedAt: string): ActionError {
