@@ -37,7 +37,6 @@ export const env = {
   emailFrom: () => process.env.EMAIL_FROM ?? "TaxWise Consultants <noreply@twchartered.com>",
   emailReplyTo: () => process.env.EMAIL_REPLY_TO ?? "info@twchartered.com",
   firstPartnerEmail: () => process.env.FIRST_PARTNER_EMAIL ?? null,
-  desktopDownloadUrl: () => process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ?? null,
   sentryDsn: () => process.env.SENTRY_DSN ?? null,
 } as const;
 

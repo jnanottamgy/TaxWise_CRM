@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     ".claude/**",
     ".taste-skill/**",
     ".local-stack/**",
+    // Netlify's build output (functions and edge functions it generates).
+    ".netlify/**",
   ]),
 ]);
 
