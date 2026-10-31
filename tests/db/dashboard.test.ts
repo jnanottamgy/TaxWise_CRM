@@ -5,6 +5,7 @@
  * and that RLS still decides what each person's figures are made of (§4.1, §4.6).
  */
 import { describe, expect, it } from "vitest";
+import { addDays, todayIST } from "@/lib/domain/fy";
 import { C, F, U, SQLSTATE, fid, setupTestDatabase, userMessage, type Session, type TestUser } from "./helpers";
 
 const db = setupTestDatabase("dashboard");
@@ -271,7 +272,8 @@ describe("Team today (§7.2 Manager)", () => {
   it("counts each queue the way its /work list does, with the first rows", async () => {
     await db.asRole(U.M1, async (s) => {
       const unassigned = await addTask(s, { key: "t-unassigned", client: C.A, assignee: null, due: "2026-10-30" });
-      const waiting = await addTask(s, { key: "t-waiting", client: C.A, assignee: U.E1, acceptance: "pending", due: "2026-10-28" });
+      // Due after the real today, so the row's own is_overdue (the list view's, against today) stays false.
+      const waiting = await addTask(s, { key: "t-waiting", client: C.A, assignee: U.E1, acceptance: "pending", due: addDays(todayIST(), 7) });
       const declined = await addTask(s, { key: "t-declined", client: C.B, assignee: null, acceptance: "declined", due: "2026-10-29" });
       await addTask(s, { key: "t-data", client: C.B, assignee: U.E2, status: "data_awaited", due: "2026-10-20" });
       await addTask(s, { key: "t-filed", client: C.B, assignee: null, status: "filed_done", due: "2026-10-01" });
