@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { CheckCircle2Icon, FileSearchIcon } from "lucide-react"
 import { formatDate } from "@/lib/format"
 import { formatINR, type Paise } from "@/lib/domain/money"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import type { TdsMatchStatus } from "@/lib/domain/collections"
 import type { StatementIssue } from "@/lib/data/tds-credits"
 import type { FormError } from "@/hooks/use-action-form"
@@ -141,7 +141,6 @@ function CorrectionRow({ group: g }: { group: CorrectionGroup }) {
           recipientName={g.contactName ? `${g.contactName} · ${g.clientName}` : g.clientName}
           number={g.whatsappNumber}
           draft={g.body}
-          buildUrl={waMeUrl}
           variant="outline"
           onHandedOff={({ number, text }) => handedOff("whatsapp_handoff", number, text, null)}
         />

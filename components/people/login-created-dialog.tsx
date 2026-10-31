@@ -7,7 +7,7 @@ import { FormDialog } from "@/components/app/form-dialog"
 import { CopyButton } from "@/components/app/copy-button"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { loginInviteEmail, loginShareMessage } from "@/lib/schemas/people"
 import type { LoginHandout } from "@/server/actions/people"
 import { cn } from "@/lib/utils"
@@ -108,7 +108,6 @@ function LoginCard({ login, compact }: { login: LoginHandout; compact: boolean }
           recipientName={login.fullName}
           number={login.whatsapp}
           draft={loginShareMessage(share)}
-          buildUrl={(digits, text) => waMeUrl(digits, text)}
           label="Share on WhatsApp"
           disabledReason={`No WhatsApp or mobile number for ${login.fullName}. Add one in their details, or use Gmail.`}
         />

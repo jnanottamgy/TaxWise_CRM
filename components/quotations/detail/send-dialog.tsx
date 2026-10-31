@@ -15,12 +15,11 @@ import { useActionForm } from "@/hooks/use-action-form"
 import { useCopy } from "@/hooks/use-copy"
 import { cn } from "@/lib/utils"
 import { emailOutcomeNotice, type EmailSendOutcome } from "@/lib/handoff"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { SendQuotationEmailSchema, type SendQuotationEmailInput } from "@/lib/schemas/quotations"
 import { logQuotationHandoff, sendQuotationEmail } from "@/server/actions/quotations"
 import type { ControlsData } from "@/components/quotations/detail/types"
 
-const whatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 const gmailUrl = (f: ComposeFields) => gmailComposeUrl(f)
 
 /**
@@ -121,7 +120,6 @@ export function SendQuotationDialog({
           recipientName={data.who}
           number={data.whatsappNumber}
           draft={data.drafts.whatsapp}
-          buildUrl={whatsAppUrl}
           disabledReason="No WhatsApp number on the quotation's lead or client. Copy the link instead."
           onHandedOff={async ({ number, text }) => {
             await handOff({ channel: "whatsapp_handoff", recipient: number, body: text })

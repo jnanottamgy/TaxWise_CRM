@@ -38,7 +38,7 @@ export function HandoffSheet({
         >
           <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div className="min-w-0">
-              <DialogPrimitive.Title className="text-md leading-6 font-semibold text-text">{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Title className="font-serif text-[20px] leading-7 font-medium tracking-[-0.005em] text-text">{title}</DialogPrimitive.Title>
               {description ? (
                 <DialogPrimitive.Description className="mt-0.5 text-sm text-text-muted">{description}</DialogPrimitive.Description>
               ) : (

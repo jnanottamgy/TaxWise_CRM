@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ChevronRightIcon, DownloadIcon, PlusIcon, ReceiptIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useTheme } from "next-themes"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { cn } from "@/lib/utils"
 import { STATUS_VOCABULARY, statusOptions, type StatusKind } from "@/lib/status"
 import { Button } from "@/components/ui/button"
@@ -58,7 +58,6 @@ const SECTIONS = [
 ]
 
 // The real hand-off builders (lib/domain/messaging.ts), so the kit shows exactly what features send.
-const kitWhatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 const kitGmailUrl = (f: { to: string; cc?: string; bcc?: string; subject: string; body: string }) => gmailComposeUrl(f)
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
@@ -335,7 +334,7 @@ export function KitGallery({
                   description="Partnership firm · Bengaluru · GST monthly"
                   actions={
                     <>
-                      <WhatsAppButton recipientName="Rakesh Sharma · Sharma Traders" number="919845012345" draft="Hi Rakesh," buildUrl={kitWhatsAppUrl} />
+                      <WhatsAppButton recipientName="Rakesh Sharma · Sharma Traders" number="919845012345" draft="Hi Rakesh," />
                       <Button variant="outline" size="sm">
                         Edit
                       </Button>
@@ -612,7 +611,6 @@ export function KitGallery({
                 recipientName="Rakesh Sharma · Sharma Traders"
                 number="919845012345"
                 draft={"Hi Rakesh, for your GSTR-3B for Sep 2026 we still need:\n• Purchase register\n• Bank statement for September\nYou can upload them here: https://app.twchartered.com/portal/documents\n– Anita"}
-                buildUrl={kitWhatsAppUrl}
                 templates={[
                   { id: "t1", name: "Compliance reminder", body: "Hi Rakesh, GSTR-3B for Sep 2026 is due on 20 Oct 2026. Please share the purchase register today.\n– Anita" },
                   { id: "t2", name: "Payment reminder", body: "Hi Rakesh, invoice TW/26-27/0142 for ₹14,750.00 is due on 31 Oct 2026. Pay by UPI from the portal.\n– Anita" },
@@ -621,9 +619,9 @@ export function KitGallery({
                   await new Promise((r) => setTimeout(r, 300))
                 }}
               />
-              <WhatsAppButton recipientName="Malnad Coffee Estates" number={null} draft="" buildUrl={kitWhatsAppUrl} />
-              <WhatsAppButton recipientName="Rakesh Sharma" number="919845012345" draft="Hi Rakesh," buildUrl={kitWhatsAppUrl} iconOnly variant="outline" />
-              <WhatsAppButton recipientName="Malnad Coffee Estates" number={null} draft="" buildUrl={kitWhatsAppUrl} iconOnly />
+              <WhatsAppButton recipientName="Malnad Coffee Estates" number={null} draft="" />
+              <WhatsAppButton recipientName="Rakesh Sharma" number="919845012345" draft="Hi Rakesh," iconOnly variant="outline" />
+              <WhatsAppButton recipientName="Malnad Coffee Estates" number={null} draft="" iconOnly />
               <GmailButton
                 to="accounts@sharmatraders.in"
                 subject="Invoice TW/26-27/0142 from TaxWise Consultants"

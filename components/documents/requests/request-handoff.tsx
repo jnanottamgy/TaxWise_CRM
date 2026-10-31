@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { WhatsAppButton, type MessageTemplateOption } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber, waMeUrl } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { renderTemplate } from "@/lib/domain/templates"
 import { formatDate } from "@/lib/format"
 import { outstandingLines, requestHandoffDraft, requestHandoffSubject, type DraftItem } from "@/lib/schemas/document-requests"
@@ -99,7 +99,6 @@ export function RequestHandoff({
         number={number?.digits ?? null}
         draft={sign(draft)}
         templates={templates}
-        buildUrl={waMeUrl}
         size={size}
         variant="outline"
         disabledReason="No WhatsApp number for this client. Add one in Contacts."

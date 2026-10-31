@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { EllipsisIcon, ExternalLinkIcon, ListPlusIcon, ReceiptTextIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber, waMeUrl } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { extractVariables, renderTemplate, type TemplateValues } from "@/lib/domain/templates"
 import { logHandoff } from "@/server/actions/messages"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,6 @@ export type MessagingProps = {
 /** Variables a client-list hand-off can fill (no task, deadline or invoice is in view). */
 const CLIENT_LEVEL = new Set(["client_name", "client_code", "contact_name", "portal_link", "firm_name", "firm_phone", "sender_name"])
 
-const whatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 const gmailUrl = (f: { to: string; cc?: string; subject: string; body: string }) => gmailComposeUrl(f)
 
 async function logged(r: Promise<{ ok: boolean }>) {
@@ -83,7 +82,6 @@ export function ClientRowActions({
         number={picked?.digits ?? null}
         draft={sign(`Hi ${first},\n\n`)}
         templates={templates}
-        buildUrl={whatsAppUrl}
         onHandedOff={({ number, text, templateId }) =>
           logged(logHandoff({ clientId: client.id, contactId: contact?.id ?? null, channel: "whatsapp_handoff", recipient: number, body: text, templateId }))
         }

@@ -4,7 +4,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { WhatsAppButton, type MessageTemplateOption } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber, waMeUrl } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { renderTemplate } from "@/lib/domain/templates"
 import { askClientDraft, askClientSubject, askClientValues, type AskClientFacts } from "@/lib/schemas/tasks"
 import { logHandoff } from "@/server/actions/messages"
@@ -72,7 +72,6 @@ export function AskClientForData({
         number={number?.digits ?? null}
         draft={sign(draft)}
         templates={waTemplates}
-        buildUrl={waMeUrl}
         size={size === "sm" ? "sm" : "default"}
         variant={variant}
         label="Ask on WhatsApp"

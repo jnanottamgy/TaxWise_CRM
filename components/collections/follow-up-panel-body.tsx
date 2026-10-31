@@ -7,7 +7,7 @@ import { MessageSquareTextIcon, PlusIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { formatINR, type Paise } from "@/lib/domain/money"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { reminderSlotLabel } from "@/lib/domain/collections"
 import { FOLLOW_UP_CHANNEL_LABEL } from "@/lib/schemas/collections"
 import type { FollowUpRow, ReminderRow } from "@/lib/data/collections"
@@ -192,7 +192,6 @@ function PendingReminder({ p, invoiceNumber, pdfHref }: { p: PendingReminderView
           recipientName={p.contactName}
           number={p.whatsappNumber}
           draft={p.whatsappDraft}
-          buildUrl={waMeUrl}
           variant="outline"
           onHandedOff={({ number, text }) => handedOff("whatsapp_handoff", number, text, null, p.whatsappTemplateId)}
         />

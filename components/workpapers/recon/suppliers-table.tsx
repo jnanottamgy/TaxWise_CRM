@@ -14,7 +14,7 @@ import { GmailButton } from "@/components/app/messaging/gmail-button"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber, waMeUrl } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { renderTemplate } from "@/lib/domain/templates"
 import { FOLLOW_UP_SUBJECT, FOLLOW_UP_TEMPLATE_NAMES, SUPPLIER_DEFAULT_SORT, defaultSupplierFollowUp } from "@/lib/schemas/gst-recon"
 import type { SupplierRow, FollowUpContext } from "@/lib/data/gst-recon"
@@ -203,7 +203,6 @@ function FollowUpSheet({ target, supplier, onClose }: { target: FollowUpTarget; 
                       ? renderTemplate(waTemplate.body, values(state.items))
                       : defaultSupplierFollowUp({ contactName, periodText: target.periodText, missingItems: state.items, channel: "whatsapp", senderName: messaging.senderName, firmName: messaging.firmName }),
                   )}
-                  buildUrl={waMeUrl}
                   size="default"
                   variant="outline"
                   disabledReason="No WhatsApp number for this client. Add one in Contacts."

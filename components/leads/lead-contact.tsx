@@ -6,10 +6,9 @@ import { PhoneIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton, type ComposeFields } from "@/components/app/messaging/gmail-button"
-import { applySignature, firstNameOf, gmailComposeUrl, normalizeWhatsAppNumber, waMeUrl } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, gmailComposeUrl, normalizeWhatsAppNumber } from "@/lib/domain/messaging"
 import { logLeadHandoff } from "@/server/actions/leads"
 
-const whatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 const gmailUrl = (f: ComposeFields) => gmailComposeUrl(f)
 
 /**
@@ -44,7 +43,6 @@ export function LeadContactButtons({
         recipientName={who}
         number={number}
         draft={wa}
-        buildUrl={whatsAppUrl}
         disabledReason="No WhatsApp number for this lead. Add a mobile number to the lead."
         onHandedOff={({ number: n, text }) => log({ leadId: lead.id, channel: "whatsapp_handoff", recipient: n, body: text })}
       />

@@ -7,7 +7,7 @@ import { FormDialog } from "@/components/app/form-dialog"
 import { MonoId } from "@/components/app/mono-id"
 import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { emailOutcomeNotice } from "@/lib/handoff"
 import type { PortalHandout } from "@/server/actions/portal-access"
 
@@ -77,7 +77,6 @@ export function PortalHandoutDialog({ handout, onClose }: { handout: PortalHando
               recipientName={`${h.handoff.contactName} · ${h.clientName}`}
               number={h.handoff.whatsappNumber}
               draft={h.handoff.whatsappText}
-              buildUrl={waMeUrl}
               label="Share on WhatsApp"
               variant="outline"
             />

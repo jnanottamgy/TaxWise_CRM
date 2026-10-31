@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Explain } from "@/components/app/explain"
 import { WhatsAppButton, type MessageTemplateOption } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton } from "@/components/app/messaging/gmail-button"
-import { gmailComposeUrl, mailtoUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl, mailtoUrl } from "@/lib/domain/messaging"
 import { logHandoff } from "@/server/actions/messages"
 
 export interface ContactTarget {
@@ -77,7 +77,6 @@ export function ContactButtons({
         number={target.whatsapp}
         draft={draft}
         templates={templates}
-        buildUrl={waMeUrl}
         onHandedOff={onWhatsApp}
         variant="outline"
         size="sm"

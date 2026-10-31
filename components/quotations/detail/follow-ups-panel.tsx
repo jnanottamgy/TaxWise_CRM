@@ -12,12 +12,11 @@ import { GmailButton, type ComposeFields } from "@/components/app/messaging/gmai
 import { cn } from "@/lib/utils"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { emailOutcomeNotice } from "@/lib/handoff"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { CHANNEL_SEND_LABELS, followUpStatusInfo } from "@/lib/schemas/quotations"
 import { logQuotationHandoff, sendQuotationFollowUp } from "@/server/actions/quotations"
 import type { FollowUpView } from "@/components/quotations/detail/types"
 
-const whatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 const gmailUrl = (f: ComposeFields) => gmailComposeUrl(f)
 
 /**
@@ -132,7 +131,6 @@ export function FollowUpsPanel({
                   recipientName={who}
                   number={whatsappNumber}
                   draft={r.whatsapp}
-                  buildUrl={whatsAppUrl}
                   variant="outline"
                   disabledReason="No WhatsApp number on the quotation's lead or client."
                   onHandedOff={({ number, text }) => handOff(r.day, { channel: "whatsapp_handoff", recipient: number, body: text })}

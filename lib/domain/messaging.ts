@@ -178,6 +178,17 @@ export function waMeUrl(digits: string, draft = ""): string {
   return text === "" ? `https://wa.me/${digits}` : `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 
+/**
+ * The same chat straight in WhatsApp Web, for computers: wa.me stops on a "Continue to chat" page in
+ * a desktop browser, while web.whatsapp.com/send opens the chat with the message typed in.
+ */
+export function whatsAppWebSendUrl(digits: string, draft = ""): string {
+  if (!/^[1-9]\d{7,14}$/.test(digits)) throw new RangeError("whatsAppWebSendUrl needs a normalised number (8–15 digits, from normalizeWhatsAppNumber).");
+  const text = normaliseLineBreaks(draft);
+  const base = `https://web.whatsapp.com/send?phone=${digits}`;
+  return text === "" ? base : `${base}&text=${encodeURIComponent(text)}`;
+}
+
 // -------------------------------------------------------------------------------------------------
 // Signature on shared numbers (§7.13.2, §7.25.10)
 // -------------------------------------------------------------------------------------------------

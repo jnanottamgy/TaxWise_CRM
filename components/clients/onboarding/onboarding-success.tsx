@@ -13,7 +13,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { gmailComposeUrl, waMeUrl } from "@/lib/domain/messaging"
+import { gmailComposeUrl } from "@/lib/domain/messaging"
 import { logHandoff } from "@/server/actions/messages"
 import type { OnboardingResult } from "@/server/actions/clients"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,6 @@ import { WhatsAppButton } from "@/components/app/messaging/whatsapp-button"
 import { GmailButton } from "@/components/app/messaging/gmail-button"
 import type { UploadJob } from "@/components/clients/onboarding/use-checklist-uploads"
 
-const whatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 const gmailUrl = (f: { to: string; cc?: string; subject: string; body: string }) => gmailComposeUrl(f)
 
 /** The temporary password is shown once and never stored, so the logged copy of a hand-off leaves it out (§12). */
@@ -149,7 +148,6 @@ export function OnboardingSuccess({
                 recipientName={portal.handoff.contactName}
                 number={portal.handoff.whatsappNumber}
                 draft={portal.handoff.whatsappText}
-                buildUrl={whatsAppUrl}
                 label="Send on WhatsApp"
                 onHandedOff={({ number, text }) =>
                   logged(

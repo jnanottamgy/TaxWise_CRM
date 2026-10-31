@@ -20,7 +20,7 @@ import { Money } from "@/components/app/money"
 import { cn } from "@/lib/utils"
 import { fromPaise, formatINR } from "@/lib/domain/money"
 import { formatDate } from "@/lib/format"
-import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber, upiPayUrl, waMeUrl } from "@/lib/domain/messaging"
+import { applySignature, firstNameOf, gmailComposeUrl, pickWhatsAppNumber, upiPayUrl } from "@/lib/domain/messaging"
 import { extractVariables, renderTemplate } from "@/lib/domain/templates"
 import { emailOutcomeNotice, type EmailSendOutcome } from "@/lib/handoff"
 import { invoiceShareText, type SendChannel } from "@/lib/schemas/invoices"
@@ -245,7 +245,6 @@ export function SendInvoiceDialog({
         number={number?.digits ?? null}
         draft={sign(share.whatsapp)}
         templates={templates}
-        buildUrl={waMeUrl}
         size="default"
         variant="outline"
         onHandedOff={logWhatsApp}

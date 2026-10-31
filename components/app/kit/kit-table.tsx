@@ -4,7 +4,6 @@ import * as React from "react"
 import { BellIcon, UsersIcon } from "lucide-react"
 import { toast } from "sonner"
 import { statusOptions } from "@/lib/status"
-import { waMeUrl } from "@/lib/domain/messaging"
 import { ok } from "@/lib/result"
 import { Button } from "@/components/ui/button"
 import { DataTable, type DataTableColumn } from "@/components/app/data-table/data-table"
@@ -23,7 +22,6 @@ import { KIT_OWNERS, KIT_VIEWS, type KitClientRow } from "@/components/app/kit/s
 
 const TODAY = "2026-10-22"
 
-const kitWhatsAppUrl = (digits: string, text: string) => waMeUrl(digits, text)
 
 const columns: DataTableColumn<KitClientRow>[] = [
   { id: "name", header: "Client", cell: (r) => r.name, sortable: true, hideable: false, mobile: "primary", width: "26%" },
@@ -55,7 +53,6 @@ const columns: DataTableColumn<KitClientRow>[] = [
         recipientName={r.name}
         number={r.gstin ? `9198450${r.code.slice(-4).replace(/\D/g, "0")}1` : null}
         draft={`Hi, for your ${r.nextFiling} we still need your purchase invoices. You can upload them on the TaxWise portal.`}
-        buildUrl={kitWhatsAppUrl}
       />
     ),
   },
