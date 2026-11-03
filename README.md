@@ -85,10 +85,36 @@ For each project:
 3. **Auth → URL configuration:** Site URL = the app URL.
 4. **Storage:** buckets `client-documents`, `task-files`, `generated` (private) and `branding` (public logo) are created
    by the migrations. Optionally set `allowed_mime_types` on `client-documents` as a second file-type check.
-5. **Backups (§12, §18.2):** the Pro plan keeps a daily backup for 7 days and never pauses the project; the Free plan
-   has neither, and pauses a project after a week without use. Point-in-time recovery is a paid add-on on top of Pro.
-   Whatever the plan, download Settings → Data → **Download full export** regularly (weekly at least) and keep it
-   outside Supabase; on the Free plan it is the only backup of the records. Uploaded documents are not in it.
+5. **Backups:** see Backups below. The Free plan keeps none of its own.
+
+## Backups
+
+The firm runs on Supabase's Free plan, which keeps no backups and pauses a project after a week
+without use (the 15-minute scheduler keeps it in use). Two copies are kept instead:
+
+- **Every night (automatic):** `.github/workflows/backup.yml` dumps the production database at
+  02:00 IST with the Supabase CLI (roles, schema, data), encrypts it with `BACKUP_PASSPHRASE` and keeps
+  it 10 days under Actions → Nightly backup → a run → Artifacts. Add the repository secrets
+  `SUPABASE_DB_URL_PRODUCTION` (as for the Database workflow) and `BACKUP_PASSPHRASE` (a long
+  passphrase, kept offline with the vault key: a backup can't be opened without it). GitHub Free
+  keeps 500 MB of artifacts for a private repository; a backup is about a megabyte per few thousand
+  records.
+- **Every Friday (by hand):** Settings → Data → **Download full export**, kept in the firm's Google
+  Drive.
+
+Neither holds the uploaded documents (Supabase Storage, 1 GB on Free): keep the originals.
+
+To restore into a new Supabase project: download the artifact, then
+
+```bash
+gpg --decrypt taxwise-db-YYYY-MM-DD.tar.gz.gpg > backup.tar.gz   # asks for BACKUP_PASSPHRASE
+mkdir backup && tar -xzf backup.tar.gz -C backup && cd backup
+psql "<new project's session pooler URL>" --single-transaction --variable ON_ERROR_STOP=1 \
+  --file roles.sql --file schema.sql --command 'SET session_replication_role = replica' --file data.sql
+```
+
+then point the Netlify variables at the new project. (Checked on a copy of the QA database: every
+table came back with the same row counts.)
 
 ## Hosting on Netlify
 

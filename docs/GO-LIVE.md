@@ -17,9 +17,9 @@ Tick every line before real client data goes into production. Owner: a Partner, 
 - [ ] Settings → Diagnostics: schema version matches, every table answers, enums complete, RLS helpers present, buckets exist.
 - [ ] RLS is on for every table — prove it in the SQL editor:
       `select tablename from pg_tables where schemaname = 'public' and not rowsecurity;` returns no rows.
-- [ ] Backups decided and in place: Supabase Pro (daily backups, 7 days) or a weekly full export kept outside
-      Supabase (Settings → Data); point-in-time recovery if the Partners want it. First restore drill recorded in
-      Quality → Restore drills.
+- [ ] Backups in place (README → Backups): `SUPABASE_DB_URL_PRODUCTION` and `BACKUP_PASSPHRASE` set, the
+      Nightly backup workflow green with an artifact, the passphrase kept offline, and a Partner downloading the
+      full export every Friday. First restore drill recorded in Quality → Restore drills.
 
 ## 3. Configuration
 - [ ] `npm run env:check` passes against the production values (the production build on Netlify runs it).

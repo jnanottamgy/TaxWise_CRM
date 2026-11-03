@@ -1,0 +1,76 @@
+name: Nightly backup
+
+# A copy of the production database every night, kept 10 days: the Supabase Free plan keeps no
+# backups of its own. Three files (roles, schema, data), made with the Supabase CLI the way
+# Supabase's backup guide does, packed and encrypted with BACKUP_PASSPHRASE, and kept as the run's
+# artifact (Actions → Nightly backup → a run → Artifacts). Uploaded documents (Storage) are not in
+# it. Restoring: README → Backups.
+#
+# Needs the repository secrets SUPABASE_DB_URL_PRODUCTION (as for the Database workflow) and
+# BACKUP_PASSPHRASE (a long passphrase kept offline: without it a backup can't be opened). Until
+# both are set, the run only says so and stops.
+
+on:
+  schedule:
+    - cron: "30 20 * * *" # 02:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Back up the production database
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check the secrets are set
+        id: check
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL_PRODUCTION }}
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::notice::No backup made: add the repository secrets SUPABASE_DB_URL_PRODUCTION and BACKUP_PASSPHRASE (README → Backups)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.ready == 'true'
+        with:
+          version: 2.122.0
+      - name: Dump roles, schema and data
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL_PRODUCTION }}
+        run: |
+          mkdir -p backup
+          supabase db dump --db-url "$DB_URL" --role-only -f backup/roles.sql
+          supabase db dump --db-url "$DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$DB_URL" --data-only --use-copy -f backup/data.sql
+          ls -l backup
+      - name: Pack and encrypt
+        if: steps.check.outputs.ready == 'true'
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          name="taxwise-db-$(TZ=Asia/Kolkata date +%Y-%m-%d)"
+          tar -czf "$name.tar.gz" -C backup .
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 -o "$name.tar.gz.gpg" "$name.tar.gz" <<< "$PASSPHRASE"
+          rm -rf backup "$name.tar.gz"
+          echo "BACKUP_FILE=$name.tar.gz.gpg" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: error
