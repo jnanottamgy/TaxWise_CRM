@@ -31,7 +31,7 @@ export type ScheduledJobName = keyof typeof SCHEDULED_JOBS;
 
 /**
  * When each job runs, as UTC cron expressions (IST − 5:30; lib/domain/cron.ts reads them). The
- * scheduler checks every 15 minutes (netlify/functions/scheduler.mts calls /api/cron/tick) and runs
+ * scheduler checks every 15 minutes (Supabase Cron calls /api/cron/tick; README → Scheduled jobs) and runs
  * whatever has come due since its last check, oldest first and in this order when several are due
  * together, so a job starts within 15 minutes of its time. absent-without-cover runs twice: at
  * 10:00 IST and again after the 10:30 no-show cut-off.

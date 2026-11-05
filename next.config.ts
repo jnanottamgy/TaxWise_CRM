@@ -66,9 +66,9 @@ const nextConfig: NextConfig = {
   // Every screen is per-user and RLS-scoped; nothing is cached across users (§0.1 rule 15).
   cacheComponents: false,
   poweredByHeader: false,
-  // Netlify sets COMMIT_REF during the build only: carry it into the server code so /api/health can
-  // name the deployed commit.
-  env: { COMMIT_REF: process.env.COMMIT_REF ?? "" },
+  // Vercel sets VERCEL_GIT_COMMIT_SHA during the build: carry it into the server code so /api/health
+  // can name the deployed commit.
+  env: { COMMIT_REF: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.COMMIT_REF ?? "" },
   experimental: {
     // forbidden() → app/(staff)/forbidden.tsx and app/(portal)/portal/forbidden.tsx: a real 403 for a
     // page the role may not open (lib/auth/guards.ts denyAccess). Without it, denyAccess falls back to 404.

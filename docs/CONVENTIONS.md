@@ -41,7 +41,7 @@ server/jobs/<job>.ts   scheduled job bodies; schedule.ts (when), due.ts (what is
 server/pdf/            PDF rendering (server-only)
 supabase/migrations/NNNN_name.sql · supabase/seed.sql (only §16 content)
 tests/unit/ · tests/db/ · tests/e2e/
-netlify/functions/     the scheduler (Netlify scheduled function, every 15 minutes)
+vercel.json            Vercel: the app's server in Mumbai; production builds run env:check first
 ```
 
 ## 2. Routes (fixed; the sidebar links to these)

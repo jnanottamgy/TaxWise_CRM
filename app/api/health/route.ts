@@ -8,7 +8,7 @@ import pkg from "@/package.json";
  * Settings → Diagnostics.
  *
  * `version` is the package version, plus the short commit: APP_BUILD_ID when set, else the commit
- * Netlify built (COMMIT_REF, carried into the build by next.config.ts).
+ * Vercel built (VERCEL_GIT_COMMIT_SHA, carried into the build as COMMIT_REF by next.config.ts).
  */
 export const dynamic = "force-dynamic";
 

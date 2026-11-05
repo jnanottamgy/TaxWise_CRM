@@ -241,7 +241,7 @@ export const VARIABLES: readonly VariableSpec[] = [
   },
   {
     name: "APP_BUILD_ID",
-    breaks: "Optional: /api/health reports the package version only (plus the commit on Netlify, which sets COMMIT_REF during the build).",
+    breaks: "Optional: /api/health reports the package version only (plus the commit on Vercel, which sets VERCEL_GIT_COMMIT_SHA during the build).",
     requiredIn: [],
     validate: (v) => (/^[0-9a-zA-Z._-]{1,64}$/.test(v) ? null : "must be 1 to 64 letters, digits, dots, dashes or underscores"),
   },
@@ -346,7 +346,7 @@ export function checkEnv(env: Env): EnvReport {
   if (appEnv === "production") {
     const supa = parseUrl(env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "");
     const app = parseUrl(env.NEXT_PUBLIC_APP_URL?.trim() ?? "");
-    const host = app ? /(^|\.)((netlify|vercel)\.app)$/.exec(app.hostname) : null;
+    const host = app ? /(^|\.)((vercel|netlify)\.app)$/.exec(app.hostname) : null;
     if (host) {
       warnings.push({
         name: "NEXT_PUBLIC_APP_URL",

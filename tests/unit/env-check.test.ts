@@ -203,13 +203,13 @@ describe("env-check: production sanity", () => {
     expect(checkEnv(production({ NEXT_PUBLIC_SUPABASE_URL: "https://taxwise-staging.supabase.co" })).ok).toBe(false);
   });
 
-  it("warns about a netlify.app (or vercel.app) address in production, and not on staging", () => {
-    for (const url of ["https://taxwise-crm.netlify.app", "https://taxwise.vercel.app"]) {
+  it("warns about a vercel.app (or netlify.app) address in production, and not on staging", () => {
+    for (const url of ["https://tax-wise-crm.vercel.app", "https://taxwise-crm.netlify.app"]) {
       const r = checkEnv(production({ NEXT_PUBLIC_APP_URL: url }));
       expect(r.ok, url).toBe(true);
       expect(r.warnings.find((w) => w.name === "NEXT_PUBLIC_APP_URL")?.message, url).toMatch(/its own domain/);
     }
-    expect(names(checkEnv(production({ APP_ENV: "staging", NEXT_PUBLIC_APP_URL: "https://taxwise-crm.netlify.app" })).warnings)).not.toContain("NEXT_PUBLIC_APP_URL");
+    expect(names(checkEnv(production({ APP_ENV: "staging", NEXT_PUBLIC_APP_URL: "https://tax-wise-crm.vercel.app" })).warnings)).not.toContain("NEXT_PUBLIC_APP_URL");
   });
 });
 

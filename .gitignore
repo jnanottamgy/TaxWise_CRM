@@ -33,8 +33,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# netlify (CLI state)
-.netlify
+# vercel (CLI state)
+.vercel
 
 # typescript
 *.tsbuildinfo

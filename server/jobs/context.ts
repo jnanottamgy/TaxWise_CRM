@@ -1,6 +1,6 @@
 /**
  * What a scheduled job is told when it runs (§8). A call has a time budget, because hosts cap how
- * long a request may run (Netlify: about 10 seconds). A job that loops over many records checks
+ * long a request may run (Vercel: the route's maxDuration). A job that loops over many records checks
  * `outOfTime` between records and, when it runs short, stops and returns `next`: a cursor the next
  * call resumes from. The scheduler stores it on the job_runs row and calls again on its next check.
  * Jobs that finish quickly ignore all of this. Import-free, so jobs and tests can use it.

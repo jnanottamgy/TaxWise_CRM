@@ -111,7 +111,7 @@ sending the presence heartbeat at once (expects all eight answered).
 
 ## 4. What the stack cannot cover
 
-These need a real Supabase project, Netlify and a real WhatsApp session, so they are on the go-live
+These need a real Supabase project, Vercel and a real WhatsApp session, so they are on the go-live
 checklist (`docs/GO-LIVE.md`) and the §18.3 acceptance run instead:
 
 - **Supabase Auth.** The stand-in issues and verifies signed JWTs for the fixture users: one shared
@@ -125,9 +125,10 @@ checklist (`docs/GO-LIVE.md`) and the §18.3 acceptance run instead:
   `web.whatsapp.com/send` (or `wa.me` on a phone) link, which unit tests check; whether WhatsApp opens
   the chat with the text is checked by hand in the go-live pilot. The CRM's WhatsApp groups, numbers
   and checklist pages are crawled.
-- **Netlify.** The scheduler function, the 10-second request limit and the edge-run proxy are
-  Netlify's own; `netlify build` was run locally to check the app packages for it. The scheduler's
-  decisions (what is due, retries, continuations) are unit-tested (`tests/unit/jobs-due.test.ts`).
+- **Vercel and Supabase Cron.** The Vercel build (`vercel.json`), the Mumbai region and the call
+  from Supabase Cron are the platforms' own. The check itself (`/api/cron/tick`, in the foreground
+  and with `?background=1`) runs on the QA stack's production build, and the scheduler's decisions
+  (what is due, retries, continuations) are unit-tested (`tests/unit/jobs-due.test.ts`).
 - **Scheduled jobs and writes.** The crawler only reads. Cron jobs (`/api/cron/[job]`) and server
   actions are covered by unit tests (2,608) and DB tests (742, RLS role × table), not by the crawl.
 - **Scale and network.** One database on the same machine: load times are not production numbers,

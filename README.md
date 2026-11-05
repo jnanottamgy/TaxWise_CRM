@@ -19,8 +19,8 @@ Go-live checklist: [`docs/GO-LIVE.md`](docs/GO-LIVE.md). Local QA stack, crawler
 | Forms and rules | react-hook-form + zod (one schema for client and server); pure business rules in `lib/domain/` |
 | Documents | Server-side PDFs (`@react-pdf/renderer`), Excel/CSV (`exceljs`, `papaparse`) |
 | Messaging | WhatsApp only: the chat opens in WhatsApp Web (the WhatsApp app on a phone) with the message typed in and the document downloaded to attach. The app sends no email |
-| Hosting | Netlify, built from GitHub on every push (`netlify.toml`) |
-| Scheduling | A Netlify scheduled function every 15 minutes → `/api/cron/tick` runs the jobs that are due (`server/jobs/schedule.ts`) |
+| Hosting | Vercel, built from GitHub on every push (`vercel.json`: the app's server in Mumbai, `bom1`) |
+| Scheduling | Supabase Cron every 15 minutes → `/api/cron/tick` runs the jobs that are due (`server/jobs/schedule.ts`) |
 
 ## Repository layout
 
@@ -37,7 +37,7 @@ supabase/migrations/ the schema — applied in order, never edited after release
 supabase/seed/       §16 production seed only (firm settings, law tables, templates) — no demo data
 tests/unit/          Vitest unit tests for every pure rule
 tests/db/            role × table RLS and SQL function tests against real Postgres
-netlify/functions/   the scheduler (every 15 minutes on the live site)
+vercel.json          Vercel: the app's server in Mumbai; production builds run env:check first
 ```
 
 ## Local development
@@ -67,10 +67,10 @@ The database harness (`scripts/db-local.ts`, `tests/db/shim/`) refuses to touch 
 ## Supabase setup (two projects)
 
 Create **two** Supabase projects in the same region: `taxwise-production` (real data, production branch) and
-`taxwise-staging` (test data, deploy previews and testing). Production is never used for testing. On the region:
-Mumbai (South Asia) keeps the data in India; the app's server on Netlify runs in the USA (Ohio) unless the Netlify
-plan lets you pick a region, and every page asks the database a few questions, so a database in East US (Ohio)
-answers fastest. Pick one before real data goes in: a project can't move region later.
+`taxwise-staging` (test data, preview deployments and testing). Production is never used for testing. On the
+region: pick **Mumbai (South Asia)**. It keeps the data in India, and `vercel.json` runs the app's server in Mumbai
+too (`bom1`), next to the database, which matters because every page asks the database a few questions. A project
+can't move region later.
 
 For each project:
 
@@ -114,33 +114,65 @@ psql "<new project's session pooler URL>" --single-transaction --variable ON_ERR
   --file roles.sql --file schema.sql --command 'SET session_replication_role = replica' --file data.sql
 ```
 
-then point the Netlify variables at the new project. (Checked on a copy of the QA database: every
+then point the Vercel environment variables at the new project. (Checked on a copy of the QA database: every
 table came back with the same row counts.)
 
-## Hosting on Netlify
+## Hosting on Vercel
 
-1. **Site:** Netlify → Add new site → Import an existing project → GitHub → this repository. Netlify reads
-   `netlify.toml` (build command, Node 22) and detects Next.js; choose the branch to publish. Every push builds a new
-   deploy; pull requests get deploy previews (point them at the staging project).
-2. **Environment variables:** Site configuration → Environment variables, every variable in
-   [`.env.example`](.env.example) (it says what breaks without each one). Where each value comes from:
+1. **Project:** Vercel → Add New → Project → import this repository (the Vercel GitHub app needs access to it).
+   Vercel detects Next.js. `vercel.json` runs the app's server in Mumbai (`bom1`) and makes production builds run
+   `npm run env:check` first, so a missing or example value stops the build instead of reaching the live site. Every
+   push to the production branch deploys; other branches and pull requests get preview deployments.
+2. **Environment variables:** Settings → Environment Variables: every variable in [`.env.example`](.env.example)
+   (it says what breaks without each one), for Production (and Preview, pointed at the staging project).
+   Where each value comes from:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (anon or publishable key) and
-     `SUPABASE_SERVICE_ROLE_KEY` (service_role or secret key): Supabase → the project → Project Settings → API.
-   - `DATABASE_URL` (transaction pooler) and `DIRECT_URL` (session pooler): Supabase → Connect.
+     `SUPABASE_SERVICE_ROLE_KEY` (service_role or secret key): Supabase → the project → Project Settings → API Keys
+     (the URL under Data API).
+   - `DATABASE_URL` (transaction pooler) and `DIRECT_URL` (session pooler): Supabase → Connect. Optional for the
+     app itself.
    - `CREDENTIAL_VAULT_KEY` and `CRON_SECRET`: make them yourself with `openssl rand -hex 32` (or, in the Supabase SQL
-     editor, `select encode(gen_random_bytes(32), 'hex');`). **Keep an offline copy of the vault key**: losing it makes
-     every stored portal password unreadable.
-   - `NEXT_PUBLIC_APP_URL`: the site's address (the `netlify.app` one while testing, then the firm's domain);
-     `APP_ENV`: `production` on the live site, `staging` elsewhere; `FIRST_PARTNER_EMAIL`: the first Partner's login.
-   The production build runs `npm run env:check` first and stops if a value is missing or still the example.
-3. **Scheduled jobs:** `netlify/functions/scheduler.mts` runs every 15 minutes on the published deploy and calls
-   `/api/cron/tick` with `Authorization: Bearer <CRON_SECRET>`. The check runs the jobs that are due (times in UTC in
-   `server/jobs/schedule.ts`; IST − 5:30), keeps each request inside Netlify's time limit (about 10 seconds), and
-   continues a long job on the next check. Netlify → Logs → Functions → `scheduler` shows each check;
-   Settings → Diagnostics → Cron jobs shows each job's last run. If the app ever moves host, anything that can call
-   that URL every 15 minutes with the header does the same job (a GitHub Actions schedule, cron-job.org).
-4. **Domain:** Domain management → Add a domain (e.g. `app.twchartered.com`), add the DNS record Netlify shows at the
-   domain's registrar, and HTTPS follows on its own. Then set `NEXT_PUBLIC_APP_URL` and the Supabase Site URL to it.
+     editor, `select replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');`). **Keep an offline copy
+     of the vault key**: losing it makes every stored portal password unreadable.
+   - `NEXT_PUBLIC_APP_URL`: the firm's address (`https://app.twchartered.com`); `APP_ENV`: `production` on the live
+     site, `staging` on previews; `FIRST_PARTNER_EMAIL`: the first Partner's login.
+   A variable change takes effect on the next deployment (Deployments → ⋯ → Redeploy).
+3. **Domain:** Settings → Domains → add `app.twchartered.com`. `twchartered.com` is already in the firm's Vercel
+   account with its DNS at Cloudflare, so add the record Vercel shows there: CNAME `app` → the target Vercel gives
+   (e.g. `cname.vercel-dns.com`), proxy status **DNS only**. HTTPS follows on its own. Then set `NEXT_PUBLIC_APP_URL`
+   and the Supabase Site URL to it and redeploy.
+4. **Deployment Protection:** Vercel Authentication (on by default) keeps the `*.vercel.app` addresses for the Vercel
+   team only; the firm's own domain stays public, which clients, the portal, quotation links and the scheduler need.
+5. **Plan:** Vercel's free Hobby plan is meant for personal, non-commercial use; a firm's working system belongs on
+   Pro. The app runs the same on either (the scheduler below doesn't use Vercel Cron).
+
+### Scheduled jobs
+
+The jobs of §8 (times in UTC in `server/jobs/schedule.ts`; IST − 5:30) run from one check every 15 minutes:
+`/api/cron/tick` works out what is due, runs it, and continues a long job on the next check. Supabase Cron calls it
+(free on every Supabase plan, and independent of the Vercel plan; Hobby's own cron jobs run at most once a day). Set
+it up once in the production project's SQL editor, with the app's address and the `CRON_SECRET` value in place:
+
+```sql
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
+select cron.schedule(
+  'taxwise-scheduler',
+  '*/15 * * * *',
+  $$ select net.http_post(
+       url := 'https://app.twchartered.com/api/cron/tick?background=1',
+       headers := jsonb_build_object('Authorization', 'Bearer <CRON_SECRET>'),
+       timeout_milliseconds := 10000
+     ) $$
+);
+```
+
+With `?background=1` the app answers at once and runs the check after answering (`after()`, up to 60 seconds), so
+the call's HTTP timeout never cuts a check short. Running `cron.schedule` again with the same name replaces the job
+(a new address or secret); `select cron.unschedule('taxwise-scheduler');` stops it. Supabase → Integrations → Cron
+shows the job and its runs; Settings → Diagnostics → Cron jobs shows each job's last run. On a Vercel Pro plan,
+Vercel Cron can make the call instead: add `"crons": [{ "path": "/api/cron/tick", "schedule": "*/15 * * * *" }]` to
+`vercel.json` (Vercel sends the `CRON_SECRET` header itself) and unschedule the Supabase job.
 
 ## Messaging (WhatsApp)
 
@@ -186,7 +218,8 @@ Decided with TaxWise after the specification (`docs/SPEC.md`) was written; where
   §7.25 and the desktop parts of §7.13 are not built.
 - **No email.** WhatsApp is the only channel to clients (above). The app sends no invoices, reminders, invites,
   digests or password resets by email, and has no Settings → Email.
-- **Netlify, not Vercel.** The scheduled jobs of §8 keep their times; one check every 15 minutes runs them.
+- **One scheduler check.** The scheduled jobs of §8 keep their times, but one check every 15 minutes (Supabase
+  Cron → `/api/cron/tick`) runs whatever is due, instead of a Vercel Cron job per job.
 - **The logo is built in.** The firm's shield and wordmark are redrawn as vectors in `lib/brand.ts` and appear
   in the app, its icons and every PDF letterhead. Uploading a logo in Settings → Firm details is optional and
   replaces it; the setup checklist has no logo step.

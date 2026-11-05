@@ -13,10 +13,17 @@ import type { ScheduledJobName } from "@/server/jobs/schedule";
  */
 
 /**
- * How long one call may spend on jobs. Hosts stop a request after a fixed time (Netlify: about
- * 10 seconds), so a call stops starting new work after this and the next check carries on.
+ * How long one call may spend on jobs while its caller waits for the answer: callers give up after
+ * a while (a person's browser, cron services with short HTTP timeouts), so a call stops starting
+ * new work after this and the next check carries on.
  */
 export const JOB_TIME_BUDGET_MS = 8_000;
+
+/**
+ * The budget of a check that runs after its answer has gone (`/api/cron/tick?background=1`): only
+ * the route's own limit applies (maxDuration 60 s on Vercel), so leave room for the last job.
+ */
+export const BACKGROUND_TIME_BUDGET_MS = 40_000;
 
 export interface JobOutcome {
   job: ScheduledJobName;

@@ -6,8 +6,8 @@ Tick every line before real client data goes into production. Owner: a Partner, 
 - [ ] Two Supabase projects exist: `taxwise-production` and `taxwise-staging`, in the region the Partners chose
       (README → Supabase setup). Staging holds no real data (only `scripts/seed-staging.ts` synthetic data, which
       refuses to run with `APP_ENV=production`).
-- [ ] The Netlify site publishes the production branch with production variables; deploy previews use staging.
-- [ ] The firm's domain (e.g. `app.twchartered.com`) points at Netlify, HTTPS is on, and `NEXT_PUBLIC_APP_URL` and the
+- [ ] The Vercel project builds the production branch with production variables; preview deployments use staging.
+- [ ] The firm's domain (`app.twchartered.com`) points at Vercel (CNAME at Cloudflare), HTTPS is on, and `NEXT_PUBLIC_APP_URL` and the
       Supabase Site URL use it.
 - [ ] The GitHub repository is **private**.
 
@@ -22,10 +22,10 @@ Tick every line before real client data goes into production. Owner: a Partner, 
       full export every Friday. First restore drill recorded in Quality → Restore drills.
 
 ## 3. Configuration
-- [ ] `npm run env:check` passes against the production values (the production build on Netlify runs it).
+- [ ] `npm run env:check` passes against the production values (the production build on Vercel runs it: `vercel.json`).
 - [ ] `CREDENTIAL_VAULT_KEY` set **and backed up offline** before any portal credential is stored.
 - [ ] Auth: sign-ups disabled; TOTP enabled; Site URL set.
-- [ ] Scheduler: Netlify → Logs → Functions → `scheduler` shows a check every 15 minutes; every job has run once
+- [ ] Scheduler: Supabase → Integrations → Cron shows `taxwise-scheduler` every 15 minutes (README → Scheduled jobs); every job has run once
       successfully (Diagnostics → Cron jobs).
 
 ## 4. People and access
