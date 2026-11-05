@@ -1,30 +1,12 @@
 import { cn } from "@/lib/utils";
-import { TwMonogram } from "@/components/shell/brand";
+import { TaxWiseLockup } from "@/components/brand/taxwise-logo";
 
 /**
  * The sign-in screen's brand moment (§3.5): a navy panel with a faint diagonal line pattern, the
- * firm's name in large type, its tagline, one quiet line, and "Powered by J-TACS" with the gold J
- * mark at the foot. On a phone only the card shows, with the monogram and name above it.
+ * firm's logo large (the shield with its wordmark, lib/brand.ts), its tagline, one quiet line, and
+ * "Powered by J-TACS" with the gold J mark at the foot. On a phone only the card shows, with the
+ * logo above it.
  */
-
-/**
- * The TW monogram on a navy tile: the same mark the app's sidebar band and error pages draw
- * (components/shell/brand.tsx), so the brand reads identically before and after sign-in.
- */
-export function TwMark({ className, size = "md" }: { className?: string; size?: "sm" | "md" }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "inline-flex flex-none items-center justify-center rounded-[10px] bg-[#0c1830]",
-        size === "md" ? "size-11" : "size-9",
-        className,
-      )}
-    >
-      <TwMonogram className="size-full" />
-    </span>
-  );
-}
 
 /** The J-TACS mark: a navy J on a small gold square. */
 export function JMark({ className }: { className?: string }) {
@@ -71,20 +53,13 @@ export function BrandPanel() {
   return (
     <aside
       aria-label="TaxWise Consultants"
-      className="relative hidden overflow-hidden bg-frame text-white md:sticky md:top-0 md:flex md:h-dvh md:w-2/5 md:flex-none md:flex-col md:justify-between md:p-10 lg:p-14"
+      className="relative hidden overflow-hidden bg-frame text-white md:sticky md:top-0 md:flex md:h-dvh md:w-2/5 md:flex-none md:flex-col md:p-10 lg:p-14"
     >
       <DiagonalLines />
-      <div className="relative">
-        <TwMark />
-      </div>
-      <div className="relative flex flex-col">
-        {/* The firm's name in large type (§3.5), set in the serif like the app's titles. */}
-        <p className="font-serif text-[44px] leading-[1.02] font-[420] tracking-[-0.02em] text-white lg:text-[56px]">
-          TaxWise
-          <br />
-          Consultants
-        </p>
-        <p className="mt-5 text-base text-white/75">Chartered Accountants · Bengaluru</p>
+      <div className="relative my-auto flex flex-col">
+        {/* The logo is the firm's name in large type (§3.5). */}
+        <TaxWiseLockup title="TaxWise Consultants" className="h-20 self-start text-white lg:h-24 xl:h-28" />
+        <p className="mt-8 text-base text-white/75">Chartered Accountants · Bengaluru</p>
         <span aria-hidden="true" className="my-8 block h-px w-12 bg-gold/80" />
         <p className="max-w-xs font-serif text-xl leading-7 text-white/80 italic">Your practice, in one place.</p>
       </div>
@@ -93,15 +68,12 @@ export function BrandPanel() {
   );
 }
 
-/** Phones: the monogram and name above the card (§3.5). */
+/** Phones: the logo above the card (§3.5). */
 export function PhoneBrand() {
   return (
-    <div className="mb-6 flex flex-col items-center gap-3 text-center md:hidden">
-      <TwMark />
-      <div>
-        <p className="text-md font-semibold text-text">TaxWise Consultants</p>
-        <p className="text-sm text-text-muted">Chartered Accountants · Bengaluru</p>
-      </div>
+    <div className="mb-6 flex flex-col items-center gap-2.5 text-center md:hidden">
+      <TaxWiseLockup title="TaxWise Consultants" className="h-14" />
+      <p className="text-sm text-text-muted">Chartered Accountants · Bengaluru</p>
     </div>
   );
 }

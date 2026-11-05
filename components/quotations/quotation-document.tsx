@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { TaxWiseShield } from "@/components/brand/taxwise-logo"
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format"
 import { formatINR, toPaise } from "@/lib/domain/money"
 import { lineMeta, placeOfSupplyLabel, quotationTotals, recipientHeading, totalRows, type DocumentFirm, type QuotationDocument } from "@/lib/schemas/quotations"
@@ -33,7 +34,9 @@ export function QuotationDocumentView({ doc, firm, className }: { doc: Quotation
           {firm.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- the firm's logo from the public branding bucket
             <img src={firm.logoUrl} alt="" className="h-10 max-w-28 flex-none object-contain" />
-          ) : null}
+          ) : (
+            <TaxWiseShield className="h-10" />
+          )}
           <div className="min-w-0">
             <p className="text-lg leading-6 font-semibold text-brand-navy dark:text-text">{firm.legalName ?? firm.firmName}</p>
             {firm.tagline ? <p className="text-sm text-text-muted">{firm.tagline}</p> : null}

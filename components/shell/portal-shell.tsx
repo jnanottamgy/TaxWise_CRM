@@ -50,7 +50,7 @@ export function PortalShell({ firm, user, clientName, children }: PortalShellPro
 
   const brand = (
     <>
-      <FirmMark logoUrl={firm.logoUrl} firmName={firm.name} className="size-8" />
+      <FirmMark logoUrl={firm.logoUrl} firmName={firm.name} />
       <span className="flex min-w-0 flex-col">
         <span className="truncate font-serif text-[17px] leading-6 font-medium tracking-[-0.01em] text-text">{firm.name}</span>
         {/* Phones: the client's name under the firm's, instead of a row of its own in the sticky header. */}

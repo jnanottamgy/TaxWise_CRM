@@ -547,7 +547,6 @@ function parseFirmToday(data: Json, fy: FinancialYear, today: DateString): FirmT
     monthStart: str(r.month_start) ?? `${today.slice(0, 7)}-01`,
     monthEnd: str(r.month_end) ?? today,
     setup: {
-      hasLogo: s.has_logo === true,
       hasBank: s.has_bank === true,
       hasUpi: s.has_upi === true,
       hasFrn: s.has_frn === true,

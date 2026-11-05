@@ -29,8 +29,10 @@ well-run CA office.
   - Invoices: "What's outstanding, and what's overdue?"
 - **Signature elements** (only this product has them; build them properly):
   - the **filings grid**: clients × periods, each cell a status mark (§7.7);
-  - the **TW monogram** in `--accent-gold` beside the firm's name in the serif at the top of the navy frame, and
-    "Powered by **J-TACS**" small in gold-text at the foot (§0, §3.3);
+  - the **TaxWise shield**, the firm's own logo (`lib/brand.ts`, drawn by `components/brand/taxwise-logo.tsx`:
+    the royal-blue T-and-W crest with its pale-gold rim, in its own colours everywhere), beside the firm's name
+    in the serif at the top of the navy frame; the full logo (shield and "TAXWISE CONSULTANTS") on the sign-in
+    screen; and "Powered by **J-TACS**" small in gold-text at the foot (§0, §3.3);
   - the **FY switcher** (`2026-27`) in the top bar;
   - **Indian money**: `₹1,23,456.00`, lakh/crore words on invoices, `₹12.3L` only on dashboard figures
     with the full value on hover;
@@ -44,7 +46,7 @@ The app is a navy binder: the **frame** (sidebar and top bar, the phone top bar 
 band, the sign-in panel) is deep navy `--frame` #0c1830; every page is a **sheet of paper** (`--bg`
 #f6f5f3) inset in it with a 16px radius; cards on the sheet are white with a warm hairline. Ink is navy
 (`--text` #0e1a2f), the one filled button is navy (`--primary` #13254a), and **gold** marks only the
-brand and where you are (the monogram, the short gold rule on the active nav item, counts on the
+brand and where you are (the logo's rim, the short gold rule on the active nav item, counts on the
 frame, the portal's active tab, "Powered by J-TACS"). Status colours stay on dots and pale pills.
 
 Things that sit on the frame wrap in **`.on-frame`**: it re-themes the tokens (`--text`, `--surface`,

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { TaxWiseShield } from "@/components/brand/taxwise-logo"
 import { formatDate } from "@/lib/format"
 import { formatStateWithCode } from "@/lib/domain/india-validators"
 
@@ -39,7 +40,9 @@ export function InvoiceHeaderPreview(p: InvoiceHeaderPreviewProps) {
           {p.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- public branding URL or a local blob: preview
             <img src={p.logoUrl} alt={`${p.firmName} logo`} className="h-12 w-auto max-w-[9rem] flex-none object-contain" />
-          ) : null}
+          ) : (
+            <TaxWiseShield className="h-12" />
+          )}
           <div className="min-w-0">
             <p className="text-md leading-6 font-semibold break-words text-text">{p.firmName || "Firm name"}</p>
             {p.legalName && p.legalName !== p.firmName ? <p className="text-xs text-text-muted">{p.legalName}</p> : null}

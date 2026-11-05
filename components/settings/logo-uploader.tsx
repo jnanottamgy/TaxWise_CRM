@@ -2,19 +2,22 @@
 
 import * as React from "react"
 import { toast } from "sonner"
-import { ImageIcon, Trash2Icon, UploadIcon } from "lucide-react"
+import { Trash2Icon, UploadIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/browser"
 import { checkLogoBytes, LOGO_ACCEPT, LOGO_CONTENT_TYPE } from "@/lib/schemas/settings"
 import { confirmLogo, removeLogo, requestLogoUpload } from "@/server/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { ConfirmDialog } from "@/components/app/confirm-dialog"
+import { TaxWiseShield } from "@/components/brand/taxwise-logo"
 
 /**
- * The firm logo (§1: PNG, SVG or JPG, at most 1 MB, transparent background preferred). The file is
- * checked in the browser first (size, magic bytes, SVG safety), uploaded straight to the branding
- * bucket through a signed URL, then checked again on the server before firm_settings points at it.
- * While it uploads, the invoice preview already shows the chosen file.
+ * The firm logo. TaxWise's own logo is built in (lib/brand.ts) and prints on every document; a file
+ * uploaded here replaces it on screen and on paper (§1: PNG, SVG or JPG, at most 1 MB, transparent
+ * background preferred), and removing it brings the built-in one back. The file is checked in the
+ * browser first (size, magic bytes, SVG safety), uploaded straight to the branding bucket through a
+ * signed URL, then checked again on the server before firm_settings points at it. While it uploads,
+ * the invoice preview already shows the chosen file.
  */
 export function LogoUploader({
   logoUrl,
@@ -61,7 +64,7 @@ export function LogoUploader({
       const done = await confirmLogo({ path: req.data.path, updated_at: updatedAt })
       if (!done.ok) throw new Error(done.error)
       for (const w of done.warnings ?? []) toast.warning(w, { duration: 12_000 })
-      toast.success("Logo saved. It now prints on invoices and quotations.")
+      toast.success("Logo saved. It now prints on invoices and quotations in place of the built-in one.")
       onSaved({ updated_at: done.data.updated_at, logoUrl: done.data.logoUrl })
     } catch (err) {
       setError(err instanceof Error ? err.message : "The logo couldn't be saved. Try again.")
@@ -83,7 +86,7 @@ export function LogoUploader({
         return false
       }
       for (const w of r.warnings ?? []) toast.warning(w, { duration: 12_000 })
-      toast.success("Logo removed. Documents show the firm's name instead.")
+      toast.success("Logo removed. Documents show the built-in TaxWise logo again.")
       onSaved({ updated_at: r.data.updated_at, logoUrl: null })
     } finally {
       setBusy(null)
@@ -98,14 +101,14 @@ export function LogoUploader({
             // eslint-disable-next-line @next/next/no-img-element -- public branding URL
             <img src={logoUrl} alt="Current logo" className="max-h-16 max-w-16 object-contain" />
           ) : (
-            <ImageIcon aria-hidden="true" className="size-5 text-text-muted" />
+            <TaxWiseShield title="Built-in TaxWise logo" className="h-14" />
           )}
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={pick} disabled={busy !== null} aria-describedby={error ? errorId : undefined}>
               {busy === "upload" ? <Spinner /> : <UploadIcon aria-hidden="true" />}
-              {busy === "upload" ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+              {busy === "upload" ? "Uploading…" : logoUrl ? "Replace logo" : "Use a different logo"}
             </Button>
             {logoUrl ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmRemove(true)} disabled={busy !== null}>
@@ -114,7 +117,11 @@ export function LogoUploader({
               </Button>
             ) : null}
           </div>
-          <p className="text-sm text-text-muted">PNG, JPG or SVG, at most 1 MB. A transparent PNG or an SVG prints best.</p>
+          <p className="text-sm text-text-muted">
+            {logoUrl
+              ? "Your uploaded logo prints on every document. Remove it to go back to the built-in TaxWise logo."
+              : "The TaxWise logo is built in and prints on every document. Upload a file only to use a different one: PNG, JPG or SVG, at most 1 MB."}
+          </p>
         </div>
         <input
           ref={inputRef}
@@ -138,7 +145,7 @@ export function LogoUploader({
         open={confirmRemove}
         onOpenChange={setConfirmRemove}
         title="Remove the logo?"
-        description="Invoices, quotations and the portal will show the firm's name in type instead. You can upload a logo again at any time."
+        description="Invoices, quotations and the portal will show the built-in TaxWise logo again. You can upload a logo again at any time."
         confirmLabel="Remove logo"
         destructive
         onConfirm={remove}

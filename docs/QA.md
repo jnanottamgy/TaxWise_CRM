@@ -141,7 +141,26 @@ the stand-in logs `42501 permission denied` for `employees`, `client_credentials
 (tables the API roles can't read by design; the page marks them as such). Crawling `/q/<token>`
 signed out counts as the client viewing the quotation, so its view counter rises with every crawl.
 
-## 5. Latest run (r-wa2): WhatsApp only, no desktop app, Netlify
+## 5. Latest run (r-logo, 5 Nov 2026): the firm's logo built in
+
+Run after the TaxWise Consultants logo was redrawn as vectors (`lib/brand.ts`) and put in place of the
+TW monogram: the sidebar and portal bands, the sign-in panel and phone header, the error, 404 and
+diagnostics bands, the public quotation band and on-screen letterhead, Settings → Firm details, the
+browser and home-screen icons, and every PDF letterhead (drawn as vectors when no logo is uploaded). The
+setup checklist lost its logo step (seven steps). Production build on the QA stack (schema 0241).
+
+### Checks run in the same pass
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit -p .` · `npm run lint` | clean · clean |
+| `npm test` | 129 files, 2,530 tests, all pass (new: `tests/unit/brand.test.ts`) |
+| `npm run build` (via `stack.ts up`) | success; `/icon.svg`, `/favicon.ico` (16, 32, 48) and `/apple-icon.png` (180) served and linked in `<head>` |
+| The logo against the firm's artwork | shield edges within about 1.5 px of the original at its 260 px width (outline overlay); wordmark Jost 470/510, each letter at the original's position |
+| Screens checked by eye (1366×768 at 2×, 1366×768 at 1×, 900×700, 390×844) | sign-in desktop and phone, sidebar and tablet rail, phone drawer, portal, 404, public quotation, Settings → Firm details, dark theme |
+| Invoice PDF (`/api/pdf/invoice/…`) at 600 dpi | the vector shield on the letterhead, rim corners mitred cleanly |
+
+## 6. Earlier run (r-wa2, 31 Oct 2026): WhatsApp only, no desktop app, Netlify
 
 Run on 31 Oct 2026, after TaxWise Desktop and email were removed, the 15-minute scheduler replaced
 Vercel Cron, quotations stopped requiring an email (0241) and issued invoices got their WhatsApp button:
@@ -176,7 +195,7 @@ cross a minute after the server drew it. Fixed in the eight places that draw one
 the server's time (`suppressHydrationWarning`, as the WhatsApp register already did); r-wa2 is the crawl
 after the fix.
 
-## 6. Earlier full run (r-final, 25 Oct 2026)
+## 7. Earlier full run (r-final, 25 Oct 2026)
 
 Before the WhatsApp-only change: the desktop app's checks and `/settings/email` below no longer exist.
 
@@ -425,7 +444,7 @@ role's route.
   everywhere), message timestamps consistent, nothing dated later today when loaded before office
   hours, a notification that printed an ISO date.
 
-## 7. Known and accepted (not failures)
+## 8. Known and accepted (not failures)
 
 - Capacity bands print as CLEAR / BUSY / TIGHT / OVER because §7.11.4 names them so; `docs/DESIGN.md`
   otherwise bans all-caps labels. The spec wins until a Partner decides otherwise.

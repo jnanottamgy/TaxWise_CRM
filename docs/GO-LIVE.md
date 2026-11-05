@@ -35,7 +35,7 @@ Tick every line before real client data goes into production. Owner: a Partner, 
 - [ ] Vault access granted only to the Employees who need it.
 
 ## 5. Firm data
-- [ ] Settings → Firm details: logo, ICAI FRN, each Partner's membership number, bank, UPI.
+- [ ] Settings → Firm details: ICAI FRN, each Partner's membership number, bank, UPI (the logo is built in).
 - [ ] Settings → Billing: SAC map confirmed, approval limits set, last GSTR-1 month set.
 - [ ] Settings → Law & rules: **every [verify] item confirmed or corrected** by a Partner (TDS s.393 table entries,
       ITR-3/4 31 August date, Form 26 mapping, DIR-3 KYC cycle, Karnataka PT dates, appeal limitation periods, DPDP

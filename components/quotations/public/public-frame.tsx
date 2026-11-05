@@ -1,7 +1,7 @@
-import { TwMonogram } from "@/components/shell/brand"
+import { TaxWiseShield } from "@/components/brand/taxwise-logo"
 
 /**
- * The public quotation page's frame (§7.23): a navy band with the TW mark and the firm's name, the
+ * The public quotation page's frame (§7.23): a navy band with the TaxWise shield and the firm's name, the
  * content on the page background, and the footer with "Powered by J-TACS". Server-safe, no data.
  */
 export function PublicQuotationFrame({ children }: { children: React.ReactNode }) {
@@ -9,9 +9,7 @@ export function PublicQuotationFrame({ children }: { children: React.ReactNode }
     <div className="flex min-h-dvh flex-col bg-bg">
       <header className="bg-brand-navy text-white">
         <div className="mx-auto flex w-full max-w-4xl items-center gap-3 px-4 py-3 md:px-6">
-          <span aria-hidden="true" className="inline-flex size-9 flex-none items-center justify-center rounded-[10px] bg-brand-navy ring-1 ring-white/15">
-            <TwMonogram className="size-full" />
-          </span>
+          <TaxWiseShield className="h-10" />
           <div className="min-w-0">
             <p className="truncate text-base leading-5 font-semibold">TaxWise Consultants</p>
             <p className="truncate text-sm leading-5 text-white/70">Chartered Accountants</p>

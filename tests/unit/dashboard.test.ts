@@ -143,7 +143,6 @@ describe("overdue tasks by person", () => {
 
 describe("setup checklist", () => {
   const none: SetupFacts = {
-    hasLogo: false,
     hasBankAndUpi: false,
     hasFrnAndMembership: false,
     hasWhatsAppNumbers: false,
@@ -153,19 +152,20 @@ describe("setup checklist", () => {
     lawReviewed: false,
   };
 
-  it("lists the eight items in order with where to do each (§7.2, less the email domain)", () => {
+  it("lists the seven items in order with where to do each (§7.2, less the email domain and the built-in logo)", () => {
     const c = setupChecklist(none);
-    expect(c.items).toHaveLength(8);
-    expect(c.items[0]).toMatchObject({ id: "hasLogo", href: "/settings/firm", done: false });
-    expect(c.items[7]).toMatchObject({ id: "lawReviewed", href: "/settings/law" });
+    expect(c.items).toHaveLength(7);
+    expect(c.items[0]).toMatchObject({ id: "hasBankAndUpi", href: "/settings/bank", done: false });
+    expect(c.items[6]).toMatchObject({ id: "lawReviewed", href: "/settings/law" });
     expect(c.items.map((i) => i.href)).not.toContain("/settings/email");
+    expect(c.items.map((i) => i.label).join(" ")).not.toMatch(/logo/i);
     expect(c).toMatchObject({ done: 0, complete: false });
   });
 
   it("is complete once every item is done", () => {
     const all = Object.fromEntries(Object.keys(none).map((k) => [k, true])) as SetupFacts;
-    expect(setupChecklist(all)).toMatchObject({ done: 8, complete: true });
-    expect(setupChecklist({ ...all, lawReviewed: false })).toMatchObject({ done: 7, complete: false });
+    expect(setupChecklist(all)).toMatchObject({ done: 7, complete: true });
+    expect(setupChecklist({ ...all, lawReviewed: false })).toMatchObject({ done: 6, complete: false });
   });
 });
 

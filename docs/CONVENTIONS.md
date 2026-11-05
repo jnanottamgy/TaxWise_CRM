@@ -30,6 +30,7 @@ app/
 components/ui/         shadcn primitives (owned by the UI kit)
 components/app/        TaxWise patterns: StatusChip, EmptyState, DataTable, Money, DateText, CopyButton,
                        PageHeader, FilterBar, FormDialog (sticky footer), Wizard, KpiStrip, …
+components/brand/      the TaxWise logo (TaxWiseShield, TaxWiseLockup); its paths are data in lib/brand.ts
 components/<module>/   feature components (clients/, tasks/, invoices/ …)
 lib/domain/            PURE business rules, no I/O, each with tests in tests/unit/
 lib/schemas/<module>.ts  zod schemas shared by forms (client) and actions (server). Client-safe.

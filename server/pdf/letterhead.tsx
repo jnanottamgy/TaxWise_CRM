@@ -1,15 +1,17 @@
 import "server-only";
 
-import { Image, Text, View } from "@react-pdf/renderer";
+import { Image, Path, Svg, Text, View } from "@react-pdf/renderer";
+import { LOGO } from "@/lib/brand";
 import { POWERED_BY, displayWebsite, formatFirmAddress, type FirmProfile } from "@/server/firm";
 import { PDF } from "@/server/pdf/theme";
 import type { PdfLogo } from "@/server/pdf/logo";
 
 /**
  * The letterhead every generated document starts with (§11 "letterhead from Settings"): the logo
- * (or the firm's name set in type), the firm block (address, GSTIN, phone, email, website) and, on
- * the right, the document's title with its key facts (number, date …). A navy rule closes it
- * (§3.1 --brand-navy "PDF headers"). Ink-light: no filled band, so it prints well in an office.
+ * (one uploaded in Settings, or else the TaxWise shield drawn as vectors from lib/brand.ts), the
+ * firm block (name, address, GSTIN, phone, email, website) and, on the right, the document's title
+ * with its key facts (number, date …). A navy rule closes it (§3.1 --brand-navy "PDF headers").
+ * Ink-light: no filled band, so it prints well in an office.
  *
  *   <Letterhead firm={firm} logo={logo} title="Tax invoice"
  *     meta={[{ label: "Invoice no.", value: "TW/26-27/0042" }, { label: "Date", value: "22 Oct 2026" }]} />
@@ -29,7 +31,7 @@ export function Letterhead({
   pan,
 }: {
   firm: FirmProfile;
-  /** From loadFirmLogo(firm); null prints the name in type. */
+  /** From loadFirmLogo(firm); null draws the built-in TaxWise shield. */
   logo?: PdfLogo | null;
   /** "Tax invoice", "QUOTATION", "Receipt voucher", "Statement of account" … */
   title?: string;
@@ -48,7 +50,9 @@ export function Letterhead({
           {logo ? (
             // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt attribute
             <Image src={{ data: logo.data, format: logo.format }} style={{ height: 40, maxWidth: 120, objectFit: "contain", marginRight: 10 }} />
-          ) : null}
+          ) : (
+            <PdfShield height={40} />
+          )}
           <View style={{ flexShrink: 1 }}>
             <Text style={{ fontSize: PDF.size.firm, lineHeight: 1.25, fontWeight: 600, color: PDF.colour.navy, letterSpacing: -0.1 }}>{firm.legalName ?? firm.firmName}</Text>
             {firm.tagline ? <Text style={{ fontSize: PDF.size.label, color: PDF.colour.textMuted, marginTop: 2 }}>{firm.tagline}</Text> : null}
@@ -71,6 +75,24 @@ export function Letterhead({
       </View>
       <View style={{ marginTop: 10, borderBottomWidth: 1.5, borderBottomColor: PDF.colour.navy }} />
     </View>
+  );
+}
+
+/**
+ * The TaxWise shield in vectors (sharp at any zoom, and on paper): each shape's gold rim is a stroke
+ * drawn first, its blue fill over it, as on screen (components/brand/taxwise-logo.tsx).
+ */
+function PdfShield({ height }: { height: number }) {
+  const { width: w, height: h } = LOGO.mark;
+  return (
+    <Svg viewBox={`0 0 ${w} ${h}`} style={{ height, width: (height * w) / h, marginRight: 10 }}>
+      {LOGO.shield.map((d) => (
+        <Path key={`rim-${d}`} d={d} fill={LOGO.gold} stroke={LOGO.gold} strokeWidth={LOGO.rim} strokeLinejoin="miter" />
+      ))}
+      {LOGO.shield.map((d) => (
+        <Path key={`fill-${d}`} d={d} fill={LOGO.blue} />
+      ))}
+    </Svg>
   );
 }
 

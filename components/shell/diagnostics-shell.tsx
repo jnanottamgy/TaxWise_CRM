@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TriangleAlertIcon } from "lucide-react";
-import { PoweredBy, TwMonogram } from "./brand";
+import { TaxWiseShield } from "@/components/brand/taxwise-logo";
+import { PoweredBy } from "./brand";
 
 /**
  * The frame Settings → Diagnostics renders in when the full staff shell can't be built because the
@@ -13,7 +14,7 @@ export function DiagnosticsShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh flex-col bg-bg">
       <header className="flex h-14 flex-none items-center justify-between gap-3 bg-brand-navy px-4 text-white md:px-6">
         <div className="flex min-w-0 items-center gap-2.5">
-          <TwMonogram className="size-8" />
+          <TaxWiseShield />
           <span className="truncate text-base font-semibold tracking-[-0.01em]">TaxWise Consultants</span>
         </div>
         <Link

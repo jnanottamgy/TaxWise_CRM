@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SearchXIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PoweredBy, TwMonogram } from "@/components/shell/brand";
+import { TaxWiseShield } from "@/components/brand/taxwise-logo";
+import { PoweredBy } from "@/components/shell/brand";
 
 export const metadata = { title: "Page not found" };
 
@@ -11,7 +12,7 @@ export default function NotFound() {
     <div className="flex min-h-dvh flex-col items-center justify-center bg-bg px-4 py-10">
       <main className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface">
         <div className="flex h-14 items-center gap-2.5 bg-brand-navy px-5 text-white">
-          <TwMonogram className="size-8" />
+          <TaxWiseShield />
           <span className="text-base font-semibold tracking-[-0.01em]">TaxWise Consultants</span>
         </div>
         <div className="px-5 py-6 sm:px-6">

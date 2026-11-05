@@ -69,7 +69,7 @@ export function FirmDetailsForm({
     <div className="flex min-w-0 flex-col gap-4 md:gap-5">
       <SettingsCard
         title="Logo and letterhead"
-        description="The logo saves as soon as it uploads. The letterhead below follows the details you type, before you save them."
+        description="The TaxWise logo is built in. An uploaded logo replaces it and saves as soon as it uploads. The letterhead below follows the details you type, before you save them."
         columns={1}
       >
         <LogoUploader

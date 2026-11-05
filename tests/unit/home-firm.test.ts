@@ -19,7 +19,6 @@ const ME = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
 
 const fresh: SetupDetail = {
-  hasLogo: false,
   hasBank: false,
   hasUpi: false,
   hasFrn: false,
@@ -35,7 +34,6 @@ const fresh: SetupDetail = {
 
 const done: SetupDetail = {
   ...fresh,
-  hasLogo: true,
   hasBank: true,
   hasUpi: true,
   hasFrn: true,
@@ -52,7 +50,6 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
     const s = setupSteps(fresh, { profileId: ME });
     expect(s).toMatchObject({ done: 0, complete: false, percent: 0 });
     expect(s.items.map((i) => i.id)).toEqual([
-      "hasLogo",
       "hasBankAndUpi",
       "hasFrnAndMembership",
       "hasWhatsAppNumbers",
@@ -67,9 +64,9 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
     expect(by.hasFrnAndMembership).toMatchObject({ href: "/settings/firm", detail: "FRN still to add · No membership number for CA Vinay" });
   });
 
-  it("is complete, and leaves the page, once all eight are done", () => {
+  it("is complete, and leaves the page, once all seven are done", () => {
     const s = setupSteps(done, { profileId: ME });
-    expect(s).toMatchObject({ done: 8, complete: true, percent: 100 });
+    expect(s).toMatchObject({ done: 7, complete: true, percent: 100 });
     expect(s.items.every((i) => i.detail === null)).toBe(true);
     expect(Object.values(setupFactsOf(done)).every(Boolean)).toBe(true);
   });
@@ -79,7 +76,7 @@ describe("the setup checklist with what is missing (§7.2, §4.3)", () => {
     expect(bankOnly.items.find((i) => i.id === "hasBankAndUpi")).toMatchObject({ done: false, detail: "UPI ID still to add" });
     const upiOnly = setupSteps({ ...done, hasBank: false }, { profileId: ME });
     expect(upiOnly.items.find((i) => i.id === "hasBankAndUpi")).toMatchObject({ done: false, detail: "Bank account still to add" });
-    expect(bankOnly.percent).toBe(88); // 7 of 8
+    expect(bankOnly.percent).toBe(86); // 6 of 7
   });
 
   it("sends a missing membership number to the Partner's own Profile, or to the other Partner in People", () => {

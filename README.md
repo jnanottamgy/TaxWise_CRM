@@ -26,7 +26,8 @@ Go-live checklist: [`docs/GO-LIVE.md`](docs/GO-LIVE.md). Local QA stack, crawler
 
 ```
 app/                 routes: (auth), (staff), (portal)/portal, q/[token] (public quotation), api/*
-components/          ui/ (shadcn primitives), app/ (TaxWise patterns), one folder per module
+components/          ui/ (shadcn primitives), app/ (TaxWise patterns), brand/ (the logo), one folder per module
+lib/brand.ts         the TaxWise logo as vector paths (screen, icons and PDF letterheads draw from it)
 lib/domain/          pure business rules (GST, TDS, ITR, statutory calendar, recon, Schedule III, covers, …)
 lib/data/            typed reads (run under the signed-in user's RLS)
 server/actions/      mutations, each wrapped in defineAction (lib/action.ts)
@@ -159,8 +160,8 @@ access).
 
 Open `/setup` while no users exist: it creates the first Partner (app role in `app_metadata` + `profiles`), confirms the
 firm details from §1 and then 404s forever. Every Partner and Manager enrols TOTP on first sign-in. The Partner dashboard
-shows the setup checklist (logo, bank and UPI, ICAI numbers, firm WhatsApp numbers, team, first client, first invoice,
-law & rules review).
+shows the setup checklist (bank and UPI, ICAI numbers, firm WhatsApp numbers, team, first client, first invoice,
+law & rules review). The TaxWise logo is built in, so there is nothing to upload.
 
 ## Security model (summary)
 
@@ -186,3 +187,6 @@ Decided with TaxWise after the specification (`docs/SPEC.md`) was written; where
 - **No email.** WhatsApp is the only channel to clients (above). The app sends no invoices, reminders, invites,
   digests or password resets by email, and has no Settings → Email.
 - **Netlify, not Vercel.** The scheduled jobs of §8 keep their times; one check every 15 minutes runs them.
+- **The logo is built in.** The firm's shield and wordmark are redrawn as vectors in `lib/brand.ts` and appear
+  in the app, its icons and every PDF letterhead. Uploading a logo in Settings → Firm details is optional and
+  replaces it; the setup checklist has no logo step.

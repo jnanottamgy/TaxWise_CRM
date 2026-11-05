@@ -21,6 +21,8 @@
   --primary-soft: #e9edf5;
   --accent-gold: #b8892e;
   --accent-gold-text: #8a6420;
+  /* The logo's wordmark (lib/brand.ts): the logo's own blue on paper, light ink on navy and in the dark. */
+  --logo-ink: #00179d;
   --bg: #f6f5f3;
   --surface: #ffffff;
   --surface-2: #f1f0ed;
@@ -89,6 +91,7 @@
   --primary-soft: #1a2741;
   --accent-gold: #d9ad55;
   --accent-gold-text: #d9ad55;
+  --logo-ink: #e8ecf4;
   --bg: #0d1524;
   --surface: #121c2f;
   --surface-2: #18243a;
@@ -140,6 +143,7 @@
   --primary-foreground: #0c1830;
   --primary-soft: rgb(255 255 255 / 0.09);
   --accent-gold-text: #e2bd6d;
+  --logo-ink: #ffffff;
   --ring: #d9ad55;
   --background: transparent;
   --foreground: #e9edf5;
@@ -175,6 +179,7 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-gold: var(--accent-gold);
   --color-gold-text: var(--accent-gold-text);
+  --color-logo-ink: var(--logo-ink);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);

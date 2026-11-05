@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CircleAlertIcon, RotateCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/app/copy-button";
-import { TwMonogram } from "./brand";
+import { TaxWiseShield } from "@/components/brand/taxwise-logo";
 
 /**
  * The body of the error boundaries (§0.1 rules 2–3): a plain sentence, the Ref to quote (Next's
@@ -79,7 +79,7 @@ export function RouteError({
       <div className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
         <div role="alert" className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-surface">
           <div className="flex h-14 items-center gap-2.5 bg-brand-navy px-5 text-white">
-            <TwMonogram className="size-8" />
+            <TaxWiseShield />
             <span className="text-base font-semibold tracking-[-0.01em]">TaxWise Consultants</span>
           </div>
           {body}

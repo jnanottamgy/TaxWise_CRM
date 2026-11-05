@@ -3,11 +3,11 @@ import "server-only";
 import { log } from "@/lib/log";
 
 /**
- * The firm's logo for the letterhead (§1, §7.21: PNG/SVG/JPG ≤ 1 MB in the public `branding`
- * bucket). PDFs embed PNG and JPEG only, so an SVG logo prints the firm's name in type instead.
- * The file is fetched from its public URL with a short timeout and checked by its magic bytes;
- * any failure returns null and the letterhead falls back to the name (a document never fails for
- * want of a logo).
+ * A logo uploaded in Settings, for the letterhead (§1, §7.21: PNG/SVG/JPG ≤ 1 MB in the public
+ * `branding` bucket). PDFs embed PNG and JPEG only, so an uploaded SVG is passed over. The file is
+ * fetched from its public URL with a short timeout and checked by its magic bytes; with no upload,
+ * or on any failure, this returns null and the letterhead draws the built-in TaxWise shield (a
+ * document never fails for want of a logo).
  */
 
 export interface PdfLogo {

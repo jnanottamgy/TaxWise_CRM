@@ -165,11 +165,11 @@ export function countByPerson(rows: ReadonlyArray<{ assigneeId: string | null; a
 }
 
 // -------------------------------------------------------------------------------------------------
-// The Partner's setup checklist (§7.2)
+// The Partner's setup checklist (§7.2). No logo step: the TaxWise logo ships with the app
+// (lib/brand.ts); an upload in Settings only replaces it.
 // -------------------------------------------------------------------------------------------------
 
 export type SetupFacts = {
-  hasLogo: boolean;
   hasBankAndUpi: boolean;
   hasFrnAndMembership: boolean;
   hasWhatsAppNumbers: boolean;
@@ -182,7 +182,6 @@ export type SetupFacts = {
 export type SetupItem = { id: keyof SetupFacts; label: string; href: string; done: boolean };
 
 const SETUP_ITEMS: ReadonlyArray<Omit<SetupItem, "done">> = [
-  { id: "hasLogo", label: "Upload the firm's logo", href: "/settings/firm" },
   { id: "hasBankAndUpi", label: "Add the bank account and UPI ID", href: "/settings/bank" },
   { id: "hasFrnAndMembership", label: "Enter the ICAI FRN and membership numbers", href: "/settings/firm" },
   { id: "hasWhatsAppNumbers", label: "Enter the firm's WhatsApp numbers", href: "/settings/whatsapp" },
@@ -413,13 +412,12 @@ export function attendanceSoFar(input: {
 }
 
 // -------------------------------------------------------------------------------------------------
-// The setup checklist with what is still missing (§7.2, §4.3): the same eight items, in order, with a
+// The setup checklist with what is still missing (§7.2, §4.3): the same seven items, in order, with a
 // one-line detail from the data and a link to the exact place to finish each one.
 // -------------------------------------------------------------------------------------------------
 
 /** What dashboard_firm_today reports about the firm's setup (0216). */
 export type SetupDetail = {
-  hasLogo: boolean;
   hasBank: boolean;
   hasUpi: boolean;
   hasFrn: boolean;
@@ -436,10 +434,9 @@ export type SetupDetail = {
   invoicesIssued: number;
 };
 
-/** The eight yes/no facts of the checklist (the order and links are SETUP_ITEMS'). */
+/** The seven yes/no facts of the checklist (the order and links are SETUP_ITEMS'). */
 export function setupFactsOf(d: SetupDetail): SetupFacts {
   return {
-    hasLogo: d.hasLogo,
     hasBankAndUpi: d.hasBank && d.hasUpi,
     hasFrnAndMembership: d.hasFrn && d.partners > 0 && d.partnersMissingMembership.length === 0,
     hasWhatsAppNumbers: d.whatsappNumbers > 0,

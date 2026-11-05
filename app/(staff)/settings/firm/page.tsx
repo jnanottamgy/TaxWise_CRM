@@ -19,7 +19,7 @@ export default async function FirmSettingsPage() {
 
   return (
     <div className="min-w-0">
-      <SectionHeader title="Firm details" description="Who the firm is on every invoice, quotation, email and portal page." />
+      <SectionHeader title="Firm details" description="Who the firm is on every invoice, quotation and portal page." />
       {!result.ok ? (
         <SectionLoadError what="the firm details" errorRef={result.ref} />
       ) : !result.data.settings ? (
