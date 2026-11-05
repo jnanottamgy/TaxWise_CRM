@@ -160,6 +160,15 @@ setup checklist lost its logo step (seven steps). Production build on the QA sta
 | Screens checked by eye (1366×768 at 2×, 1366×768 at 1×, 900×700, 390×844) | sign-in desktop and phone, sidebar and tablet rail, phone drawer, portal, 404, public quotation, Settings → Firm details, dark theme |
 | Invoice PDF (`/api/pdf/invoice/…`) at 600 dpi | the vector shield on the letterhead, rim corners mitred cleanly |
 
+### Crawl results
+
+**891 visits (297 role × route pairs × 3 viewports), 0 with problems.** No error boundaries, no block
+errors, no page errors, no response ≥ 500, no horizontal overflow at 1366 or 390, dark mode applied on all
+297 dark visits, one h1 on every allowed page, slowest settle 5.6 s (Partner `/dashboard`, light, one
+of the first four visits, made together on a cold server; median 2.0 s). All 738 allowed visits answered 200; all 153 refusal visits were refused:
+111 with 403, 3 with 404 and 39 by redirect (the only console errors and failed requests are those 114
+refusals' own responses).
+
 ## 6. Earlier run (r-wa2, 31 Oct 2026): WhatsApp only, no desktop app, Netlify
 
 Run on 31 Oct 2026, after TaxWise Desktop and email were removed, the 15-minute scheduler replaced
