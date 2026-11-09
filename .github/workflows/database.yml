@@ -54,6 +54,9 @@ jobs:
             echo "::error::The repository secret $NAME isn't set. Add it under Settings → Secrets and variables → Actions (see the top of this file)."
             exit 1
           fi
+          # Tidy the usual copy-and-paste slips and say what was wrong, never the password (scripts/db-url.py).
+          DB_URL="$(DB_URL="$DB_URL" python3 scripts/db-url.py)"
+          echo "::add-mask::$DB_URL"
           FLAGS="--include-seed --yes"
           if [ "$DRY_RUN" = "true" ]; then FLAGS="$FLAGS --dry-run"; fi
           supabase db push --db-url "$DB_URL" $FLAGS

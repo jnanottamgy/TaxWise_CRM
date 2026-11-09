@@ -51,6 +51,8 @@ jobs:
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL_PRODUCTION }}
         run: |
+          DB_URL="$(DB_URL="$DB_URL" python3 scripts/db-url.py)"
+          echo "::add-mask::$DB_URL"
           mkdir -p backup
           supabase db dump --db-url "$DB_URL" --role-only -f backup/roles.sql
           supabase db dump --db-url "$DB_URL" -f backup/schema.sql
