@@ -28,9 +28,18 @@ raw = os.environ.get("DB_URL", "")
 url = raw.strip().strip("'\"`").strip()
 if url != raw:
     note("removed spaces, line breaks or quote marks around it.")
+prefix = re.match(r"^[A-Za-z_][A-Za-z0-9_]*\s*=\s*", url)
+if prefix and "://" in url[prefix.end():]:
+    url = url[prefix.end():].strip().strip("'\"")
+    note('removed a "NAME=" in front of it.')
+if url.lower().startswith("jdbc:"):
+    url = url[5:]
+    note('removed "jdbc:" in front of it.')
 if re.match(r"^psql\s+", url):
     url = re.sub(r"^psql\s+", "", url).strip().strip("'\"")
     note('removed "psql" in front of it.')
+if re.search(r"(^|\s)(host|user|dbname|port)=", url):
+    fail("it is the list of connection parameters (host=… port=…), not the one-line connection string.")
 if re.search(r"\s", url):
     fail("it has a space or line break inside it.")
 if "[YOUR-PASSWORD]" in url.upper():
@@ -40,6 +49,8 @@ m = re.match(r"^(postgres(?:ql)?)://([^:/@]+):(.*)@([^@/]+)(/.*)?$", url)
 if not m:
     if url.startswith(("http://", "https://")):
         fail("it is a web address (https://…), not the database connection string (postgresql://…).")
+    if "://" not in url and "@" not in url:
+        fail("it looks like a single word (perhaps only the password), not the whole connection string.")
     if not url.startswith(("postgres://", "postgresql://")):
         fail("it doesn't start with postgresql://.")
     fail("it isn't in the form postgresql://user:password@host:port/postgres.")
