@@ -129,12 +129,14 @@ describe("forced password change (§4.4)", () => {
 });
 
 describe("two-step sign-in (§12)", () => {
-  it("requires aal2 for Partners and Managers", () => {
+  it("asks for the code only from people who turned two-step sign-in on (optional for every role)", () => {
     expect(route("/dashboard", { ...partner, aal: "aal1" })).toEqual({ kind: "redirect", to: "/mfa?next=%2Fdashboard" });
-    expect(route("/clients", { ...manager, aal: "aal1", mfaEnrolled: false }, { search: "?q=ravi" })).toEqual({
+    expect(route("/clients", { ...manager, aal: "aal1", mfaEnrolled: true }, { search: "?q=ravi" })).toEqual({
       kind: "redirect",
       to: "/mfa?next=%2Fclients%3Fq%3Dravi",
     });
+    expect(route("/dashboard", { ...partner, aal: "aal1", mfaEnrolled: false })).toEqual({ kind: "next" });
+    expect(route("/clients", { ...manager, aal: "aal1", mfaEnrolled: false })).toEqual({ kind: "next" });
     expect(route("/dashboard", partner)).toEqual({ kind: "next" });
     expect(route("/", { ...partner, aal: "aal1" })).toEqual({ kind: "redirect", to: "/mfa?next=%2Fdashboard" });
   });
@@ -337,10 +339,11 @@ describe("updateSession", () => {
     expect(activity?.sameSite).toBe("lax");
   });
 
-  it("sends a Manager at aal1 to /mfa", async () => {
+  it("lets a Manager without an authenticator app in at aal1, and sends one who has it to /mfa", async () => {
     auth.getClaims.mockResolvedValue(claims({ role: "manager" }, "aal1"));
-    const res = await updateSession(request("/work"));
-    expect(res.headers.get("location")).toBe("https://crm.twchartered.com/mfa?next=%2Fwork");
+    expect((await updateSession(request("/work"))).headers.get("location")).toBeNull();
+    auth.getSession.mockResolvedValue({ data: { session: { access_token: "t", user: { id: "u1", factors: [{ status: "verified" }] } } }, error: null });
+    expect((await updateSession(request("/work"))).headers.get("location")).toBe("https://crm.twchartered.com/mfa?next=%2Fwork");
   });
 
   it("sends an Employee who turned on two-step sign-in to /mfa, from the stored session's factors", async () => {
@@ -350,8 +353,8 @@ describe("updateSession", () => {
     expect((await updateSession(request("/my-day"))).headers.get("location")).toBe("https://crm.twchartered.com/mfa?next=%2Fmy-day");
   });
 
-  it("doesn't read the stored session for a role that always needs the second step", async () => {
-    auth.getClaims.mockResolvedValue(claims({ role: "manager" }, "aal1"));
+  it("doesn't read the stored session once the second step is done", async () => {
+    auth.getClaims.mockResolvedValue(claims({ role: "manager" }, "aal2"));
     await updateSession(request("/work"));
     expect(auth.getSession).not.toHaveBeenCalled();
   });

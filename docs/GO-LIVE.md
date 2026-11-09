@@ -30,7 +30,7 @@ Tick every line before real client data goes into production. Owner: a Partner, 
 
 ## 4. People and access
 - [ ] First Partner created through `/setup`; `/setup` now returns 404.
-- [ ] Every Partner and Manager has enrolled two-step sign-in (TOTP).
+- [ ] Two-step sign-in (TOTP) is optional; Partners who can reveal portal passwords are advised to turn it on (Profile).
 - [ ] No demo or test accounts in production Auth; no passwords or keys anywhere in the repository.
 - [ ] Vault access granted only to the Employees who need it.
 

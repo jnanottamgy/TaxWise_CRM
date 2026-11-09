@@ -67,7 +67,8 @@ const DIAGNOSTICS_PATH = "/settings/diagnostics";
 
 /**
  * True only on /settings/diagnostics, when the profile can't be read (getSession reports no profile)
- * and the verified token says Partner at `aal2` (server/diagnostics.ts diagnosticsAccess). Never
+ * and the verified token says Partner, verified with the authenticator app if they have one
+ * (server/diagnostics.ts diagnosticsAccess). Never
  * throws: any doubt means "no", and the normal guard decides.
  */
 async function diagnosticsWithoutProfile(): Promise<boolean> {
@@ -79,7 +80,7 @@ async function diagnosticsWithoutProfile(): Promise<boolean> {
     const access = await diagnosticsAccess();
     if (!access.ok) return false;
     const { data } = await access.supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    return toAal(data?.currentLevel) === "aal2";
+    return toAal(data?.currentLevel) === "aal2" || data?.nextLevel !== "aal2";
   } catch (err) {
     unstable_rethrow(err);
     logUnexpected(err, { source: "layout:(staff):diagnostics-gate" });

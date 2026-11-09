@@ -15,7 +15,7 @@ Go-live checklist: [`docs/GO-LIVE.md`](docs/GO-LIVE.md). Local QA stack, crawler
 | Layer | Choice |
 |---|---|
 | Web app | Next.js 16 (App Router, `proxy.ts`), React 19, TypeScript strict, Tailwind CSS 4, shadcn/ui (Radix) |
-| Data | Supabase: Auth (email + password, TOTP for Partners/Managers), Postgres with RLS on every table, private Storage |
+| Data | Supabase: Auth (email + password; an authenticator app optional, from Profile), Postgres with RLS on every table, private Storage |
 | Forms and rules | react-hook-form + zod (one schema for client and server); pure business rules in `lib/domain/` |
 | Documents | Server-side PDFs (`@react-pdf/renderer`), Excel/CSV (`exceljs`, `papaparse`) |
 | Messaging | WhatsApp only: the chat opens in WhatsApp Web (the WhatsApp app on a phone) with the message typed in and the document downloaded to attach. The app sends no email |
@@ -191,7 +191,7 @@ access).
 ## First run
 
 Open `/setup` while no users exist: it creates the first Partner (app role in `app_metadata` + `profiles`), confirms the
-firm details from §1 and then 404s forever. Every Partner and Manager enrols TOTP on first sign-in. The Partner dashboard
+firm details from §1 and then 404s forever. Two-step sign-in (TOTP) is optional: anyone turns it on from Profile. The Partner dashboard
 shows the setup checklist (bank and UPI, ICAI numbers, firm WhatsApp numbers, team, first client, first invoice,
 law & rules review). The TaxWise logo is built in, so there is nothing to upload.
 
@@ -220,6 +220,9 @@ Decided with TaxWise after the specification (`docs/SPEC.md`) was written; where
   digests or password resets by email, and has no Settings → Email.
 - **One scheduler check.** The scheduled jobs of §8 keep their times, but one check every 15 minutes (Supabase
   Cron → `/api/cron/tick`) runs whatever is due, instead of a Vercel Cron job per job.
+- **Two-step sign-in is optional.** §12 required an authenticator app for Partners and Managers; the firm chose to
+  make it optional for everyone (Profile → Two-step sign-in). `MFA_REQUIRED_ROLES` in `lib/auth/mfa.ts` turns the
+  requirement back on for a role.
 - **The logo is built in.** The firm's shield and wordmark are redrawn as vectors in `lib/brand.ts` and appear
   in the app, its icons and every PDF letterhead. Uploading a logo in Settings → Firm details is optional and
   replaces it; the setup checklist has no logo step.

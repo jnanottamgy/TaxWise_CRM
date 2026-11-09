@@ -53,7 +53,7 @@ export const ROLE_SCOPE: Record<StaffRole, { label: string; grants: string; stop
   partner: {
     label: "Partner",
     grants: "Everything: firm settings, money, approvals, people and the audit log.",
-    stops: "Nothing is held back. Partners must use two-step sign-in.",
+    stops: "Nothing is held back.",
   },
   manager: {
     label: "Manager",

@@ -15,8 +15,7 @@ import { auditAuthEvent, isFirstRun, requestMeta, startActivityClock } from "@/s
  * First run (§4.3). Reachable only while `profiles` is empty. Creates the first Partner's login
  * (`app_metadata.role = 'partner'`, through the service role), their `profiles` and `employees`
  * rows, and the `firm_settings` row (or confirms the seeded one); then signs them in. They land on
- * the authenticator set-up (§12, required for Partners) and from there on the dashboard's setup
- * checklist (§7.2).
+ * the dashboard's setup checklist (§7.2); two-step sign-in is optional, turned on from Profile.
  */
 
 const CHECK_FIELDS = "Please check the highlighted fields.";
@@ -164,7 +163,7 @@ export async function completeSetup(input: SetupInput): Promise<ActionResult<{ r
       supabase,
     });
 
-    return ok({ redirectTo: `/mfa?next=${encodeURIComponent("/dashboard")}` }, warnings);
+    return ok({ redirectTo: "/dashboard" }, warnings);
   } catch (err) {
     unstable_rethrow(err);
     if (createdUserId) {

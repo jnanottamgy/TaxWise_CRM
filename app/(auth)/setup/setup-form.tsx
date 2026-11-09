@@ -220,7 +220,7 @@ export function SetupForm({ firm, lockedEmail, states }: { firm: FirmDetails; lo
       </fieldset>
 
       <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-3 border-t border-border bg-surface px-6 py-4 sm:-mx-8 sm:-mb-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p className="text-sm text-text-muted">Next, you&apos;ll turn on two-step sign-in.</p>
+        <p className="text-sm text-text-muted">Next, you&apos;ll land on the dashboard.</p>
         <SubmitButton busy={busy} busyText="Setting up…" className="sm:w-auto">
           Create Partner login
         </SubmitButton>

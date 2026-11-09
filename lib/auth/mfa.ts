@@ -1,9 +1,10 @@
 /**
  * Two-step sign-in with an authenticator app (TOTP, §12).
  *
- * Required for Partners and Managers (they see fees and can reveal portal passwords), optional for
- * Employees (turned on from Profile) and Clients. A required role is never let past the proxy or the
- * page guards at assurance level `aal1`; anyone who has turned it on is challenged at sign-in.
+ * Optional for everyone, by the firm's choice (README → Changes from the original specification):
+ * anyone can turn it on from Profile, and whoever has is challenged at sign-in. A role listed in
+ * MFA_REQUIRED_ROLES would be made to set it up first and never let past the proxy or the page
+ * guards at assurance level `aal1`; the list is empty.
  *
  * The pure rules are client-safe. `getMfaState` takes the caller's own Supabase client (it never
  * creates one) so this file can be imported anywhere without pulling in server-only code.
@@ -14,8 +15,8 @@ import type { AppRole } from "@/lib/auth/roles";
 
 export type Aal = "aal1" | "aal2";
 
-/** The roles that must use an authenticator app (§12). */
-export const MFA_REQUIRED_ROLES = ["partner", "manager"] as const satisfies readonly AppRole[];
+/** The roles that must use an authenticator app (§12 named Partners and Managers; the firm chose none). */
+export const MFA_REQUIRED_ROLES: readonly AppRole[] = [];
 
 /** Issuer shown in the authenticator app beside the account name. */
 export const TOTP_ISSUER = "TaxWise";
@@ -23,7 +24,7 @@ export const TOTP_ISSUER = "TaxWise";
 export const TOTP_FRIENDLY_NAME = "Authenticator app";
 
 export function mfaRequiredFor(role: string | null | undefined): boolean {
-  return role === "partner" || role === "manager";
+  return (MFA_REQUIRED_ROLES as readonly string[]).includes(role ?? "");
 }
 
 export function toAal(value: unknown): Aal | null {

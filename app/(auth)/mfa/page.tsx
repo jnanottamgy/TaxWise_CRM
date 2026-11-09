@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Two-step sign-in" };
 /**
  * Two-step sign-in (§12). One page for both halves:
  * - challenge: someone with an authenticator enters the code after their password;
- * - enrol: Partners and Managers must add one before going further; Employees can choose to,
+ * - enrol: a role in MFA_REQUIRED_ROLES (none today) must add one before going further; anyone can choose to,
  *   from Profile (link here with `?enrol=1&next=/profile`).
  */
 export default async function MfaPage({ searchParams }: PageProps<"/mfa">) {
