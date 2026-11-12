@@ -2047,6 +2047,27 @@ export const DUE_DATE_RULE_SEED: readonly DueDateRule[] = [
     verified: false,
   }),
   seed({
+    // Everyone the three rules above don't name: trusts, societies, "Other" entities, and a client
+    // whose constitution isn't recorded yet. Without it such a client had advance tax on the
+    // calendar and no return at all.
+    code: "ITR_NON_AUDIT_OTHER",
+    title: "Income tax return, non-audit trust, society or other entity (ITR-5 / ITR-7)",
+    complianceType: "itr",
+    formCode: "ITR",
+    appliesTo: {
+      serviceTypes: IT,
+      excludeEntityTypes: ["individual", "huf", "proprietorship", "partnership", "llp", "aop"],
+      auditCase: false,
+      tpCase: false,
+    },
+    frequency: "annual",
+    rule: { fixed: "07-31", yearOffset: 1, periodLabel: "taxYear" },
+    reminderDays: 15,
+    sourceRef:
+      "Income-tax Act, 1961 s.139(1), (4A) and (4C): 31 July for any other assessee, incl. a trust or institution whose accounts are not audited. Where they are audited (Form 10B / 10BB) the return is due on 31 October: record the audit on the client [verify]",
+    verified: false,
+  }),
+  seed({
     code: "TAX_AUDIT_REPORT",
     title: "Tax audit report",
     complianceType: "audit",

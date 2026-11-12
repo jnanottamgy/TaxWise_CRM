@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { notFound, unstable_rethrow } from "next/navigation"
 import { CalendarClockIcon, FileTextIcon, ListChecksIcon } from "lucide-react"
 import { z } from "zod"

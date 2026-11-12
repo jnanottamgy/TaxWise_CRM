@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -418,7 +418,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
                                 alignClass(c.align),
                                 c.align === "right" && "num tabular-nums",
                                 hideClass(c.hideBelow),
-                                i === 0 && "max-w-[28rem] truncate md:sticky md:z-[1] md:bg-inherit",
+                                // The identity cell wraps (names were cut to "ZC Anand Kumar (In…" beside columns with room to spare).
+                                i === 0 && "max-w-[28rem] min-w-[11rem] [overflow-wrap:anywhere] whitespace-normal md:sticky md:z-[1] md:bg-inherit",
                                 i === 0 && (selectable ? "md:left-11" : "md:left-0 pl-4"),
                                 i === visible.length - 1 && "pr-4",
                                 i !== 0 && "whitespace-nowrap",

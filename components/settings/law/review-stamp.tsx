@@ -47,7 +47,7 @@ export function ReviewStamp({
               <span className="font-medium text-warning-text">
                 {awaiting.toLocaleString("en-IN")} item{awaiting === 1 ? "" : "s"} awaiting partner confirmation
               </span>
-              . Confirm each one before go-live.
+              . Tick the rows you have checked against their source and confirm them together.
             </>
           ) : (
             "Every item in force has been confirmed by a Partner."

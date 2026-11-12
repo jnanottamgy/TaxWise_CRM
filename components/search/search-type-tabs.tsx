@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { formatNumber } from "@/lib/format"
 import { SEARCH_TYPE_LABEL, type SearchType } from "@/lib/schemas/search"

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { notFound, unstable_rethrow } from "next/navigation"
 import { FileDownIcon } from "lucide-react"
 import { requireManagerOrPartner } from "@/lib/auth/guards"

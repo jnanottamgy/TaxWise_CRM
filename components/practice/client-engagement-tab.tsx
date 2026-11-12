@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { unstable_rethrow } from "next/navigation"
 import type { ClientTabProps } from "@/components/client360/types"
 import { ErrorBlock } from "@/components/app/error-block"

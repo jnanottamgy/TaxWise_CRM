@@ -231,6 +231,29 @@ export const revokePortalAccess = defineAction(
     if (!client.portal_user_id) return ok({ revoked: false });
     const userId = client.portal_user_id;
 
+    // The link must point at a portal login. This action bans the login with the service role, so
+    // it never acts on an id it hasn't checked: a row pointing at a staff member's login (written
+    // behind the app) would otherwise lock that person out of the firm.
+    const profile = await portalProfile(userId);
+    if (!profile) {
+      const ref = logUnexpected(new Error("clients.portal_user_id does not point at a client login"), {
+        source: "action:clients.portal_revoke",
+        userId: ctx.user.id,
+        role: ctx.user.role,
+        clientId: client.id,
+      });
+      await ctx.audit({
+        event: "user_disable",
+        resourceType: "portal_user",
+        resourceId: userId,
+        action: "clients.portal_revoke",
+        success: false,
+        error: "linked login is not a client",
+        details: { client_id: client.id },
+      });
+      return fail(`This client's portal link doesn't point at a portal login, so nothing was changed. Ask a Partner to check it. (Ref ${ref})`, { code: "blocked" });
+    }
+
     // 1. Unlink (under the caller's RLS): from this moment the login sees nothing (§7.22).
     const { data, error } = await ctx.supabase
       .from("clients")

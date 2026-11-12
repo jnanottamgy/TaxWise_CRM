@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { TimerIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useOptionalShell } from "@/components/shell/shell-context"

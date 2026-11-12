@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 
 export const LAW_TABS = [

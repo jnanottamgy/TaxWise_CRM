@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { AtSignIcon, FileTextIcon, GlobeIcon, MailIcon, MessageCircleIcon, PhoneIcon, StickyNoteIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StatusChip } from "@/components/app/status-chip"

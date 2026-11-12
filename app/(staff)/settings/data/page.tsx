@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { DownloadIcon } from "lucide-react"
 import { requirePartner } from "@/lib/auth/guards"
 import { starterNotice } from "@/lib/domain/dpdp"

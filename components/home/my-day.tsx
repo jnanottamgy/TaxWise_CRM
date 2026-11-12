@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { SectionCard } from "@/components/app/section-card"
 import { EmptyState } from "@/components/app/empty-state"
 import { StatusChip } from "@/components/app/status-chip"

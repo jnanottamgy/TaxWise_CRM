@@ -178,6 +178,16 @@ export const setTaxAuditDecision = defineAction(
         metadata: { decision: input.decision },
       }),
     );
+    // The decision picks the return date (31 July / 31 August or the audit-case 31 October) and puts
+    // the tax audit report on the calendar: refresh the client's deadlines the way a change to the
+    // master data does.
+    ctx.after(
+      "Refresh the client's deadlines",
+      async () => {
+        await generateForClient(ctx.supabase, input.clientId, { today: todayIST(), retire: true });
+      },
+      "Decision saved, but the deadlines weren't refreshed. Use Generate deadlines on the Compliance tab.",
+    );
     return ok({ updatedAt: saved.updated_at });
   },
 );

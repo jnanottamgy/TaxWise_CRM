@@ -7,6 +7,28 @@ import { PRESENCE_DEFAULTS } from "@/lib/domain/presence";
 const MIN_GAP_MS = 30_000;
 
 /**
+ * When this tab last sent a beat (ms), kept for the tab's lifetime so a full page load doesn't send
+ * another straight away: every beat costs a session check and a write, and reloads are frequent.
+ */
+const LAST_BEAT_KEY = "tw.presence.lastBeat";
+
+function readLastBeat(): number {
+  try {
+    return Number(window.sessionStorage.getItem(LAST_BEAT_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeLastBeat(at: number) {
+  try {
+    window.sessionStorage.setItem(LAST_BEAT_KEY, String(at));
+  } catch {
+    // Storage is off (private window): the beat simply goes out on every load, as before.
+  }
+}
+
+/**
  * Sends the presence heartbeat while the app is open and visible (§7.12): every 5 minutes, plus one
  * at once when the tab becomes visible again. A hidden tab sends nothing, so a forgotten tab earns
  * no time; the server caps each beat's credit anyway (lib/domain/presence.ts). Mounted once by the
@@ -20,18 +42,26 @@ export function PresenceHeartbeat() {
   React.useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let stopped = false;
-    let lastBeat = 0;
+    let lastBeat = readLastBeat();
     let inFlight = false;
+    const every = PRESENCE_DEFAULTS.heartbeatMinutes * 60_000;
 
     const clear = () => {
       if (timer) clearTimeout(timer);
       timer = null;
     };
 
-    const schedule = () => {
+    const schedule = (delay = every) => {
       clear();
       if (stopped || document.visibilityState !== "visible") return;
-      timer = setTimeout(() => void beat(), PRESENCE_DEFAULTS.heartbeatMinutes * 60_000);
+      timer = setTimeout(() => void beat(), Math.max(1_000, delay));
+    };
+
+    /** Beat now if one is due; otherwise wait out the rest of the interval since the last one. */
+    const beatWhenDue = () => {
+      const since = Date.now() - lastBeat;
+      if (since >= every) void beat();
+      else schedule(every - since);
     };
 
     const beat = async () => {
@@ -43,6 +73,7 @@ export function PresenceHeartbeat() {
       }
       inFlight = true;
       lastBeat = now;
+      writeLastBeat(now);
       try {
         const res = await fetch("/api/presence/heartbeat", {
           method: "POST",
@@ -71,7 +102,7 @@ export function PresenceHeartbeat() {
     };
 
     document.addEventListener("visibilitychange", onVisibility);
-    if (document.visibilityState === "visible") void beat();
+    if (document.visibilityState === "visible") beatWhenDue();
 
     return () => {
       stopped = true;

@@ -39,13 +39,14 @@ export function GenerateButton({
           return
         }
         for (const w of r.warnings ?? []) toast.warning(w, { duration: 12_000 })
-        const { created, updated, retired } = r.data
+        const { created, updated, retired, restored } = r.data
         toast.success(
-          created === 0 && updated === 0 && retired === 0
+          created === 0 && updated === 0 && retired === 0 && !restored
             ? "Deadlines are already up to date."
             : [
                 created ? `${created} ${created === 1 ? "deadline" : "deadlines"} added` : null,
                 updated ? `${updated} ${updated === 1 ? "date" : "dates"} updated` : null,
+                restored ? `${restored} brought back because the service is active again` : null,
                 retired ? `${retired} cancelled because the service ended` : null,
               ]
                 .filter(Boolean)

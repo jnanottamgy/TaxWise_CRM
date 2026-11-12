@@ -2,6 +2,7 @@ import { after, type NextResponse } from "next/server";
 import { log, logUnexpected } from "@/lib/log";
 import { unexpectedMessage } from "@/lib/result";
 import { createAdminClient } from "@/server/admin";
+import { ensureApiGate } from "@/server/api-gate";
 import { RUN_HISTORY_MINUTES, dueRuns } from "@/server/jobs/due";
 import { refuseUnlessCron, respond } from "@/server/jobs/http";
 import { BACKGROUND_TIME_BUDGET_MS, JOB_TIME_BUDGET_MS, closeStaleRuns, runJob, type JobOutcome } from "@/server/jobs/runner";
@@ -41,6 +42,12 @@ async function check(budgetMs: number, source: string): Promise<CheckResult> {
   const now = new Date();
   const deadline = now.getTime() + budgetMs;
   const admin = createAdminClient();
+  // Keep the database API gate registered and on (migration 0243); never a reason to skip the jobs.
+  try {
+    await ensureApiGate(admin);
+  } catch (err) {
+    logUnexpected(err, { source: `${source}:api-gate` });
+  }
   const closed = await closeStaleRuns(admin, now);
   const { data, error } = await admin
     .from("job_runs")

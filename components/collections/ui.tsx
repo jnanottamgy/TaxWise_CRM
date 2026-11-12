@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { SectionCard } from "@/components/app/section-card"
 import { ErrorBlock } from "@/components/app/error-block"

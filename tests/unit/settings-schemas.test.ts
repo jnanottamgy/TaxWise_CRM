@@ -22,6 +22,7 @@ import {
 import {
   ConcordanceSchema,
   describeParameterValue,
+  splitParameterNote,
   DueDateRuleChangeSchema,
   formatParameterValue,
   OverrideSchema,
@@ -520,12 +521,31 @@ describe("law schemas", () => {
 });
 
 describe("describeParameterValue (the parameters table, in words)", () => {
-  it("reads objects as labelled parts, numbers in Indian grouping", () => {
-    expect(describeParameterValue({ months: 3 })).toBe("months 3");
-    expect(describeParameterValue({ amount: 50000, inclusive: false })).toBe("amount 50,000 · inclusive no");
-    expect(describeParameterValue({ turnover: 1000000000, paid_up_capital: 100000000 })).toBe("turnover 1,00,00,00,000 · paid up capital 10,00,00,000");
-    expect(describeParameterValue({ counted: ["a", "b"], notCounted: [] })).toBe("counted a, b · notCounted none");
-    expect(describeParameterValue({ access: { days: 90 } })).toBe("access (days 90)");
+  it("reads durations, rupees, rates and sections the way a CA says them", () => {
+    expect(describeParameterValue({ months: 3 })).toBe("3 months");
+    expect(describeParameterValue({ days: 1 })).toBe("1 day");
+    expect(describeParameterValue({ amount: 50000, inclusive: false })).toBe("₹50,000 · inclusive no");
+    expect(describeParameterValue({ turnover: 1000000000, paid_up_capital: 100000000 })).toBe("turnover ₹100 crore · paid up capital ₹10 crore");
+    expect(describeParameterValue({ rate: 2, section: "194H" })).toBe("2% · s.194H");
+    expect(describeParameterValue({ per: "year", amount: 15000 })).toBe("₹15,000 per year");
+    expect(describeParameterValue({ per: "payment", amount: 30000, annual: 100000 })).toBe("₹30,000 per payment · annual ₹1 lakh");
+    expect(describeParameterValue({ day: 30, month: 11 })).toBe("30 November");
+    expect(describeParameterValue({ day: 31, month: 12, yearOffset: 0 })).toBe("31 December");
+    expect(describeParameterValue({ maxReceipts: 7500000, minIncomePct: 50 })).toBe("max receipts ₹75 lakh · min income pct 50%");
+    expect(describeParameterValue({ level1: 3, level2: 7 }, 90, "escalation.overdue_days")).toBe("level1 3 days · level2 7 days");
+    expect(describeParameterValue(6, 90, "retention.income_tax_years_after_ay")).toBe("6 years");
+    expect(describeParameterValue({ regimes: { new: { slabs: Array.from({ length: 40 }, (_, i) => ({ rate: i, upTo: i * 100000 })) } } })).toBe("A detailed table (open it under ⋯ → Change from a date)");
+    expect(describeParameterValue({ counted: ["a", "b"], notCounted: [] })).toBe("counted a, b · not counted none");
+    expect(describeParameterValue({ access: { days: 90 } })).toBe("access (90 days)");
+  });
+
+  it("takes a plain number's unit from the parameter's key", () => {
+    expect(describeParameterValue(14, 90, "audit.file_assembly_warn_days")).toBe("14 days");
+    expect(describeParameterValue(72, 90, "retention.gst_records_months")).toBe("72 months");
+    expect(describeParameterValue(18, 90, "gst.default_rate_services")).toBe("18%");
+    expect(describeParameterValue([0, 5, 18, 40], 90, "gst.slabs")).toBe("0%, 5%, 18%, 40%");
+    expect(describeParameterValue([3, 7, 14], 90, "quotation.follow_up_days")).toBe("3, 7, 14 days");
+    expect(describeParameterValue(60, 90, "audit.tax_audit_ceiling")).toBe("60");
   });
 
   it("reads plain values as they are, and cuts long ones", () => {
@@ -536,5 +556,20 @@ describe("describeParameterValue (the parameters table, in words)", () => {
     const long = describeParameterValue({ text: "x".repeat(200) }, 40);
     expect(long).toHaveLength(40);
     expect(long.endsWith("…")).toBe(true);
+  });
+});
+
+describe("splitParameterNote (the meaning, and what is still to check)", () => {
+  it("splits at [verify] and drops references to the specification", () => {
+    expect(splitParameterNote("First appeal to the Appellate Authority: 3 months from the date the order is communicated. [verify] against the current statute before relying on it (§7.8.4).")).toEqual({
+      meaning: "First appeal to the Appellate Authority: 3 months from the date the order is communicated.",
+      toCheck: "Against the current statute before relying on it.",
+    });
+    expect(splitParameterNote("Rule set for FY 2025-26 (AY 2026-27), the last year under the 1961 Act (§6.1, §6.11).")).toEqual({
+      meaning: "Rule set for FY 2025-26 (AY 2026-27), the last year under the 1961 Act.",
+      toCheck: null,
+    });
+    expect(splitParameterNote(null)).toEqual({ meaning: "", toCheck: null });
+    expect(splitParameterNote("SAC group 9982 stays at 18%. [verify]")).toEqual({ meaning: "SAC group 9982 stays at 18%.", toCheck: null });
   });
 });

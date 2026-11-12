@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { WithinInteractive } from "@/components/app/full-value-hint"
 
@@ -28,11 +28,17 @@ export interface KpiItem {
 export function KpiStrip({
   items,
   lead = false,
+  compact = false,
   className,
   "aria-label": ariaLabel,
 }: {
   items: KpiItem[]
   lead?: boolean
+  /**
+   * One line per figure (label left, figure right), for list pages: the full strip took 105 to 125 px
+   * off the top of a 768 px screen and left six rows of the list in view.
+   */
+  compact?: boolean
   className?: string
   "aria-label"?: string
 }) {
@@ -47,8 +53,13 @@ export function KpiStrip({
       className={cn("grid grid-cols-2 overflow-hidden rounded-lg border border-border bg-surface", mdCols, className)}
     >
       {items.map((item, i) => {
-        const big = lead && i === 0
-        const inner = (
+        const big = lead && i === 0 && !compact
+        const inner = compact ? (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate text-sm leading-5 text-text-muted">{item.label}</span>
+            <span className="num flex-none font-serif text-xl leading-7 font-[450] tracking-[-0.012em] text-text tabular-nums">{item.value}</span>
+          </div>
+        ) : (
           <>
             <div className="text-sm leading-5 text-text-muted">{item.label}</div>
             <div
@@ -64,7 +75,7 @@ export function KpiStrip({
           </>
         )
         const cell = cn(
-          "min-w-0 px-4 py-3 md:px-5 md:py-4",
+          compact ? "min-w-0 px-4 py-2 md:px-5" : "min-w-0 px-4 py-3 md:px-5 md:py-4",
           "max-md:[&:nth-child(even)]:border-l max-md:[&:nth-child(n+3)]:border-t max-md:[&:last-child:nth-child(odd)]:col-span-2",
           "border-border md:border-l md:first:border-l-0"
         )

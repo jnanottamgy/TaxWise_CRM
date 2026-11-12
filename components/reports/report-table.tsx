@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { EMPTY } from "@/lib/format"
 import { StatusChip } from "@/components/app/status-chip"

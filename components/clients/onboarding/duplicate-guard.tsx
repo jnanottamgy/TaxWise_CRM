@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ExternalLinkIcon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { describeDuplicate, duplicateBlocks, type DuplicateCandidate } from "@/lib/domain/conflict"

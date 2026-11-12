@@ -57,8 +57,8 @@ describe("helpers", () => {
   });
 
   it("lists people and names without a dangling separator", () => {
-    expect(capacityLine([{ name: "Ravi", band: "over", perDay: "5.2" }])).toBe("Ravi OVER (5.2 a day)");
-    expect(capacityLine([{ name: "Ravi", band: "over", perDay: "5.2" }, { name: "Anita", band: "tight", perDay: "2.8" }])).toBe("Ravi OVER (5.2 a day) and Anita TIGHT (2.8 a day)");
+    expect(capacityLine([{ name: "Ravi", band: "over", perDay: "5.2" }])).toBe("Ravi: over (5.2 a day)");
+    expect(capacityLine([{ name: "Ravi", band: "over", perDay: "5.2" }, { name: "Anita", band: "tight", perDay: "2.8" }])).toBe("Ravi: over (5.2 a day) and Anita: tight (2.8 a day)");
     expect(namesLine(["A", "B", "C", "D"], 3)).toBe("A, B, C and 1 more");
     expect(namesLine(["A", "B"], 3, 9)).toBe("A, B and 7 more");
     expect(namesLine(["A", "B"])).toBe("A and B");
@@ -120,7 +120,7 @@ describe("team health, Mondays 08:30 IST", () => {
     const calls = vi.mocked(notify).mock.calls.map((c) => c[0]);
     const capacity = calls.find((c) => c.dedupeKey === "team_health:capacity:2026-10-26");
     expect(capacity).toMatchObject({ to: { roles: ["manager"] }, type: "warning", linkUrl: "/people" });
-    expect(capacity?.body).toContain("Ravi Kumar OVER");
+    expect(capacity?.body).toContain("Ravi Kumar: over");
     expect(calls.find((c) => c.dedupeKey === "team_health:stale_leads:2026-10-26")).toMatchObject({ to: { roles: ["partner", "manager"] }, linkUrl: "/leads?flag=stale" });
     expect(calls.find((c) => c.dedupeKey === "team_health:unassigned:2026-10-26")?.body).toContain("TDS return Q2 for Beta Industries, due 31 Oct 2026");
     const letters = calls.find((c) => c.dedupeKey === "team_health:engagement_letters:2026-27:2026-10-26");

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { usePathname } from "next/navigation";
 import { Building2Icon, ListChecksIcon, MenuIcon, SunIcon, TimerIcon, type LucideIcon } from "lucide-react";
 import { navMatchScore } from "@/lib/nav";

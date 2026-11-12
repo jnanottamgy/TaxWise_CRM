@@ -349,6 +349,22 @@ describe("both regimes side by side", () => {
     expect(r.regimes.new.totalIncome).toBe(R(1425000));
   });
 
+  it("positive house-property income is part of total income, in both regimes", () => {
+    // Rent only, ₹15,00,000 (net). New regime FY 2025-26: 20,000 + 40,000 + 45,000 = 1,05,000; cess 4,200 → 1,09,200.
+    const rent = compute({ income: { houseProperty: R(1500000) } });
+    expect(rent.regimes.new.income.grossTotalIncome).toBe(R(1500000));
+    expect(rent.regimes.new.totalIncome).toBe(R(1500000));
+    expect(rent.regimes.new.taxLiabilityRounded).toBe(R(109200));
+    expect(rent.regimes.old.totalIncome).toBe(R(1500000));
+    // Salary ₹15,00,000 (less ₹75,000) plus rent ₹6,00,000: total income ₹20,25,000 in the new regime.
+    const both = compute({ income: { salaryGross: R(1500000), houseProperty: R(600000) } });
+    const salaryOnly = compute({ income: { salaryGross: R(1500000) } });
+    expect(both.regimes.new.totalIncome).toBe(R(2025000));
+    expect(both.regimes.new.totalIncome - salaryOnly.regimes.new.totalIncome).toBe(R(600000));
+    expect(both.regimes.new.taxLiabilityRounded).toBeGreaterThan(salaryOnly.regimes.new.taxLiabilityRounded);
+    expect(both.regimes.new.income.houseProperty).toEqual({ entered: R(600000), allowed: R(600000), lossSetOff: 0, lossCarriedForward: 0, lossNotAllowed: 0 });
+  });
+
   it("Chapter VI-A deductions never reduce special-rate gains; a resident's unused exemption does", () => {
     // Old: other sources 1,00,000 + STCG 5,00,000; 80C 1,50,000 limited to 1,00,000 → TI 5,00,000.
     // Normal income nil, so 2,50,000 of exemption goes against STCG: 20% of 2,50,000 = 50,000.
@@ -452,24 +468,38 @@ describe("surcharge (§6.11)", () => {
     expect(o.taxLiabilityRounded).toBe(R(19266650));
   });
 
-  it("surcharge on capital-gains tax is capped at 15%", () => {
-    // New: business 1,50,00,000 + STCG 1,00,00,000 = 2.5 Cr (25% band).
-    // Normal tax 3,00,000 + 30% of 1,26,00,000 = 40,80,000 → 25% = 10,20,000.
-    // STCG 20% of 1 Cr = 20,00,000 → capped 15% = 3,00,000. Surcharge 13,20,000.
-    // Cess 4% of 74,00,000 = 2,96,000 → 76,96,000.
+  it("gains that carry total income past ₹2 crore don't bring the 25% rate: 15% on everything", () => {
+    // New: business 1,50,00,000 + STCG 1,00,00,000 = 2.5 Cr, but income other than the gains is 1.5 Cr,
+    // so the 25% rate (income *excluding* such gains above 2 Cr) doesn't apply: 15% throughout.
+    // Normal tax 3,00,000 + 30% of 1,26,00,000 = 40,80,000; STCG 20% of 1 Cr = 20,00,000 → 60,80,000.
+    // Surcharge 15% = 9,12,000. Cess 4% of 69,92,000 = 2,79,680 → 72,71,680.
     const n = compute({ income: { businessProfession: R(15000000), stcg111a: R(10000000) } }).regimes.new;
-    expect(n.surcharge.gross).toBe(R(1320000));
+    expect(n.surcharge.rate).toBe(15);
+    expect(n.surcharge.gross).toBe(R(912000));
     expect(n.surcharge.marginalRelief).toBe(0);
-    expect(n.taxLiabilityRounded).toBe(R(7696000));
+    expect(n.taxLiabilityRounded).toBe(R(7271680));
   });
 
-  it("surcharge on dividends is capped at 15% (dividends taken as the top slice)", () => {
-    // Old: other sources 5.5 Cr incl. dividends 1 Cr. Tax 1,12,500 + 30% of 5,40,00,000 = 1,63,12,500.
-    // Dividend tax 30% of 1 Cr = 30,00,000 at 15% = 4,50,000; the rest 1,33,12,500 at 37% = 49,25,625.
-    // Surcharge 53,75,625; cess 4% of 2,16,88,125 = 8,67,525 → 2,25,55,650.
+  it("the 25% rate applies to the other income's tax when that income passes ₹2 crore; gains stay at 15%", () => {
+    // New: business 2,50,00,000 + STCG 1,00,00,000. Normal tax 3,00,000 + 30% of 2,26,00,000 = 70,80,000
+    // → 25% = 17,70,000. STCG 20,00,000 → capped 15% = 3,00,000. Surcharge 20,70,000.
+    // Cess 4% of 1,11,50,000 = 4,46,000 → 1,15,96,000.
+    const n = compute({ income: { businessProfession: R(25000000), stcg111a: R(10000000) } }).regimes.new;
+    expect(n.surcharge.rate).toBe(25);
+    expect(n.surcharge.gross).toBe(R(2070000));
+    expect(n.surcharge.marginalRelief).toBe(0);
+    expect(n.taxLiabilityRounded).toBe(R(11596000));
+  });
+
+  it("dividends are left out when the 37% band is measured, and their tax is capped at 15% (top slice)", () => {
+    // Old: other sources 5.5 Cr incl. dividends 1 Cr. Income other than dividends is 4.5 Cr: the 25%
+    // band, not 37%. Tax 1,12,500 + 30% of 5,40,00,000 = 1,63,12,500.
+    // Dividend tax 30% of 1 Cr = 30,00,000 at 15% = 4,50,000; the rest 1,33,12,500 at 25% = 33,28,125.
+    // Surcharge 37,78,125; cess 4% of 2,00,90,625 = 8,03,625 → 2,08,94,250.
     const o = compute({ income: { otherSources: R(55000000), dividends: R(10000000) } }).regimes.old;
-    expect(o.surcharge.gross).toBe(R(5375625));
-    expect(o.taxLiabilityRounded).toBe(R(22555650));
+    expect(o.surcharge.rate).toBe(25);
+    expect(o.surcharge.gross).toBe(R(3778125));
+    expect(o.taxLiabilityRounded).toBe(R(20894250));
   });
 });
 

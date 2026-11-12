@@ -14,6 +14,10 @@ const LOCKED_TABLES = ["client_credentials", "rate_limits"];
 
 /** Functions anon may execute: pure helpers and the public firm profile (0032). */
 const ANON_FUNCTIONS = [
+  // The API gate (0243) runs before every request, as the request's own role.
+  "api_gate()",
+  "api_gate_request_token()",
+  "api_gate_sees_app()",
   "financial_year_label(date)",
   "fy_end_date(text)",
   "fy_start_date(text)",

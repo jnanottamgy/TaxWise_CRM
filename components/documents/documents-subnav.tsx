@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { formatNumber } from "@/lib/format"
 import type { DocumentSubtab } from "@/lib/schemas/documents"

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useRouter } from "next/navigation"
 import { ArchiveIcon, ArchiveRestoreIcon, BellIcon, MailIcon, MailOpenIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react"
 import { cn } from "@/lib/utils"

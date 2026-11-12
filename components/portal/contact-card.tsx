@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { MailIcon, MapPinIcon, MessageSquareIcon, PhoneIcon, GlobeIcon } from "lucide-react"
 import { SectionCard } from "@/components/app/section-card"
 import { displayWebsite, formatFirmAddress, type FirmProfile } from "@/server/firm"

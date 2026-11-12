@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ArrowRightIcon } from "lucide-react"
 import { formatNumber } from "@/lib/format"

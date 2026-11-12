@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { C, F, SQLSTATE, U, setupTestDatabase, userMessage, type Session } from "./helpers";
+import { limitationDate } from "@/lib/domain/escalation";
 import { addDays, addMonths, fyStart, todayIST } from "@/lib/domain/fy";
 import { parseRuleSet } from "@/lib/domain/itr-rulesets";
 import { ItrFormSchema, blankItrForm, computeStored, formToStoredInputs } from "@/lib/schemas/itr";
@@ -386,8 +387,10 @@ describe("set_tax_notice_status (§7.8.4)", () => {
 
       // Correcting the order date moves the task; no second task.
       const fixed = await noticeStatus(s, r.id, "closed_unfavourable", { order_date: addDays(today, -3), appeal: { decision: "appeal", forum: "income_tax_tribunal" } });
-      expect(fixed).toMatchObject({ task_created: false, appeal_task_id: closed.appeal_task_id, limitation_date: addDays(addDays(today, -3), 60) });
-      expect(await s.value("select due_date::text from tasks where id = $1", [closed.appeal_task_id])).toBe(addDays(addDays(today, -3), 60));
+      // ITAT (0245): two months from the end of the month of the order.
+      const itat = limitationDate(addDays(today, -3), { months: 2, from: "month_end" });
+      expect(fixed).toMatchObject({ task_created: false, appeal_task_id: closed.appeal_task_id, limitation_date: itat });
+      expect(await s.value("select due_date::text from tasks where id = $1", [closed.appeal_task_id])).toBe(itat);
       expect(await s.value("select count(*)::int from tasks where client_id = $1 and title like 'Appeal to %'", [C.A])).toBe(1);
     });
   });

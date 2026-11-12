@@ -62,31 +62,133 @@ export function summariseParameterValue(value: unknown, max = 60): string {
 
 const valueNumber = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 4 });
 
-function describePart(v: unknown): string {
+/** Durations: `{ months: 3 }` reads "3 months"; a key ending `_days` gives its plain number the unit. */
+const DURATION_UNITS = ["minutes", "hours", "days", "weeks", "months", "years"] as const;
+const SINGULAR: Record<string, string> = { minutes: "minute", hours: "hour", days: "day", weeks: "week", months: "month", years: "year" };
+
+/** Field names that hold rupees (whole rupees, as the law states them). */
+const MONEY_FIELD = /^(amount|annual|limit|limit_?low_?cash|turnover|turnover_?up_?to|paid_?up_?capital|revenue|borrowings|capital_?and_?reserves|max_?turnover|max_?turnover_?low_?cash|max_?receipts|max_?receipts_?low_?cash|threshold)$/i;
+/** Field names that hold a percentage. */
+const PERCENT_FIELD = /(^rate$|pct|percent)/i;
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function duration(n: number, unit: string): string {
+  return `${valueNumber.format(n)} ${n === 1 ? SINGULAR[unit] : unit}`;
+}
+
+/** Rupees as a CA says them: ₹50,000 · ₹7.5 lakh · ₹5 crore (whole rupees in). */
+function rupees(n: number): string {
+  const abs = Math.abs(n);
+  const words = (value: number, unit: string) => `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value)} ${unit}`;
+  if (abs >= 1_00_00_000) return words(n / 1_00_00_000, "crore");
+  if (abs >= 1_00_000) return words(n / 1_00_000, "lakh");
+  return `₹${valueNumber.format(n)}`;
+}
+
+function label(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase();
+}
+
+/** What a field's name says about its unit: "days", "₹", "%", or nothing. */
+function unitOf(key: string | undefined): string | null {
+  if (!key) return null;
+  const k = key.toLowerCase();
+  for (const u of DURATION_UNITS) if (k === u || k.endsWith(`_${u}`) || k.includes(`_${u}_`)) return u;
+  if (MONEY_FIELD.test(key)) return "₹";
+  if (PERCENT_FIELD.test(key) || /(^|[._])(rate|slabs)([._]|$)/.test(k)) return "%";
+  return null;
+}
+
+function scalar(v: number, unit: string | null): string {
+  if (unit === "₹") return rupees(v);
+  if (unit === "%") return `${valueNumber.format(v)}%`;
+  if (unit) return duration(v, unit);
+  return valueNumber.format(v);
+}
+
+function describePart(v: unknown, key?: string, inherited: string | null = null): string {
   if (v === null || v === undefined) return "—";
-  if (typeof v === "number") return valueNumber.format(v);
+  const unit = unitOf(key) ?? inherited;
+  if (typeof v === "number") return scalar(v, unit);
   if (typeof v === "boolean") return v ? "yes" : "no";
-  if (typeof v === "string") return v;
-  if (Array.isArray(v)) return v.length ? v.map(describePart).join(", ") : "none";
+  if (typeof v === "string") return key === "section" ? `s.${v}` : key === "per" ? `per ${v}` : v;
+  if (Array.isArray(v)) {
+    if (!v.length) return "none";
+    // A list of plain numbers carries the unit once: "3, 7, 14 days"; percentages each: "0%, 5%, 18%".
+    if (unit && unit !== "%" && unit !== "₹" && v.every((x) => typeof x === "number")) return `${v.map((x) => valueNumber.format(x as number)).join(", ")} ${unit}`;
+    return v.map((x) => describePart(x, key, inherited)).join(", ");
+  }
   if (typeof v === "object") {
-    return Object.entries(v as Record<string, unknown>)
-      .map(([k, x]) => {
-        const nested = x !== null && typeof x === "object" && !Array.isArray(x);
-        return `${k.replace(/_/g, " ")} ${nested ? `(${describePart(x)})` : describePart(x)}`;
-      })
-      .join(" · ");
+    const o = { ...(v as Record<string, unknown>) };
+    const lead: string[] = [];
+    // A calendar day: { day: 30, month: 11 } reads "30 November".
+    if (typeof o.day === "number" && typeof o.month === "number" && o.month >= 1 && o.month <= 12) {
+      const offset = typeof o.yearOffset === "number" && o.yearOffset !== 0 ? ` (year ${o.yearOffset > 0 ? "+" : ""}${o.yearOffset})` : "";
+      lead.push(`${o.day} ${MONTH_NAMES[o.month - 1]}${offset}`);
+      delete o.day;
+      delete o.month;
+      delete o.yearOffset;
+    }
+    // A period counted from the end of a month: { months: 2, from: "month_end" } reads
+    // "2 months from the end of the month".
+    if (typeof o.months === "number" && o.from === "month_end") {
+      lead.push(`${o.months} ${o.months === 1 ? "month" : "months"} from the end of the month`);
+      delete o.months;
+      delete o.from;
+    }
+    // An amount for a period: { per: "year", amount: 15000 } reads "₹15,000 per year".
+    if (typeof o.amount === "number" && typeof o.per === "string") {
+      lead.push(`${rupees(o.amount)} per ${o.per}`);
+      delete o.amount;
+      delete o.per;
+    }
+    const rest = Object.entries(o).map(([k, x]) => {
+      const nested = x !== null && typeof x === "object" && !Array.isArray(x);
+      if (nested) return `${label(k)} (${describePart(x, k, unit)})`;
+      // Fields whose name is the unit read as the value alone: "3 months", "2%", "s.194H", "₹5 crore".
+      if ((DURATION_UNITS as readonly string[]).includes(k) || k === "rate" || k === "section" || k === "per" || k === "amount") return describePart(x, k);
+      return `${label(k)} ${describePart(x, k, unit)}`;
+    });
+    return [...lead, ...rest].join(" · ");
   }
   return String(v);
 }
 
 /**
  * The value in words for the parameters table, so a Partner reads it rather than parses it:
- * `{"months":3}` → "months 3"; `{"amount":50000,"inclusive":false}` → "amount 50,000 · inclusive no";
- * `18` → "18". Numbers in Indian grouping. Cut at `max` characters (the full JSON is in the editor).
+ * `{"months":3}` → "3 months"; `{"amount":50000,"inclusive":false}` → "₹50,000 · inclusive no";
+ * `{"rate":2,"section":"194H"}` → "2% · s.194H"; `{"per":"year","amount":15000}` → "₹15,000 per year";
+ * `{"day":30,"month":11}` → "30 November"; `18` under a `…rate…` key → "18%"; `14` under a
+ * `…_days` key → "14 days". Rupees in lakh and crore, other numbers in Indian grouping. `key` is the
+ * parameter's key (it names the unit of a plain number). Cut at `max` characters (the full JSON is
+ * in the editor).
  */
-export function describeParameterValue(value: unknown, max = 90): string {
-  const text = describePart(value);
+export function describeParameterValue(value: unknown, max = 90, key?: string): string {
+  // A whole table (a year's income-tax rule set) doesn't fit a cell: say so instead of printing its first line.
+  if (value !== null && typeof value === "object" && JSON.stringify(value).length > 600) return "A detailed table (open it under ⋯ → Change from a date)";
+  const text = describePart(value, key?.split(".").pop());
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/**
+ * A parameter's note split for the table: the meaning, and what a Partner still has to check (the
+ * text after "[verify]"). References to the specification ("(§6.5)") are for developers and are
+ * dropped.
+ */
+export function splitParameterNote(note: string | null | undefined): { meaning: string; toCheck: string | null } {
+  const clean = (note ?? "")
+    .replace(/\s*\((?:§\s*[\d.]+(?:\s*,\s*|\s+and\s+)?)+\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const at = clean.indexOf("[verify]");
+  if (at < 0) return { meaning: clean, toCheck: null };
+  const tidy = (t: string) => t.trim().replace(/^[\s:;,.-]+/, "");
+  const after = tidy(clean.slice(at + "[verify]".length));
+  return { meaning: clean.slice(0, at).trim(), toCheck: after ? after.charAt(0).toUpperCase() + after.slice(1) : null };
 }
 
 const parameterValueText = z
@@ -171,6 +273,16 @@ export const MarkVerifiedSchema = z.object({
   updated_at: concurrencyToken,
 });
 export type MarkVerifiedInput = z.input<typeof MarkVerifiedSchema>;
+
+/** Several rows of one table confirmed together (a Partner who has checked a group against one source). */
+export const MarkVerifiedManySchema = z.object({
+  table: z.enum(VERIFIABLE_TABLES),
+  items: z
+    .array(z.object({ id: z.uuid({ error: "Reload the page and try again." }), updated_at: concurrencyToken }))
+    .min(1, { error: "Tick the rows to confirm." })
+    .max(100, { error: "Confirm at most 100 rows at a time." }),
+});
+export type MarkVerifiedManyInput = z.input<typeof MarkVerifiedManySchema>;
 
 export const MarkReviewedSchema = z.object({
   note: optionalText(300),

@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { StatusChip } from "@/components/app/status-chip"
 import { CAPACITY_BAND_LABELS, type CapacityAssessment, type CapacityBand } from "@/lib/domain/capacity"

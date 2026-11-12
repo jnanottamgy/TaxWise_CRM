@@ -790,7 +790,7 @@ const TASK_GROUPS: ReadonlyArray<{ primary: readonly string[]; also: readonly st
   { primary: ["GSTR1_QRMP"], also: [], template: null, minutes: 150 },
   { primary: ["GSTR3B_QRMP"], also: [], template: null, minutes: 120 },
   { primary: ["TDS_RETURN_Q1", "TDS_RETURN_Q2", "TDS_RETURN_Q3", "TDS_RETURN_Q4"], also: ["FORM16A"], template: "Quarterly TDS return", minutes: 180 },
-  { primary: ["ITR_NON_AUDIT_1_2", "ITR_NON_AUDIT_3_4", "ITR_NON_AUDIT_5"], also: [], template: "ITR (non-audit)", minutes: 180 },
+  { primary: ["ITR_NON_AUDIT_1_2", "ITR_NON_AUDIT_3_4", "ITR_NON_AUDIT_5", "ITR_NON_AUDIT_OTHER"], also: [], template: "ITR (non-audit)", minutes: 180 },
   { primary: ["TAX_AUDIT_REPORT"], also: [], template: "Tax audit", minutes: 2400 },
   { primary: ["ITR_AUDIT"], also: [], template: null, minutes: 300 },
   { primary: ["AOC4"], also: ["ADT1", "MGT7"], template: "ROC annual filing", title: (p) => `ROC annual filing for ${p}`, minutes: 360 },
@@ -801,7 +801,7 @@ const TASK_GROUPS: ReadonlyArray<{ primary: readonly string[]; also: readonly st
 /** Returns that leave an acknowledgement worth a filing record (§7.6.5, §7.15.2). */
 const FILED_RULES = new Set([
   "GSTR1_MONTHLY", "GSTR3B_MONTHLY", "GSTR1_QRMP", "GSTR3B_QRMP", "TDS_RETURN_Q1", "TDS_RETURN_Q2", "TDS_RETURN_Q3", "TDS_RETURN_Q4",
-  "ITR_NON_AUDIT_1_2", "ITR_NON_AUDIT_3_4", "ITR_NON_AUDIT_5", "TAX_AUDIT_REPORT", "ITR_AUDIT", "AOC4", "ADT1", "MGT7", "LLP_FORM8", "LLP_FORM11",
+  "ITR_NON_AUDIT_1_2", "ITR_NON_AUDIT_3_4", "ITR_NON_AUDIT_5", "ITR_NON_AUDIT_OTHER", "TAX_AUDIT_REPORT", "ITR_AUDIT", "AOC4", "ADT1", "MGT7", "LLP_FORM8", "LLP_FORM11",
 ]);
 
 const WAITING_ON = ["the purchase register", "the bank statements", "the sales register", "Form 16 from the employer", "the board resolution", "the fixed asset register", "confirmation of the closing stock"];

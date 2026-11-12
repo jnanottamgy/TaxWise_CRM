@@ -447,7 +447,9 @@ describe("seed SQL 42_params_practice.sql (§16)", () => {
     expect(value("escalation.overdue_days")).toEqual({ level1: 3, level2: 7 });
     expect(value("quotation.follow_up_days")).toEqual([3, 7, 14]);
     expect(value("appeal.income_tax.first_appeal")).toEqual({ days: 30 });
-    expect(value("appeal.income_tax.tribunal")).toEqual({ days: 60 });
+    // ITAT: 60 days up to 30 September 2024, then two months from the end of the order's month.
+    expect(value("appeal.income_tax.tribunal")).toEqual({ months: 2, from: "month_end" });
+    expect(expected.find((r) => r.key === "appeal.income_tax.tribunal" && r.effectiveTo === "2024-09-30")?.value).toEqual({ days: 60 });
     expect(value("appeal.gst.first_appeal")).toEqual({ months: 3 });
     expect(value("appeal.gst.tribunal")).toEqual({ months: 3 });
   });
@@ -473,7 +475,8 @@ describe("seed SQL 42_params_practice.sql (§16)", () => {
       "audit.tax_audit_form26_categories",
       "retention.income_tax_years_after_ay",
       "appeal.income_tax.first_appeal",
-      "appeal.income_tax.tribunal",
+      "appeal.income_tax.tribunal", // 60 days, up to 30 September 2024
+      "appeal.income_tax.tribunal", // two months from the end of the month, since
       "appeal.gst.first_appeal",
       "appeal.gst.tribunal",
     ]);

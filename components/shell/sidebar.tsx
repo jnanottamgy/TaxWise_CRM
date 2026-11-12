@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { usePathname } from "next/navigation";
-import { HistoryIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, StarIcon, XIcon } from "lucide-react";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon, StarIcon, XIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { navItemByHref, navMatchScore, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { UserMenu } from "./user-menu";
 
 /**
  * The staff sidebar (§3.3, DESIGN.md §3): the navy brand band with the firm's mark and name, "+ New",
- * Favourites and Recent, the role's grouped navigation (§4.2), then the user card and "Powered by
+ * Favourites, the role's grouped navigation (§4.2), then the user card and "Powered by
  * J-TACS". 260px wide, or a 64px icon rail; inside the phone drawer it is always full width.
  */
 
@@ -37,7 +37,7 @@ function formatCount(n: number): string {
 
 export function Sidebar({ rail = false, fixedRail = false, inDrawer = false, onNavigate, onClose }: SidebarProps) {
   const shell = useShell();
-  const { user, firm, nav, favourites, recent, unreadCount, collapsed, setCollapsed, setOpen } = shell;
+  const { user, firm, nav, favourites, unreadCount, collapsed, setCollapsed, setOpen } = shell;
   const pathname = usePathname() ?? "/";
 
   // The one active item: the longest match across the whole sidebar (so /clients/groups is not "Clients").
@@ -105,30 +105,6 @@ export function Sidebar({ rail = false, fixedRail = false, inDrawer = false, onN
                 onNavigate={onNavigate}
               />
             ))}
-          </NavSection>
-        ) : null}
-
-        {!rail && recent.length > 0 ? (
-          <NavSection id="recent" label="Recent">
-            {recent.map((place) => {
-              const known = navItemByHref(user.role, place.href);
-              const Icon = known?.icon ?? HistoryIcon;
-              return (
-                <li key={`recent-${place.href}`}>
-                  <Link
-                    href={place.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex h-8 items-center gap-2.5 rounded-md px-2 text-base text-text/80 outline-none transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-text focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-                      inDrawer && "h-11",
-                    )}
-                  >
-                    <Icon aria-hidden="true" className="size-4 flex-none text-text-muted" />
-                    <span className="min-w-0 flex-1 truncate">{place.title}</span>
-                  </Link>
-                </li>
-              );
-            })}
           </NavSection>
         ) : null}
 

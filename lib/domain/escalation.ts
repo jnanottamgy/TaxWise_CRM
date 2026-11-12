@@ -39,14 +39,19 @@ export const ESCALATION_DEFAULTS: EscalationParams = { level1AfterDays: 3, level
 export const FOLLOW_UP_DEFAULTS = { quotationFollowUpDays: [3, 7, 14] as readonly number[] };
 
 /** A limitation period: days or calendar months from the order date. */
-export type LimitationPeriod = { days: number } | { months: number };
+/**
+ * `{ days }` and `{ months }` run from the order date. `{ months, from: "month_end" }` runs from the
+ * end of the month the order is communicated in (ITAT appeals since 1 October 2024): the last day is
+ * the last day of the month that many months later.
+ */
+export type LimitationPeriod = { days: number } | { months: number; from?: "month_end" };
 
 export type AppealForum = "income_tax_first_appeal" | "income_tax_tribunal" | "gst_first_appeal" | "gst_tribunal";
 
 /** §7.8.4 appeal limitation periods, each [verify] against the current statute. */
 export const APPEAL_DEFAULTS: Record<AppealForum, LimitationPeriod> = {
   income_tax_first_appeal: { days: 30 },
-  income_tax_tribunal: { days: 60 },
+  income_tax_tribunal: { months: 2, from: "month_end" },
   gst_first_appeal: { months: 3 },
   gst_tribunal: { months: 3 },
 };
@@ -128,11 +133,22 @@ export const ESCALATION_SEED_PARAMETERS: readonly SeedParameterRow[] = [
     key: ESCALATION_PARAM_KEYS.incomeTaxTribunal,
     value: { days: 60 },
     effectiveFrom: "1962-04-01",
+    effectiveTo: "2024-09-30",
+    statute: IT_ACT_1961,
+    sectionRef: "s.253(3), before the Finance (No. 2) Act, 2024",
+    sourceRef: "Income-tax Act, 1961, s.253(3)",
+    notes: "Appeal to the Income Tax Appellate Tribunal, orders up to 30 September 2024: 60 days from the date the order is communicated. [verify] against the statute as it then stood before relying on it (§7.8.4).",
+    verified: false,
+  },
+  {
+    key: ESCALATION_PARAM_KEYS.incomeTaxTribunal,
+    value: { months: 2, from: "month_end" },
+    effectiveFrom: "2024-10-01",
     effectiveTo: null,
     statute: IT_ACT_1961,
     sectionRef: "s.253(3) [verify] the Income-tax Act, 2025 equivalent",
-    sourceRef: "Income-tax Act, 1961, s.253(3)",
-    notes: "Appeal to the Income Tax Appellate Tribunal: 60 days from the date the order is communicated. [verify] against the current statute before relying on it (§7.8.4).",
+    sourceRef: "Income-tax Act, 1961, s.253(3) as amended by the Finance (No. 2) Act, 2024, from 1 October 2024",
+    notes: "Appeal to the Income Tax Appellate Tribunal: two months from the end of the month in which the order is communicated. [verify] against the current statute before relying on it (§7.8.4).",
     verified: false,
   },
   {
@@ -163,12 +179,14 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
-/** Reads `{"days": n}` or `{"months": n}` (positive whole numbers), or null. */
+/** Reads `{"days": n}`, `{"months": n}` or `{"months": n, "from": "month_end"}` (positive whole numbers), or null. */
 export function readLimitationPeriod(value: unknown): LimitationPeriod | null {
   const o = asRecord(value);
   if (!o) return null;
   if (typeof o.days === "number" && Number.isInteger(o.days) && o.days > 0) return { days: o.days };
-  if (typeof o.months === "number" && Number.isInteger(o.months) && o.months > 0) return { months: o.months };
+  if (typeof o.months === "number" && Number.isInteger(o.months) && o.months > 0) {
+    return o.from === "month_end" ? { months: o.months, from: "month_end" } : { months: o.months };
+  }
   return null;
 }
 
@@ -326,7 +344,13 @@ export function quotationFollowUpsDue(input: {
 
 /** The last day to appeal: the order date plus the period (calendar months clamp to month end). */
 export function limitationDate(orderDate: DateString, period: LimitationPeriod): DateString {
-  return "days" in period ? addDays(orderDate, period.days) : addMonths(orderDate, period.months);
+  if ("days" in period) return addDays(orderDate, period.days);
+  if (period.from === "month_end") {
+    // The first day of the order's month, forward months + 1, back one day: the last day of that month.
+    const first = `${orderDate.slice(0, 8)}01` as DateString;
+    return addDays(addMonths(first, period.months + 1), -1);
+  }
+  return addMonths(orderDate, period.months);
 }
 
 /** The limitation date for a forum, from the resolved (or default) periods. */

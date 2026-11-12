@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { unstable_rethrow } from "next/navigation"
 import type { CurrentUser } from "@/lib/auth/current-user"
 import type { ServerSupabase } from "@/lib/supabase/server"
@@ -386,7 +386,7 @@ function ceilingItem(r: L<Awaited<ReturnType<typeof getCeilingHealth>>>, fy: str
           {c.rows.map((x) => (
             <HealthRow key={x.memberId} name={x.name} value={`${x.total} of ${x.ceiling}`} tone={x.warning === "over" || x.warning === "at_ceiling" ? "danger" : x.warning === "near" ? "warning" : undefined} />
           ))}
-          {c.unverified ? <li className="pt-0.5">The ceiling is still marked [verify] in Law & rules.</li> : null}
+          {c.unverified ? <li className="pt-0.5">The ceiling is not yet confirmed in Law & rules.</li> : null}
         </ul>
       ),
   }

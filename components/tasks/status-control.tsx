@@ -132,16 +132,42 @@ export function useTaskMover({ onMoved }: { onMoved?: (task: MovableTask, to: Ta
 }
 
 /**
- * The status chip with "Change status": allowed moves first, then refused ones (disabled, with why).
+ * The natural next step from a status, when this person may make it: one filled button, so the
+ * commonest moves (start, send for review, file) are a single click rather than a menu and an item.
+ */
+function nextStep(task: MovableTask, options: NextStatusOption[]): { to: TaskStatus; label: string; requiresReason: boolean } | null {
+  const natural: Partial<Record<TaskStatus, { to: TaskStatus; label: string }>> = {
+    not_started: { to: "in_progress", label: "Start work" },
+    in_progress: { to: "under_review", label: "Send for review" },
+    data_awaited: { to: "in_progress", label: "Data received: resume" },
+    on_hold: { to: "in_progress", label: "Resume work" },
+    under_review: { to: "filed_done", label: needsFilingCapture(task) ? "File it" : "Mark done" },
+  }
+  const step = natural[task.status]
+  if (!step) return null
+  const option = options.find((o) => o.status === step.to)
+  return option?.allowed ? { ...step, requiresReason: option.requiresReason } : null
+}
+
+/**
+ * The status chip, the next step as a filled button, and "Change status" for every other move:
+ * allowed moves first, then refused ones (disabled, with why).
  */
 export function StatusMenu({ task, options, size = "sm", align = "start" }: { task: MovableTask; options: NextStatusOption[]; size?: "sm" | "default"; align?: "start" | "end" }) {
   const mover = useTaskMover()
   const allowed = options.filter((o) => o.allowed)
   const refused = options.filter((o) => !o.allowed)
+  const step = nextStep(task, options)
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip kind="task_status" value={task.status} variant="pill" />
+        {step ? (
+          <Button size={size} disabled={mover.busy === task.id} aria-busy={mover.busy === task.id} onClick={() => void mover.move(task, step.to, step.requiresReason)}>
+            {mover.busy === task.id ? <Spinner /> : null}
+            {step.label}
+          </Button>
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size={size} disabled={mover.busy === task.id} aria-busy={mover.busy === task.id}>

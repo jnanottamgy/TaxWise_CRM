@@ -30,7 +30,7 @@ export async function run(admin: AdminSupabase, now: Date = new Date(), ctx: Job
     return (after ? q.gt("id", after) : q).order("id").range(a, b);
   });
 
-  const counts = { clients: 0, created: 0, updated: 0, locked: 0, retired: 0, failed: 0, gaps: 0, gapClients: 0, skippedRules: engine.skipped.length };
+  const counts = { clients: 0, created: 0, updated: 0, locked: 0, retired: 0, restored: 0, failed: 0, gaps: 0, gapClients: 0, skippedRules: engine.skipped.length };
   let done = 0;
   for (const c of clients) {
     // At least one client per call, so a continuation always moves on.
@@ -46,6 +46,7 @@ export async function run(admin: AdminSupabase, now: Date = new Date(), ctx: Job
       counts.updated += r.updated;
       counts.locked += r.locked;
       counts.retired += r.retired;
+      counts.restored += r.restored;
     } catch (err) {
       counts.failed++;
       logUnexpected(err, { source: "job:compliance-topup:client", clientId: c.id });

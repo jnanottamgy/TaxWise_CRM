@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { Building2Icon, FolderTreeIcon, PlusIcon, RefreshCwIcon, UserRoundCogIcon } from "lucide-react"
 import { DataTable, type DataTableColumn } from "@/components/app/data-table/data-table"
 import type { SortDir } from "@/components/app/data-table/params"
@@ -40,9 +40,10 @@ function Muted({ children }: { children?: React.ReactNode }) {
 function NameCell({ r }: { r: ClientTableRow }) {
   const entity = r.entity_type ? ENTITY_SHORT[r.entity_type] : null
   return (
-    <span className="flex max-w-56 min-w-0 flex-col">
-      <span className="inline-flex min-w-0 items-center gap-2 leading-5">
-        <span className="min-w-0 truncate" title={r.display_name}>{r.display_name}</span>
+    <span className="flex max-w-[22rem] min-w-0 flex-col">
+      {/* The name wraps to a second line rather than being cut ("ZC Anand Kumar (In…"): it is what people scan for. */}
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 leading-5">
+        <span className="line-clamp-2 min-w-0 [overflow-wrap:anywhere]" title={r.display_name}>{r.display_name}</span>
         {entity ? (
           <span
             title={entityLabel(r.entity_type, r.entity_type_other) ?? undefined}
@@ -81,7 +82,7 @@ function NextDeadline({ date, title, today }: { date: string; title: string | nu
   return (
     <span className="inline-flex flex-col items-end" title={title ? `${title}, due ${formatDate(date)}` : undefined}>
       <DateText date={date} today={today} className="leading-5" />
-      <span className="flex max-w-40 min-w-0 items-center text-xs leading-4">
+      <span className="flex max-w-52 min-w-0 items-center text-xs leading-4">
         <span className={cn("flex-none", urgencyTextClass(rel.urgency))}>{rel.text}</span>
         {title ? <span className="min-w-0 truncate text-text-muted">&nbsp;· {title}</span> : null}
       </span>
@@ -143,7 +144,7 @@ export function ClientsTable(props: {
 
   const columns = React.useMemo<DataTableColumn<ClientTableRow>[]>(() => {
     const cols: DataTableColumn<ClientTableRow>[] = [
-      { id: "display_name", header: "Client", sortable: true, hideable: false, mobile: "primary", width: "24%", cell: (r) => <NameCell r={r} />, mobileCell: (r) => (r.cover_badge ? `${r.display_name} · ${r.cover_badge}` : r.display_name) },
+      { id: "display_name", header: "Client", sortable: true, hideable: false, mobile: "primary", width: "32%", cell: (r) => <NameCell r={r} />, mobileCell: (r) => (r.cover_badge ? `${r.display_name} · ${r.cover_badge}` : r.display_name) },
       { id: "client_code", header: "Code", sortable: true, mobile: "secondary", hideBelow: "2xl", cell: (r) => <MonoId value={r.client_code} copy label="client code" /> },
       { id: "pan", header: "PAN", defaultHidden: true, cell: (r) => <MonoId value={r.pan} copy label="PAN" /> },
       { id: "gstin", header: "GSTIN", defaultHidden: true, cell: (r) => <MonoId value={r.gstin} copy label="GSTIN" /> },

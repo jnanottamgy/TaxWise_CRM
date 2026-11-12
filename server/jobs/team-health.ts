@@ -34,9 +34,9 @@ export function weekKey(date: DateString): DateString {
   return addDays(date, -(isoWeekday(date) - 1));
 }
 
-/** "Ravi Kumar OVER (5.2 a day), Anita Rao TIGHT (2.8 a day) and 2 more". */
+/** "Ravi Kumar: over (5.2 a day), Anita Rao: tight (2.8 a day) and 2 more". */
 export function capacityLine(people: ReadonlyArray<{ name: string; band: CapacityBand; perDay: string }>, max = 4): string {
-  const shown = people.slice(0, max).map((p) => `${p.name} ${CAPACITY_BAND_LABELS[p.band]} (${p.perDay} a day)`);
+  const shown = people.slice(0, max).map((p) => `${p.name}: ${CAPACITY_BAND_LABELS[p.band].toLowerCase()} (${p.perDay} a day)`);
   const rest = people.length - shown.length;
   if (rest > 0) return `${shown.join(", ")} and ${rest} more`;
   if (shown.length <= 1) return shown.join("");

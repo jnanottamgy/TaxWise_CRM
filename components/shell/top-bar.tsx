@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { usePathname } from "next/navigation";
 import { BellIcon, ChevronRightIcon, CircleHelpIcon, MenuIcon, SearchIcon, TimerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";

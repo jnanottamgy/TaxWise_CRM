@@ -61,7 +61,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     <div className="flex min-w-0 flex-col">
       <PageGuide title="People">
         <p>Everyone on the team, with their role, whether they can sign in, their open tasks and how loaded they are over the next two weeks.</p>
-        <p className="mt-2">Capacity is open tasks due in the next 14 days (overdue ones too) per working day left, excluding weekends, holidays and approved leave: CLEAR below 1.5 a day, BUSY from 1.5, TIGHT from 2.5, OVER from 4.</p>
+        <p className="mt-2">Capacity is open tasks due in the next 14 days (overdue ones too) per working day left, excluding weekends, holidays and approved leave: Free below 1.5 a day, Busy from 1.5, Tight from 2.5, Over from 4.</p>
         <p className="mt-2">Open a person to edit their details, reset their password, change their role, disable them, move their work, or set up cover for their clients.</p>
       </PageGuide>
       <PageHeader

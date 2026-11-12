@@ -486,7 +486,7 @@ export function setupSteps(d: SetupDetail, viewer: { profileId: string }): { ite
       case "teamAdded":
         return { ...item, detail: d.teamMembers <= 1 ? "Only you so far" : null };
       case "lawReviewed":
-        return { ...item, detail: "Confirm every [verify] item before relying on it" };
+        return { ...item, detail: "Confirm the items awaiting confirmation before relying on them" };
       default:
         return { ...item, detail: null };
     }

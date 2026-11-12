@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useWatch } from "react-hook-form"
 import { SwitchField, TextField, TextareaField } from "@/components/app/form/fields"
 import { SettingsCard, SettingPreview, Wide } from "@/components/settings/settings-card"

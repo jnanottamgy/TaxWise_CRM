@@ -150,15 +150,21 @@ describe("quotation follow-ups (§7.5.3): day 3, 7 and 14", () => {
 });
 
 describe("appeal limitation dates (§7.8.4) [verify]", () => {
-  it("uses 30 days, 60 days, 3 months and 3 months", () => {
+  it("uses 30 days, two months from the month's end, 3 months and 3 months", () => {
     expect(APPEAL_DEFAULTS).toEqual({
       income_tax_first_appeal: { days: 30 },
-      income_tax_tribunal: { days: 60 },
+      income_tax_tribunal: { months: 2, from: "month_end" },
       gst_first_appeal: { months: 3 },
       gst_tribunal: { months: 3 },
     });
     expect(appealLimitationDate("income_tax_first_appeal", "2026-10-01")).toBe("2026-10-31");
-    expect(appealLimitationDate("income_tax_tribunal", "2026-10-01")).toBe("2026-11-30");
+    // ITAT (since 1 Oct 2024): two months from the end of the month of the order.
+    expect(appealLimitationDate("income_tax_tribunal", "2026-10-01")).toBe("2026-12-31");
+    expect(appealLimitationDate("income_tax_tribunal", "2025-12-31")).toBe("2026-02-28");
+    expect(appealLimitationDate("income_tax_tribunal", "2027-12-15")).toBe("2028-02-29");
+    expect(limitationDate("2026-01-31", { months: 2, from: "month_end" })).toBe("2026-03-31");
+    expect(limitationDate("2026-04-30", { months: 1, from: "month_end" })).toBe("2026-05-31");
+    expect(limitationDate("2024-08-20", { days: 60 })).toBe("2024-10-19");
     expect(appealLimitationDate("gst_first_appeal", "2026-10-01")).toBe("2027-01-01");
     expect(appealLimitationDate("gst_tribunal", "2026-11-30")).toBe("2027-02-28");
   });

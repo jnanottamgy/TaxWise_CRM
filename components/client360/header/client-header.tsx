@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { UserRoundIcon, UsersIcon } from "lucide-react"
 import { PageHeader, type Crumb } from "@/components/app/page-header"
 import { StatusChip } from "@/components/app/status-chip"

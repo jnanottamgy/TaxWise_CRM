@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { DOCUMENT_CATEGORY_LABELS } from "@/lib/domain/enums"
 import { formatNumber } from "@/lib/format"

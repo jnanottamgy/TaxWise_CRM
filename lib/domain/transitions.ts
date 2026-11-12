@@ -4,6 +4,7 @@
  *
  * - **Moves:** any move is allowed, including backwards, except a no-op (refused, not silently
  *   written) and Filed/Done → Not started ("already done and filed; reopen to In progress instead").
+ *   Reopening filed work is a Partner's or Manager's move: an Employee asks one of them.
  * - **Acceptance:** status can't change until the task is accepted; the decliner can't update a task
  *   they declined (§7.6.3).
  * - **Who:** Employees change only tasks assigned to them (§4.6). Employees cannot set Filed/Done
@@ -60,6 +61,7 @@ export type TransitionErrorCode =
   | "declined_by_you"
   | "not_accepted"
   | "not_assignee"
+  | "employee_cannot_reopen"
   | "reopen_to_not_started"
   | "employee_cannot_file"
   | "own_work"
@@ -129,6 +131,10 @@ function check(req: TransitionRequest, ignoreReason: boolean): TransitionCheck {
     return refuse("not_assignee", "You can only change the status of tasks assigned to you.");
   }
 
+  // Filing is the reviewer's sign-off, so undoing it is a Partner's or Manager's move.
+  if (from === "filed_done" && actorRole === "employee") {
+    return refuse("employee_cannot_reopen", "This task is filed. Ask a Manager or Partner to reopen it.");
+  }
   if (from === "filed_done" && to === "not_started") {
     return refuse("reopen_to_not_started", "This task is already done and filed; reopen it to In progress instead.");
   }
@@ -199,7 +205,7 @@ export function allowedNextStatuses(ctx: TransitionContext): { status: TaskStatu
 export type NotificationTarget = { kind: "employee"; employeeId: string } | { kind: "role"; role: "manager" | "partner" };
 
 export type TransitionNotification = {
-  type: Extract<NotificationType, "review_requested" | "task_sent_back" | "task_approved">;
+  type: Extract<NotificationType, "review_requested" | "task_sent_back" | "task_approved" | "task_reopened">;
   targets: NotificationTarget[];
   /** The reason, for a send-back ("Sent back to you" shows it, §9). */
   reason?: string;
@@ -219,6 +225,8 @@ export type TransitionEffectsInput = {
   reviewerEmployeeId: string | null;
   /** `clients.owner_employee_id` of the task's client. */
   clientOwnerEmployeeId: string | null;
+  /** Who filed it last (a reopen tells them their sign-off was undone). */
+  filedByEmployeeId?: string | null;
 };
 
 export type TransitionEffects = {
@@ -292,6 +300,13 @@ export function transitionEffects(input: TransitionEffectsInput): TransitionEffe
   } else if (to === "filed_done") {
     const targets = employeeTargets([input.assigneeEmployeeId, input.clientOwnerEmployeeId], actor);
     if (targets.length > 0) notifications.push({ type: "task_approved", targets });
+  } else if (kind === "reopen") {
+    // Everyone who relied on it being filed: who did it, who reviewed and filed it, who owns the client.
+    const targets = employeeTargets(
+      [input.assigneeEmployeeId, input.reviewerEmployeeId, input.filedByEmployeeId ?? null, input.clientOwnerEmployeeId],
+      actor,
+    );
+    if (targets.length > 0) notifications.push(reason ? { type: "task_reopened", targets, reason } : { type: "task_reopened", targets });
   }
 
   return {

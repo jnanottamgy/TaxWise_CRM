@@ -423,7 +423,9 @@ export function basicsIssues(v: Raw, today: DateString): FieldIssue[] {
   const out: FieldIssue[] = [];
   if (!v.entity_type) out.push({ path: "entity_type", message: "Choose the entity type." });
   if (v.entity_type === "other" && !v.entity_type_other) out.push({ path: "entity_type_other", message: "Specify the entity type." });
-  if (v.date_of_birth_or_incorporation && compareDates(v.date_of_birth_or_incorporation, today) > 0) {
+  // Text that isn't a date is reported by the field's own rule ("Enter a valid date."); comparing it
+  // would throw, and these checks run while the wizard renders.
+  if (v.date_of_birth_or_incorporation && isDateString(v.date_of_birth_or_incorporation) && compareDates(v.date_of_birth_or_incorporation, today) > 0) {
     out.push({ path: "date_of_birth_or_incorporation", message: "This date can't be in the future." });
   }
   if (v.pan) {

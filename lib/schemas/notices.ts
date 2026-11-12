@@ -68,7 +68,9 @@ export function limitationPreview(
 }
 
 export function limitationPeriodText(p: LimitationPeriod): string {
-  return "days" in p ? `${p.days} days` : `${p.months} ${p.months === 1 ? "month" : "months"}`;
+  if ("days" in p) return `${p.days} days`;
+  const months = `${p.months} ${p.months === 1 ? "month" : "months"}`;
+  return p.from === "month_end" ? `${months} from the end of the month of the order` : months;
 }
 
 export const CLOSED_STATUSES = ["closed_favourable", "closed_unfavourable", "closed_partial"] as const satisfies readonly NoticeStatus[];

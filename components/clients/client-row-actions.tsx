@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { EllipsisIcon, ExternalLinkIcon, ListPlusIcon, ReceiptTextIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 import { applySignature, firstNameOf, pickWhatsAppNumber } from "@/lib/domain/messaging"
 import { extractVariables, renderTemplate, type TemplateValues } from "@/lib/domain/templates"

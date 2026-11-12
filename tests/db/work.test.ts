@@ -190,8 +190,8 @@ describe("tasks_list", () => {
       await s.exec("insert into task_dependencies (task_id, blocker_task_id) values ($1, $2)", [id, blocker]);
       await s.exec(
         `insert into time_entries (employee_id, client_id, task_id, started_at, ended_at)
-         values ($1, $3, $4, now() - interval '3 hours', now() - interval '2 hours'),
-                ($2, $3, $4, now() - interval '2 hours', now() - interval '90 minutes')`,
+         values ($1, $3, $4, now() - interval '5 hours', now() - interval '4 hours'),
+                ($2, $3, $4, now() - interval '4 hours', now() - interval '210 minutes')`,
         [U.E1.employeeId, U.E2.employeeId, C.A, id],
       );
       await s.as(U.E1);
@@ -402,7 +402,7 @@ describe("manual entries", () => {
       expect(d).toEqual({ minutes: 95, ended: true });
       const r = await s.value<number>(
         `insert into time_entries (employee_id, client_id, started_at, ended_at, minutes)
-         values ($1, $2, now() - interval '150 minutes', now() - interval '30 minutes', 5) returning minutes`,
+         values ($1, $2, now() - interval '270 minutes', now() - interval '150 minutes', 5) returning minutes`,
         [U.E1.employeeId, C.A],
       );
       expect(r).toBe(120);
@@ -441,14 +441,15 @@ describe("manual entries", () => {
 // Week approval and locking (§7.10)
 // =================================================================================================
 describe("week approval and locking", () => {
-  async function lastWeekEntry(s: Session, who: TestUser): Promise<{ id: string; monday: string }> {
+  /** A two-hour entry on last week's Tuesday, from `startHour` (timed entries of one person can't overlap, 0244). */
+  async function lastWeekEntry(s: Session, who: TestUser, startHour = 10): Promise<{ id: string; monday: string }> {
     const monday = await mondayAgo(s, 1);
     await s.as("super");
     const id = await s.value<string>(
       `insert into time_entries (employee_id, client_id, started_at, ended_at)
-       values ($1, $2, ($3::date + 1)::timestamp at time zone 'Asia/Kolkata' + interval '10 hours',
-                       ($3::date + 1)::timestamp at time zone 'Asia/Kolkata' + interval '12 hours') returning id`,
-      [who.employeeId, C.A, monday],
+       values ($1, $2, ($3::date + 1)::timestamp at time zone 'Asia/Kolkata' + make_interval(hours => $4::int),
+                       ($3::date + 1)::timestamp at time zone 'Asia/Kolkata' + make_interval(hours => $4::int + 2)) returning id`,
+      [who.employeeId, C.A, monday, startHour],
     );
     return { id, monday };
   }
@@ -505,7 +506,7 @@ describe("week approval and locking", () => {
   it("reopening needs a reason and unlocks the entries that aren't billed", async () => {
     await db.asSuper(async (s) => {
       const { id, monday } = await lastWeekEntry(s, U.E2);
-      const billed = await lastWeekEntry(s, U.E2);
+      const billed = await lastWeekEntry(s, U.E2, 14);
       const invoice = await s.value<string>("select id from invoices where client_id = $1 limit 1", [C.A]);
       await s.exec("update time_entries set invoice_id = $2, invoiced_at = now() where id = $1", [billed.id, invoice]);
       await s.as(U.P1);

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useRouter } from "next/navigation"
 import { useController, useFieldArray, useWatch } from "react-hook-form"
 import { toast } from "sonner"
@@ -366,7 +366,7 @@ export function InvoiceEditor({ mode, initial, invoice, client: initialClient, s
 
           <SectionCard
             title="Lines"
-            description={totals.lines.length ? `${watchedLines.filter((l) => !isBlankLine(l)).length} ${watchedLines.length === 1 ? "line" : "lines"}` : undefined}
+            description={totals.lines.length ? ((n) => (n === 0 ? "No lines yet" : `${n} ${n === 1 ? "line" : "lines"}`))(watchedLines.filter((l) => !isBlankLine(l)).length) : undefined}
             flush
             action={
               <div className="flex items-center gap-2">

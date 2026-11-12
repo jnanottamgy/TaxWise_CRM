@@ -578,6 +578,10 @@ type Pipeline = {
   taxAfterRebate: Paise;
   surchargeRate: number;
   surchargeThreshold: Paise | null;
+  /** The income the band was measured on, above its threshold (what marginal relief compares). */
+  surchargeExcess: Paise;
+  /** The band is one of the enhanced rates, measured on income other than dividends and special-rate gains. */
+  surchargeOnOtherIncome: boolean;
   surchargeGross: Paise;
   cappedTax: Paise;
   fullRateTax: Paise;
@@ -655,8 +659,20 @@ function taxPipeline(c: Composition, ctx: PersonCtx): Pipeline {
   const dividendAfter = Math.min(dividendTax, normalAfter);
   const fullRateTax = normalAfter - dividendAfter;
   const cappedTax = dividendAfter + specialAfter;
+  // Which band: the rates up to the cap (10%, 15%) go by total income. The enhanced rates above it
+  // (25%, 37%) apply only when the income *other than* dividends and special-rate gains passes the
+  // limit; when gains or dividends alone carry total income past ₹2 crore the capped rate applies
+  // to everything (Finance Act, First Schedule, Part I, Paragraph A: surcharge provisos).
   let band: { above: number; rate: number } | null = null;
-  for (const b of rules.surcharge.bands) if (totalIncome > rupees(b.above)) band = b;
+  let measured = totalIncome;
+  for (const b of rules.surcharge.bands) {
+    const enhanced = b.rate > rules.surcharge.specialIncomeCap;
+    const measure = enhanced ? c.other : totalIncome;
+    if (measure > rupees(b.above)) {
+      band = b;
+      measured = measure;
+    }
+  }
   const surchargeRate = band?.rate ?? 0;
   const cappedRate = Math.min(surchargeRate, rules.surcharge.specialIncomeCap);
   const surchargeGross = surchargeRate > 0 ? percentOf(fullRateTax, surchargeRate) + percentOf(cappedTax, cappedRate) : 0;
@@ -673,6 +689,8 @@ function taxPipeline(c: Composition, ctx: PersonCtx): Pipeline {
     taxAfterRebate,
     surchargeRate,
     surchargeThreshold: band ? rupees(band.above) : null,
+    surchargeExcess: band ? measured - rupees(band.above) : 0,
+    surchargeOnOtherIncome: band ? band.rate > rules.surcharge.specialIncomeCap : false,
     surchargeGross,
     cappedTax,
     fullRateTax,
@@ -920,7 +938,10 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
   let lossCarriedForward = 0;
   let lossNotAllowed = 0;
   let hpNote: string | undefined;
-  const normalHeads = salary + business + otherSources;
+  // Positive house-property income is income like any other head, taxed at the normal rates. (It
+  // was printed on the sheet but left out of the total: a landlord's tax came out too low.) A loss
+  // is handled below and enters through the set-off.
+  const normalHeads = salary + business + otherSources + Math.max(0, hpEntered);
   if (hpEntered < 0) {
     const loss = -hpEntered;
     if (!rules.houseProperty.lossSetOff) {
@@ -1085,7 +1106,8 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
   let marginalRelief = 0;
   let mrNote: string | undefined;
   if (p.surchargeThreshold !== null) {
-    const excess = p.totalIncome - p.surchargeThreshold;
+    // Take away the income above the threshold, as the band measured it (other normal income goes first).
+    const excess = p.surchargeExcess;
     const atThreshold = taxPipeline(reduceComposition(composition, excess), ctx);
     const ceiling = atThreshold.taxAfterRebate + atThreshold.surchargeGross + excess;
     marginalRelief = Math.min(p.surchargeGross, Math.max(0, p.taxAfterRebate + p.surchargeGross - ceiling));
@@ -1100,7 +1122,7 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
     note:
       p.surchargeRate === 0
         ? "Total income is within the first surcharge threshold."
-        : `${pct(p.surchargeRate)} as total income exceeds ${inr(p.surchargeThreshold ?? 0)}` +
+        : `${pct(p.surchargeRate)} as ${p.surchargeOnOtherIncome ? "income other than dividends and special-rate capital gains" : "total income"} exceeds ${inr(p.surchargeThreshold ?? 0)}` +
           (p.cappedTax > 0 && capRate < p.surchargeRate ? `; ${pct(capRate)} on tax of ${inr(p.cappedTax)} on capital gains and dividends.` : "."),
   });
   push("tax.marginal_relief", "Less: marginal relief on surcharge", -marginalRelief, { note: mrNote });

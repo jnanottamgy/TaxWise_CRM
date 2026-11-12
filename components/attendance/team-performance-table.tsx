@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { RoleBadge } from "@/components/app/role-badge"
 import { EmptyState } from "@/components/app/empty-state"

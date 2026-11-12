@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ArrowUpRightIcon } from "lucide-react"
 import { Money } from "@/components/app/money"
 import { MonoId } from "@/components/app/mono-id"

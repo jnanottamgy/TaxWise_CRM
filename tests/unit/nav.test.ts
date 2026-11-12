@@ -159,7 +159,7 @@ describe("lib/nav: what each role must never be offered", () => {
 
 describe("lib/nav: + New", () => {
   it("offers Partners and Managers every New item and Employees only Log time", () => {
-    const all = ["New client", "New task", "New invoice", "New quotation", "New lead", "Log time"];
+    const all = ["New task", "New client", "New invoice", "New quotation", "New lead", "Log time"];
     expect(getNewActions("partner").map((a) => a.label)).toEqual(all);
     expect(getNewActions("manager").map((a) => a.label)).toEqual(all);
     expect(getNewActions("employee").map((a) => a.label)).toEqual(["Log time"]);

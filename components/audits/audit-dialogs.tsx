@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useRouter } from "next/navigation"
 import { useWatch, type Control, type FieldValues } from "react-hook-form"
 import type { z } from "zod"

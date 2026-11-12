@@ -203,12 +203,18 @@ law & rules review). The TaxWise logo is built in, so there is nothing to upload
 - Only `server/admin.ts` holds the service-role key; `scripts/check-service-role.mjs` fails the build if it reaches the browser.
 - Portal passwords are AES-256-GCM encrypted (`server/vault.ts`); revealing one is logged.
 - Audit log is insert-only, including against `TRUNCATE`.
+- The database API and file storage answer only this app's server (migration 0243): a request made with a
+  login alone, without the token the server derives from `CREDENTIAL_VAULT_KEY`, is refused, so nobody can
+  go around the rules that live in the app's server actions. The scheduler switches the gate on by itself
+  once the database recognises the app; Settings → Diagnostics → "Database API gate" shows its state.
+  `API_GATE=off` in the environment opens it again (for a rollback to an older build).
 
 ## Law and rules
 
 Rates, thresholds, due dates and section numbers are data (`statutory_parameters`, `due_date_rules`,
 `due_date_overrides`, `section_concordance`), editable on Settings → Law & rules. Items marked **[verify]** in §6 are
-seeded unverified and listed as "awaiting partner confirmation" — a Partner confirms each before go-live.
+seeded unverified and listed as "awaiting partner confirmation". A Partner ticks the rows checked against their
+source and confirms them together, or one at a time.
 
 ## Changes from the original specification
 
@@ -223,6 +229,12 @@ Decided with TaxWise after the specification (`docs/SPEC.md`) was written; where
 - **Two-step sign-in is optional.** §12 required an authenticator app for Partners and Managers; the firm chose to
   make it optional for everyone (Profile → Two-step sign-in). `MFA_REQUIRED_ROLES` in `lib/auth/mfa.ts` turns the
   requirement back on for a role.
+- **Reopening filed work is a Partner's or Manager's move.** §7.6.4 let any assignee reopen a Filed/Done task
+  with a reason; an Employee now asks a Manager, and a reopen tells the assignee, the reviewer, whoever filed it
+  and the client's owner.
+- **Capacity reads Free / Busy / Tight / Over**, not the capitals of §7.11.4.
+- **A day's time has to be possible.** No more than 24 hours in a day, no overlapping timed entries, and a timer
+  stopped after 12 hours counts as 12 hours (migration 0244).
 - **The logo is built in.** The firm's shield and wordmark are redrawn as vectors in `lib/brand.ts` and appear
   in the app, its icons and every PDF letterhead. Uploading a logo in Settings → Firm details is optional and
   replaces it; the setup checklist has no logo step.

@@ -4,11 +4,15 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/database.types";
 import { env } from "@/lib/env";
+import { appGateHeaders, gateAwareFetch } from "@/lib/supabase/app-gate";
 import { authCookieOptions } from "@/lib/supabase/proxy";
 
 /**
  * Supabase client bound to the signed-in user's session. Every read and write through it
  * runs under that user's RLS (§2.3). Create one per request; never store it in a module variable.
+ *
+ * Its database calls carry the app server's token: the database API answers nobody else
+ * (lib/supabase/app-gate.ts, migration 0243), so a login alone can't go around the app.
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -16,6 +20,7 @@ export async function createClient() {
     // Same cookie options as the proxy (§12: HttpOnly, SameSite=Lax, Secure over https), so a cookie
     // written by a Server Action (sign-in, MFA, password change) is identical to a proxy refresh.
     cookieOptions: authCookieOptions(env.appUrl().startsWith("https://")),
+    global: { headers: appGateHeaders(), fetch: gateAwareFetch },
     cookies: {
       getAll() {
         return cookieStore.getAll();

@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { UserXIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getCurrentUser } from "@/lib/auth/current-user"

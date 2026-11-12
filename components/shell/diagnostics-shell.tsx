@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { TriangleAlertIcon } from "lucide-react";
 import { TaxWiseShield } from "@/components/brand/taxwise-logo";
 import { PoweredBy } from "./brand";

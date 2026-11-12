@@ -352,6 +352,23 @@ describe("transitionEffects: notifications (§7.6.4, §9)", () => {
     expect(same.notifications).toEqual([{ type: "task_approved", targets: [{ kind: "employee", employeeId: EMP }] }]);
   });
 
+  it("Reopened → everyone who relied on it being filed, with the reason; never the person reopening", () => {
+    const e = transitionEffects({
+      ...base, from: "filed_done", to: "in_progress", reason: "Client sent a corrected ledger",
+      actorEmployeeId: PTR, reviewerEmployeeId: MGR, filedByEmployeeId: MGR,
+    });
+    expect(e.kind).toBe("reopen");
+    expect(e.notifications).toEqual([
+      {
+        type: "task_reopened",
+        targets: [{ kind: "employee", employeeId: EMP }, { kind: "employee", employeeId: MGR }, { kind: "employee", employeeId: EMP2 }],
+        reason: "Client sent a corrected ledger",
+      },
+    ]);
+    const self = transitionEffects({ ...base, clientOwnerEmployeeId: MGR, assigneeEmployeeId: MGR, from: "filed_done", to: "in_progress", reason: "x", actorEmployeeId: MGR, reviewerEmployeeId: null, filedByEmployeeId: MGR });
+    expect(self.notifications).toEqual([]);
+  });
+
   it("never notifies the person who made the change", () => {
     // A Partner files their own task for a client they own: nobody else to tell.
     const e = transitionEffects({ ...base, assigneeEmployeeId: PTR, clientOwnerEmployeeId: PTR, from: "in_progress", to: "filed_done", actorEmployeeId: PTR, reviewerEmployeeId: null });
@@ -363,5 +380,22 @@ describe("transitionEffects: notifications (§7.6.4, §9)", () => {
     expect(e.addsToCallList).toBe(true);
     expect(e.notifications).toEqual([]);
     expect(transitionEffects({ ...base, from: "not_started", to: "in_progress", actorEmployeeId: EMP, reviewerEmployeeId: MGR }).addsToCallList).toBe(false);
+  });
+});
+
+describe("reopening filed work is a Partner's or Manager's move", () => {
+  it("refuses an Employee, whatever the target and even with a reason", () => {
+    for (const to of TASK_STATUSES.filter((x) => x !== "filed_done")) {
+      const r = canTransition(req({ from: "filed_done", to, reason: "oops" }));
+      expect(r).toMatchObject({ ok: false, code: "employee_cannot_reopen", error: "This task is filed. Ask a Manager or Partner to reopen it." });
+    }
+    expect(allowedNextStatuses({ from: "filed_done", actorRole: "employee", actorEmployeeId: EMP, assigneeEmployeeId: EMP, acceptance: "accepted" })).toEqual([]);
+  });
+
+  it("lets a Manager or Partner reopen with a reason", () => {
+    for (const actorRole of ["manager", "partner"] as const) {
+      expect(canTransition(req({ from: "filed_done", to: "in_progress", actorRole, actorEmployeeId: MGR, reason: "Revised return" }))).toEqual({ ok: true });
+      expect(canTransition(req({ from: "filed_done", to: "in_progress", actorRole, actorEmployeeId: MGR }))).toMatchObject({ ok: false, code: "reason_required" });
+    }
   });
 });

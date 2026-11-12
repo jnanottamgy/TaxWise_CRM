@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 
 const NOTICES: Record<string, { notice: FormNotice; tone: "info" | "success" | "danger" }> = {
   idle: { notice: { message: "You were signed out after a long time without activity. Sign in again to carry on." }, tone: "info" },
+  ended: { notice: { message: "Your session has ended. Sign in again to carry on." }, tone: "info" },
   signed_out: { notice: { message: "You've signed out." }, tone: "success" },
   link: { notice: { message: "That link has expired or was already used. Use Forgot password to get a new one." }, tone: "danger" },
   password_set: { notice: { message: "Your password is saved. Sign in with it." }, tone: "success" },

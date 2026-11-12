@@ -456,8 +456,6 @@ role's route.
 
 ## 8. Known and accepted (not failures)
 
-- Capacity bands print as CLEAR / BUSY / TIGHT / OVER because §7.11.4 names them so; `docs/DESIGN.md`
-  otherwise bans all-caps labels. The spec wins until a Partner decides otherwise.
 - Wide tables (Fee realisation, the financial statement, the recon summary, the ITR comparison, the
   letter's services schedule) scroll inside their own frame; the page itself never does.
 - `inbox_action_items` (0172) still counts calendar days in `item_count`; the app corrects it in
@@ -467,3 +465,43 @@ role's route.
   to the hyphen under the global `.num` rule.
 - QA-data quirks that come from `tests/db/fixtures.ts` rather than the app: a placeholder PT number
   (`PTEC-…`), Beta Industries' fee history and DSC rows, and timeline entries written by the fixture.
+
+## 9. End-to-end break-it run (12 November 2026)
+
+A throwaway copy with the **real** Supabase stack (Auth, Storage, PostgREST in Docker; all migrations and
+seeds) and a production build, never the live site. A firm was built through the real screens (`/setup`,
+then People → Add team member): 10 Partners, 10 Managers, 10 Employees. Eight testers then worked the
+same copy at once, each white-box (read the code, then prove it on the running app): security, money,
+clients and compliance, work and people, portal / documents / WhatsApp, workpapers (figures checked by
+hand), settings and audit trail, and a usability and speed review at 1366×768 and 390×844.
+
+**About 85 findings.** The largest group, about twenty, had one cause: a login plus the publishable key
+could call the database API directly and skip every rule that lives in the app's server actions.
+
+Fixed in this pass (each re-tested on the copy, with unit or database tests added):
+
+- The database API and file storage answer only the app's server (0243: PostgREST `db_pre_request` and
+  a restrictive policy on `storage.objects`; `lib/supabase/app-gate.ts`, `server/api-gate.ts`).
+- Task sign-off (0242): acceptance is the assignee's own act; work that ends in a filing is filed
+  through `file_task`; Employees don't reopen filed work and a reopen tells the people who relied on
+  it; filing again after a reopen updates the same filing record.
+- Portal: "Revoke portal access" refuses a link that doesn't point at a client login; a session ended
+  on the server no longer leaves the browser in a redirect loop (clients and staff).
+- Tax: house-property income is added to total income; the 25% / 37% surcharge applies only when the
+  income other than dividends and special-rate gains passes the limit; the ITAT appeal period is two
+  months from the end of the month of the order (0245).
+- Deadlines: trusts, societies and "Other" entities get an income-tax return date; resuming a service
+  brings back the deadlines its ending cancelled; recording "Tax audit applies" re-plans the client.
+- Time (0244): no more than 24 hours in a day, no overlapping timed entries, a timer stopped after 12
+  hours counts as 12 hours and says so.
+- The GSTR-1 export (it failed for everyone on a real PostgREST: a self-join by foreign-key name) and
+  the add-client wizard (a half-typed date took the page down).
+- Speed and reading: links fetch the next page when pointed at, not all at once (a Partner dashboard
+  made 106 requests); the presence heartbeat no longer fires on every reload; keyboard focus shows on
+  every control; the sidebar's "Recent" list is gone (it moved the navigation from page to page);
+  client names and task titles wrap instead of being cut; the board fits five columns; list pages use
+  a one-line figure strip; the task page has a one-click next step; New task asks who and when first;
+  Law & rules reads in words and confirms many rows at once.
+
+Open, with the suggested fix, is in the run's report (kept outside the repository).
+

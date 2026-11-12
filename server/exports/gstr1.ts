@@ -31,8 +31,12 @@ type InvoiceRow = {
   total_amount: number;
   clients: { display_name: string } | null;
   invoice_items: Array<{ sac_code: string; description: string; amount: number; tax_rate: number; is_reimbursement: boolean; sort_order: number }>;
-  original: { invoice_number: string | null; issue_date: string; total_amount: number; place_of_supply_code: string } | null;
+  original_invoice_id: string | null;
+  /** The invoice a debit note increases: looked up after the page is read (see loadGstr1). */
+  original?: OriginalInvoice | null;
 };
+
+type OriginalInvoice = { id: string; invoice_number: string | null; issue_date: string; total_amount: number; place_of_supply_code: string };
 
 type CreditRow = {
   id: string;
@@ -73,7 +77,7 @@ export async function loadGstr1(supabase: ServerSupabase, period: Gstr1Period): 
       supabase
         .from("invoices")
         .select(
-          "id, invoice_number, invoice_kind, issue_date, cancelled_at, client_gstin_snapshot, client_name_snapshot, place_of_supply_code, reverse_charge, total_amount, clients(display_name), invoice_items(sac_code, description, amount, tax_rate, is_reimbursement, sort_order), original:invoices!invoices_original_invoice_id_fkey(invoice_number, issue_date, total_amount, place_of_supply_code)",
+          "id, invoice_number, invoice_kind, issue_date, cancelled_at, client_gstin_snapshot, client_name_snapshot, place_of_supply_code, reverse_charge, total_amount, clients(display_name), invoice_items(sac_code, description, amount, tax_rate, is_reimbursement, sort_order), original_invoice_id",
         )
         .is("deleted_at", null)
         .not("invoice_number", "is", null)
@@ -97,6 +101,20 @@ export async function loadGstr1(supabase: ServerSupabase, period: Gstr1Period): 
   ]);
   if (firm.error) throw firm.error;
   if (param.error) throw param.error;
+  // A debit note's original invoice. Read on its own: the API can't embed a table in itself by the
+  // foreign key's name (it answered "no relationship found" and the whole export failed).
+  const originalIds = [...new Set(invoices.map((i) => i.original_invoice_id).filter((x): x is string => !!x))];
+  const originals = new Map<string, OriginalInvoice>();
+  for (let i = 0; i < originalIds.length; i += 100) {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("id, invoice_number, issue_date, total_amount, place_of_supply_code")
+      .in("id", originalIds.slice(i, i + 100));
+    if (error) throw error;
+    for (const o of data ?? []) originals.set(o.id, o as OriginalInvoice);
+  }
+  for (const i of invoices) i.original = i.original_invoice_id ? (originals.get(i.original_invoice_id) ?? null) : null;
+
   const stateCode = firm.data?.state_code ?? "29";
   const v = param.data?.value as { amount?: unknown; inclusive?: unknown } | null | undefined;
   const amount = readParameterNumber(v ?? null);

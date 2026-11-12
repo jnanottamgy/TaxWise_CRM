@@ -47,7 +47,7 @@ export function taskColumns(today: string): DataTableColumn<TaskListRow>[] {
       // the table instead of widening it and pushing Due off a 1366px screen.
       cell: (r) => (
         <span className="grid grid-cols-[minmax(0,1fr)] leading-5">
-          <span className="truncate font-medium" title={r.title}>
+          <span className="line-clamp-2 font-medium whitespace-normal [overflow-wrap:anywhere]" title={r.title}>
             {r.title}
           </span>
           <span className="truncate text-xs font-normal text-text-muted">
@@ -66,7 +66,7 @@ export function taskColumns(today: string): DataTableColumn<TaskListRow>[] {
       width: "18%",
       cell: (r) => (
         <span className="grid grid-cols-[minmax(0,1fr)]">
-          <span className="truncate" title={r.client_name ?? undefined}>
+          <span className="line-clamp-2 whitespace-normal [overflow-wrap:anywhere]" title={r.client_name ?? undefined}>
             {r.client_name ?? "—"}
           </span>
         </span>

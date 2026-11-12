@@ -402,6 +402,24 @@ describe("Income tax, FY 2025-26 / AY 2026-27 (§6.7)", () => {
     expect(one(ev, "ITR_NON_AUDIT_5", "AY 2026-27").dueDate).toBe("2026-07-31");
   });
 
+  it("trusts, societies, other entities and clients with no constitution recorded still get a return date", () => {
+    for (const entityType of ["trust", "other", null] as const) {
+      const ev = gen({ serviceTypes: ["income_tax"], entityType }, april);
+      expect(one(ev, "ITR_NON_AUDIT_OTHER", "AY 2026-27").dueDate, String(entityType)).toBe("2026-07-31");
+      expect(ev.filter((e) => e.type === "itr" && e.filingPeriod === "AY 2026-27")).toHaveLength(1);
+    }
+    // Audited accounts move it to the audit-case date, as for everyone else.
+    const audited = gen({ serviceTypes: ["income_tax"], entityType: "trust", statutoryAudit: true }, april);
+    expect(byRule(audited, "ITR_NON_AUDIT_OTHER")).toHaveLength(0);
+    expect(one(audited, "ITR_AUDIT", "AY 2026-27").dueDate).toBe("2026-11-21");
+    // The entities the other rules name keep exactly one return rule each.
+    for (const entityType of ["individual", "huf", "proprietorship", "partnership", "llp", "aop", "pvt_ltd"] as const) {
+      const ev = gen({ serviceTypes: ["income_tax"], entityType }, april);
+      expect(byRule(ev, "ITR_NON_AUDIT_OTHER"), entityType).toHaveLength(0);
+      expect(ev.filter((e) => e.type === "itr" && e.filingPeriod === "AY 2026-27"), entityType).toHaveLength(1);
+    }
+  });
+
   it("transfer-pricing cases: Form 3CEB 31 October and the ITR 30 November (no audit-case ITR)", () => {
     const ev = gen({ serviceTypes: ["income_tax"], entityType: "pvt_ltd", isTpCase: true, taxAuditApplicable: "yes" }, april);
     expect(one(ev, "FORM_3CEB", "AY 2026-27").dueDate).toBe("2026-10-31");

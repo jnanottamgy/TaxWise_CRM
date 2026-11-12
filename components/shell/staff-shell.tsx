@@ -76,7 +76,19 @@ export function StaffShell({
 
   const nav = React.useMemo(() => getNav(role), [role]);
   const goTo = React.useMemo(() => getGoToItems(role), [role]);
-  const newActions = React.useMemo(() => getNewActions(role), [role]);
+  // On a client's page, "New task" and "New invoice" (sidebar, N key, Ctrl K) start with that client
+  // filled in, as the page's own buttons do; elsewhere they open blank.
+  const clientOnScreen = /^\/clients\/([0-9a-f]{8}-[0-9a-f-]{27})(?:\/|$)/.exec(pathname ?? "")?.[1] ?? null;
+  const newActions = React.useMemo(
+    () =>
+      getNewActions(role).map((a) => {
+        if (!clientOnScreen) return a;
+        if (a.id === "task") return { ...a, href: `${a.href}&client=${clientOnScreen}` };
+        if (a.id === "invoice") return { ...a, href: `${a.href}?client=${clientOnScreen}` };
+        return a;
+      }),
+    [role, clientOnScreen],
+  );
   const navHrefs = React.useMemo(() => new Set(nav.flatMap((g) => g.items.map((i) => i.href))), [nav]);
 
   const [slots] = React.useState(createSlotStore);

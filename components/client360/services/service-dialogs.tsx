@@ -250,7 +250,7 @@ export function EndServiceDialog({ open, onOpenChange, clientId, service }: { op
       open={open}
       onOpenChange={onOpenChange}
       title={`End ${serviceName(service.service_type, service.custom_name)}?`}
-      description="It stops being billed (automatic invoices are switched off) and leaves the client's active services. Deadlines already on the calendar stay until you cancel them. You can resume it later."
+      description="It stops being billed (automatic invoices are switched off) and leaves the client's active services. Its future deadlines that nobody has started are cancelled; anything started or filed stays. Resume the service later and those deadlines come back."
       onSubmit={f.onSubmit}
       pending={f.pending}
       dirty={f.form.formState.isDirty}

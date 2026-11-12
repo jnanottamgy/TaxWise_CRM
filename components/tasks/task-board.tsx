@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ArrowRightIcon, GripVerticalIcon, MoreHorizontalIcon } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -47,7 +47,7 @@ export function TaskBoard({ columns, viewer, today, viewAllHref }: { columns: Co
   return (
     <>
       <div className="-mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0" role="region" aria-label="Board by status">
-        <div className="grid min-w-max auto-cols-[minmax(17rem,1fr)] grid-flow-col gap-3 max-md:snap-x max-md:snap-mandatory">
+        <div className="grid auto-cols-[minmax(12.5rem,1fr)] grid-flow-col gap-3 max-md:min-w-max max-md:auto-cols-[17rem] max-md:snap-x max-md:snap-mandatory">
           {columns.map((col) => {
             const info = getStatus("task_status", col.status)
             const canDrop = dragging ? dropCheck(dragging, col.status, viewer).ok : false

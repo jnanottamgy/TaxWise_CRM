@@ -271,6 +271,7 @@ export const NOTIFICATION_TYPES = [
   "whatsapp_device_linked",
   "whatsapp_client_mode_down",
   "security_alert",
+  "task_reopened",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

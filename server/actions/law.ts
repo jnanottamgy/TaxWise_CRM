@@ -13,6 +13,7 @@ import {
   ConcordanceSchema,
   DueDateRuleChangeSchema,
   MarkReviewedSchema,
+  MarkVerifiedManySchema,
   MarkVerifiedSchema,
   OverrideSchema,
   ParameterAddSchema,
@@ -198,6 +199,37 @@ export const markVerified = defineAction(
     if (!res.data) throw new ActionError(STALE, { code: "conflict" });
     await audit(ctx, input.table, input.id, "law.verify", { verified_by: ctx.user.fullName, verified_on: today });
     return ok({ id: input.id });
+  },
+);
+
+/**
+ * Confirms several rows of one table in one go: the same update, concurrency check and audit row as
+ * `markVerified`, per row. Rows someone else changed meanwhile are skipped and counted, never
+ * overwritten.
+ */
+export const markVerifiedMany = defineAction(
+  { name: "law.verify_many", schema: MarkVerifiedManySchema, roles: ["partner"] },
+  async (input, ctx): Promise<ActionResult<{ confirmed: number; skipped: number }>> => {
+    const today = todayIST();
+    const full = { verified: true, verified_by: ctx.user.id, verified_on: today };
+    let confirmed = 0;
+    let skipped = 0;
+    for (const item of input.items) {
+      let res = await ctx.supabase.from(input.table).update(full).eq("id", item.id).eq("updated_at", item.updated_at).eq("verified", false).select("id").maybeSingle();
+      if (input.table === "section_concordance" && missingColumn(res.error)) {
+        res = await ctx.supabase.from(input.table).update({ verified: true }).eq("id", item.id).eq("updated_at", item.updated_at).eq("verified", false).select("id").maybeSingle();
+      }
+      throwIfDbError(res.error);
+      if (!res.data) {
+        skipped++;
+        continue;
+      }
+      confirmed++;
+      await audit(ctx, input.table, item.id, "law.verify", { verified_by: ctx.user.fullName, verified_on: today, together_with: input.items.length });
+    }
+    if (confirmed === 0) throw new ActionError(STALE, { code: "conflict" });
+    const warnings = skipped > 0 ? [`${skipped} row${skipped === 1 ? " was" : "s were"} changed by someone else meanwhile and ${skipped === 1 ? "was" : "were"} left as ${skipped === 1 ? "it is" : "they are"}. Reload and check ${skipped === 1 ? "it" : "them"}.`] : [];
+    return ok({ confirmed, skipped }, warnings);
   },
 );
 

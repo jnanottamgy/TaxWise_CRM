@@ -355,7 +355,7 @@ function TaskSections({
 
   return (
     <>
-      <Section title="What">
+      <Section title="Task">
         {clientLocked ? (
           <div className="flex flex-col gap-1.5 md:col-span-2">
             <span className="text-sm font-medium text-text">Client</span>
@@ -382,7 +382,31 @@ function TaskSections({
           />
         )}
         <TextField control={f.control} name="title" label="Title" required maxLength={TASK_LIMITS.title} className="md:col-span-2" placeholder="GSTR-3B: Oct 2026" />
-        <TextareaField control={f.control} name="description" label="Description" rows={3} className="md:col-span-2" />
+        {/* Who does it and by when sit right under the title: they are filled in for every task. */}
+        <ComboboxField
+          control={f.control}
+          name="assigned_employee_id"
+          label="Assignee"
+          placeholder="Unassigned"
+          searchPlaceholder="Name"
+          options={staffOptions(options.staff)}
+          helper={mode === "create" ? "They accept or decline it before starting." : "A new assignee accepts or declines it first."}
+        />
+        <DateField control={f.control} name="due_date" label="Due date" />
+        <SelectField control={f.control} name="priority" label="Priority" options={PRIORITY_OPTIONS} />
+        <ComboboxField
+          control={f.control}
+          name="reviewer_employee_id"
+          label="Reviewer"
+          placeholder="Any Manager"
+          searchPlaceholder="Name"
+          options={staffOptions(options.reviewers, (v.assigned_employee_id as string) || null)}
+          helper="Files it or sends it back. Can't be the assignee."
+        />
+        <AssignmentFindings findings={check.findings} checking={check.checking} />
+      </Section>
+
+      <Section title="Details">
         <NativeSelectField control={f.control} name="service_type" label="Service" options={[{ value: "", label: "No service" }, ...SERVICE_OPTIONS]} />
         <NativeSelectField control={f.control} name="financial_year" label="FY" options={[{ value: "", label: "No FY" }, ...options.fyOptions.map((y) => ({ value: y, label: y }))]} />
         <div className="md:col-span-2">
@@ -403,11 +427,7 @@ function TaskSections({
             className="md:col-span-2"
           />
         ) : null}
-      </Section>
-
-      <Section title="When">
-        <DateField control={f.control} name="due_date" label="Due date" />
-        <SelectField control={f.control} name="priority" label="Priority" options={PRIORITY_OPTIONS} />
+        <TextareaField control={f.control} name="description" label="Description" rows={3} className="md:col-span-2" />
         <div className="flex flex-col gap-1.5 md:col-span-2">
           <span id={`${listId}-est`} className="text-sm font-medium text-text">
             Estimated time
@@ -417,28 +437,6 @@ function TaskSections({
             <TextField control={f.control} name="estimate_minutes" label="Minutes" inputMode="numeric" placeholder="0" />
           </div>
         </div>
-      </Section>
-
-      <Section title="Who">
-        <ComboboxField
-          control={f.control}
-          name="assigned_employee_id"
-          label="Assignee"
-          placeholder="Unassigned"
-          searchPlaceholder="Name"
-          options={staffOptions(options.staff)}
-          helper={mode === "create" ? "They accept or decline it before starting." : "A new assignee accepts or declines it first."}
-        />
-        <ComboboxField
-          control={f.control}
-          name="reviewer_employee_id"
-          label="Reviewer"
-          placeholder="Any Manager"
-          searchPlaceholder="Name"
-          options={staffOptions(options.reviewers, (v.assigned_employee_id as string) || null)}
-          helper="Files it or sends it back. Can't be the assignee."
-        />
-        <AssignmentFindings findings={check.findings} checking={check.checking} />
       </Section>
     </>
   )

@@ -198,6 +198,11 @@ export interface RouteInput {
   isServerAction: boolean;
   session: SessionHint | null;
   idleExpired: boolean;
+  /**
+   * The auth server says the session behind the cookie no longer exists (asked only on
+   * `/login?reason=ended`, where a page guard sends a person whose session was ended elsewhere).
+   */
+  sessionEnded?: boolean;
 }
 
 export type RouteDecision =
@@ -235,6 +240,13 @@ export function decideRoute(input: RouteInput): RouteDecision {
   const api = isApiPath(pathname);
   let session = input.session;
   let signOut = false;
+
+  // The cookie still carries a token, but its session was ended on the server (password reset,
+  // access revoked, role change): clear it and show the sign-in form instead of bouncing the person
+  // between their home and the form until the token runs out.
+  if (session && input.sessionEnded && pathname === "/login" && !isServerAction) {
+    return { kind: "next", signOut: true };
+  }
 
   if (session && input.idleExpired) {
     signOut = true;
@@ -422,6 +434,18 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     session = null;
   }
 
+  // A page guard that found the session dead sends the person to /login?reason=ended. Ask the auth
+  // server before believing the cookie (only here: one extra call, on a page nobody visits by choice).
+  let sessionEnded = false;
+  if (session && pathname === "/login" && new URLSearchParams(search).get("reason") === "ended") {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      sessionEnded = !!error || !data.user;
+    } catch {
+      sessionEnded = false;
+    }
+  }
+
   const now = Date.now();
   const lastActive = parseActivity(request.cookies.get(ACTIVITY_COOKIE)?.value);
   const idleExpired = session !== null && isIdleExpired(lastActive, now, session.role);
@@ -432,6 +456,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     isServerAction: request.method === "POST" && request.headers.has("next-action"),
     session,
     idleExpired,
+    sessionEnded,
   });
 
   if (decision.signOut) {

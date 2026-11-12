@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { FormDialog } from "@/components/app/form-dialog"
 import { Money } from "@/components/app/money"
 import { DateText } from "@/components/app/date-text"

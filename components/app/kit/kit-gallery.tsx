@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ChevronRightIcon, DownloadIcon, PlusIcon, ReceiptIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useTheme } from "next-themes"

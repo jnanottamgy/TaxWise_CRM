@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { REGISTER_TABS, REGISTER_TAB_LABEL, registersHref, type RegisterTab } from "@/lib/schemas/registers"

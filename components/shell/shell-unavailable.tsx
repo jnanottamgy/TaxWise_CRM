@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { ErrorBlock } from "@/components/app/error-block";
 import { Button } from "@/components/ui/button";
 import { TaxWiseShield } from "@/components/brand/taxwise-logo";

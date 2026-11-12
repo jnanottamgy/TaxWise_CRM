@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { Button } from "@/components/ui/button"
 import { KpiStrip } from "@/components/app/kpi-strip"
 import { StatusChip } from "@/components/app/status-chip"

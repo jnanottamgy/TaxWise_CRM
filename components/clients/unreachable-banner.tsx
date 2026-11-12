@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { PhoneOffIcon } from "lucide-react"
 import { UNREACHABLE_HREF, unreachableBanner } from "@/lib/schemas/clients"
 

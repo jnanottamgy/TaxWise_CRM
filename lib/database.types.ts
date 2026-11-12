@@ -9175,6 +9175,11 @@ export type Database = {
     }
     Functions: {
       advance_audit_stage: { Args: { p_id: string | null; p_to: string | null; p_note?: string | null; p_expected_updated_at?: string | null }; Returns: Json }
+      api_gate: { Args: never; Returns: undefined }
+      api_gate_register: { Args: { p_token_hash: string | null; p_enforce?: boolean | null }; Returns: Json }
+      api_gate_request_token: { Args: never; Returns: string }
+      api_gate_sees_app: { Args: never; Returns: boolean }
+      api_gate_status: { Args: never; Returns: Json }
       app_role: { Args: never; Returns: Database["public"]["Enums"]["app_role"] }
       apply_due_date_override: { Args: { p_override_id: string | null }; Returns: number }
       apply_job_template: { Args: { p_task_id: string | null; p_template_id: string | null }; Returns: Json }
@@ -9428,6 +9433,7 @@ export type Database = {
       task_client_ref: { Args: { p_task_id: string | null }; Returns: Json }
       task_dependency_list: { Args: { p_task_id: string | null }; Returns: { dependency_id: string | null; direction: string | null; task_id: string | null; task_number: string | null; title: string | null; status: Database["public"]["Enums"]["task_status"] | null; due_date: string | null; client_name: string | null; visible: boolean | null }[] }
       task_logged_minutes: { Args: { p_task_id: string | null }; Returns: number }
+      task_needs_filing_capture: { Args: { p_service: Database["public"]["Enums"]["service_type"] | null; p_compliance_event_id: string | null }; Returns: boolean }
       task_open_blocker_count: { Args: { p_task_id: string | null }; Returns: number }
       task_status_label: { Args: { p: Database["public"]["Enums"]["task_status"] | null }; Returns: string }
       tasks_guard_employee: { Args: { p_old: Database["public"]["Tables"]["tasks"]["Row"] | null; p_new: Database["public"]["Tables"]["tasks"]["Row"] | null }; Returns: undefined }
@@ -9477,7 +9483,7 @@ export type Database = {
       message_direction: "outbound" | "inbound"
       message_status: "pending" | "queued" | "sent" | "handed_off" | "delivered" | "read" | "failed"
       notice_status: "open" | "reply_drafted" | "replied" | "hearing" | "closed_favourable" | "closed_unfavourable" | "closed_partial"
-      notification_type: "task_assigned" | "task_declined" | "task_sent_back" | "task_approved" | "review_requested" | "task_overdue" | "compliance_due" | "invoice_overdue" | "invoice_awaiting_approval" | "payment_received" | "document_uploaded" | "quotation_viewed" | "quotation_responded" | "leave_requested" | "leave_decided" | "expiry_alert" | "info" | "warning" | "cover_started" | "cover_ending" | "cover_ended" | "whatsapp_group_missing" | "whatsapp_device_linked" | "whatsapp_client_mode_down" | "security_alert"
+      notification_type: "task_assigned" | "task_declined" | "task_sent_back" | "task_approved" | "review_requested" | "task_overdue" | "compliance_due" | "invoice_overdue" | "invoice_awaiting_approval" | "payment_received" | "document_uploaded" | "quotation_viewed" | "quotation_responded" | "leave_requested" | "leave_decided" | "expiry_alert" | "info" | "warning" | "cover_started" | "cover_ending" | "cover_ended" | "whatsapp_group_missing" | "whatsapp_device_linked" | "whatsapp_client_mode_down" | "security_alert" | "task_reopened"
       payment_method: "bank_transfer" | "upi" | "cheque" | "cash" | "card" | "other"
       peer_review_status: "scheduled" | "in_progress" | "completed"
       quotation_status: "draft" | "pending_approval" | "approved" | "sent" | "viewed" | "accepted" | "rejected" | "expired" | "superseded"
@@ -9559,7 +9565,7 @@ export const Constants = {
       message_direction: ["outbound", "inbound"],
       message_status: ["pending", "queued", "sent", "handed_off", "delivered", "read", "failed"],
       notice_status: ["open", "reply_drafted", "replied", "hearing", "closed_favourable", "closed_unfavourable", "closed_partial"],
-      notification_type: ["task_assigned", "task_declined", "task_sent_back", "task_approved", "review_requested", "task_overdue", "compliance_due", "invoice_overdue", "invoice_awaiting_approval", "payment_received", "document_uploaded", "quotation_viewed", "quotation_responded", "leave_requested", "leave_decided", "expiry_alert", "info", "warning", "cover_started", "cover_ending", "cover_ended", "whatsapp_group_missing", "whatsapp_device_linked", "whatsapp_client_mode_down", "security_alert"],
+      notification_type: ["task_assigned", "task_declined", "task_sent_back", "task_approved", "review_requested", "task_overdue", "compliance_due", "invoice_overdue", "invoice_awaiting_approval", "payment_received", "document_uploaded", "quotation_viewed", "quotation_responded", "leave_requested", "leave_decided", "expiry_alert", "info", "warning", "cover_started", "cover_ending", "cover_ended", "whatsapp_group_missing", "whatsapp_device_linked", "whatsapp_client_mode_down", "security_alert", "task_reopened"],
       payment_method: ["bank_transfer", "upi", "cheque", "cash", "card", "other"],
       peer_review_status: ["scheduled", "in_progress", "completed"],
       quotation_status: ["draft", "pending_approval", "approved", "sent", "viewed", "accepted", "rejected", "expired", "superseded"],

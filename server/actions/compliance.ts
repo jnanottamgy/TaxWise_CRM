@@ -59,6 +59,7 @@ function plannedSentence(r: GenerateResult): string {
   const parts: string[] = [];
   if (r.created) parts.push(`${r.created} ${r.created === 1 ? "deadline" : "deadlines"} added`);
   if (r.updated) parts.push(`${r.updated} ${r.updated === 1 ? "date" : "dates"} updated`);
+  if (r.restored) parts.push(`${r.restored} restored for resumed services`);
   if (r.retired) parts.push(`${r.retired} cancelled for ended services`);
   return parts.length ? parts.join(", ") : "Deadlines already up to date";
 }
@@ -97,7 +98,7 @@ export const generateDeadlinesForClient = defineAction(
       resourceId: facts.id,
       details: { client: facts.displayName, created: result.created, updated: result.updated, locked: result.locked, retired: result.retired, generated: result.generated },
     });
-    if (result.created > 0 || result.updated > 0 || result.retired > 0) {
+    if (result.created > 0 || result.updated > 0 || result.retired > 0 || result.restored > 0) {
       ctx.after("Add to the client's timeline", () =>
         addTimelineEvent({
           clientId: facts.id,

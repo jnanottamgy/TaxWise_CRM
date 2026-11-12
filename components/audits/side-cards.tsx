@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { DownloadIcon, FileTextIcon, PencilIcon } from "lucide-react"
 import { SectionCard } from "@/components/app/section-card"
 import { DefinitionList } from "@/components/app/definition-list"

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ExternalLinkIcon, SearchCheckIcon, ShieldCheckIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ACCEPTANCE_DECISION_LABELS, ACCEPTANCE_DECISIONS, rationaleProblem, type AcceptanceDecision, type ConflictHit } from "@/lib/domain/conflict"

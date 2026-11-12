@@ -59,6 +59,8 @@ export interface GenerateResult {
   skippedRules: number;
   /** Untouched future deadlines of services that ended, cancelled (§3.6 "Cancelled … because the service ended"). */
   retired: number;
+  /** Deadlines brought back because the service they were cancelled for is active again. */
+  restored: number;
 }
 
 /** The client's state: from the GSTIN, else the recorded state code (§6.6). */
@@ -245,6 +247,80 @@ export async function retireEndedServiceEvents(db: Db, engine: ComplianceEngine,
   return retired;
 }
 
+/**
+ * The other half of retireEndedServiceEvents: when a service is active again (ended, then resumed),
+ * the future deadlines that were cancelled *because it ended* come back as pending. Only those: a
+ * deadline a person cancelled, or one cancelled for an ended service and since restored and
+ * cancelled again by hand, stays cancelled (the latest history line says which it was). Without
+ * this a resumed service had nothing on the calendar, and planning couldn't add it again because
+ * the cancelled rows still held their keys.
+ */
+export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngine, facts: ClientCalendarFacts, today: DateString): Promise<number> {
+  const active = new Set(facts.services.map((s) => s.serviceType));
+  if (active.size === 0) return 0;
+  const rows = await fetchAll((a, b) =>
+    db
+      .from("compliance_events")
+      .select("id, type, form_code, rule_code, dedupe_key, due_date, title")
+      .eq("client_id", facts.id)
+      .eq("status", "cancelled")
+      .in("source", ["statutory_engine", "ops_template"])
+      .gte("due_date", today)
+      .order("due_date")
+      .range(a, b),
+  );
+  const candidates = rows.filter((e) => {
+    const services = servicesOfStored(e, engine);
+    return services.length > 0 && services.some((s) => active.has(s));
+  });
+  if (candidates.length === 0) return 0;
+
+  let restored = 0;
+  for (let i = 0; i < candidates.length; i += 60) {
+    const batch = candidates.slice(i, i + 60);
+    // Why each was cancelled: its latest cancel / restore history line.
+    const { data: history, error: he } = await db
+      .from("activity_logs")
+      .select("entity_id, action, metadata, at")
+      .eq("entity_type", "compliance_event")
+      .in("entity_id", batch.map((e) => e.id))
+      .in("action", ["cancelled", "restored"])
+      .order("at", { ascending: false })
+      .limit(2000);
+    if (he) throw he;
+    const latest = new Map<string, { action: string; reason: unknown }>();
+    for (const h of history ?? []) {
+      const id = h.entity_id as string | null;
+      if (!id || latest.has(id)) continue;
+      const meta = (h.metadata ?? {}) as Record<string, unknown>;
+      latest.set(id, { action: h.action, reason: meta.reason });
+    }
+    const ids = batch.filter((e) => {
+      const l = latest.get(e.id);
+      return l?.action === "cancelled" && l.reason === "service_ended";
+    }).map((e) => e.id);
+    if (ids.length === 0) continue;
+
+    const { data, error } = await db.from("compliance_events").update({ status: "pending" }).in("id", ids).eq("status", "cancelled").select("id");
+    if (error) throw error;
+    const done = (data ?? []).map((r) => r.id);
+    restored += done.length;
+    if (done.length) {
+      const { error: le } = await db.from("activity_logs").insert(
+        done.map((id) => ({
+          entity_type: "compliance_event",
+          entity_id: id,
+          action: "restored",
+          description: "Restored: the service it belongs to is active again.",
+          metadata: { reason: "service_resumed" } as Json,
+        })),
+      );
+      if (le) throw le;
+    }
+  }
+  return restored;
+}
+
 /** Plans and writes one client's deadlines. Throws on a database error; the caller reports it. */
 export async function generateForClient(
   db: Db,
@@ -261,8 +337,11 @@ export async function generateForClient(
   const engine = opts.engine ?? (await loadComplianceEngine(db, opts.today));
   const facts = opts.facts === undefined ? await loadClientCalendarFacts(db, clientId, { system: opts.system }) : opts.facts;
   if (!facts) return null;
+  // First bring back what was cancelled for a service that is active again, so the plan below sees
+  // those deadlines as live ones (and moves their dates if a rule has changed meanwhile).
+  const restored = opts.retire ? await reviveResumedServiceEvents(db, engine, facts, opts.today) : 0;
   const { generated, rows } = await planClientDeadlines(db, engine, facts, opts.today);
-  const total: GenerateResult = { created: 0, updated: 0, locked: 0, unchanged: generated.length - rows.length, skipped: 0, generated: generated.length, skippedRules: engine.skipped.length, retired: 0 };
+  const total: GenerateResult = { created: 0, updated: 0, locked: 0, unchanged: generated.length - rows.length, skipped: 0, generated: generated.length, skippedRules: engine.skipped.length, retired: 0, restored };
   for (let i = 0; i < rows.length; i += BATCH) {
     const { data, error } = await db.rpc("upsert_compliance_events", { p_rows: rows.slice(i, i + BATCH) as unknown as Json });
     if (error) throw error;

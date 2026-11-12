@@ -1,5 +1,5 @@
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { CheckIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AUDIT_STAGES, AUDIT_STAGE_LABELS, STAGE_STANDARDS, type AuditStage } from "@/lib/domain/audit-stages"

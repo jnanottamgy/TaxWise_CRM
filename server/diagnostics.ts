@@ -4,11 +4,13 @@ import { untyped } from "@/lib/supabase/untyped";
 import { unstable_rethrow } from "next/navigation";
 import { createClient, type ServerSupabase } from "@/lib/supabase/server";
 import { EXPECTED_SCHEMA_VERSION, appEnv } from "@/lib/env";
+import { readApiGateStatus } from "@/server/api-gate";
 import { SCHEDULED_JOBS } from "@/server/jobs/schedule";
 import { EXPECTED_TABLES, EXPECTED_VIEWS } from "@/server/diagnostics-relations";
 import { logUnexpected, scrub } from "@/lib/log";
 import { DB_ENUMS, type DbEnumName } from "@/lib/domain/enums";
 import { todayIST } from "@/lib/domain/fy";
+import { formatDateTime } from "@/lib/format";
 import { checkEnv, VARIABLES } from "@/scripts/env-check";
 
 /**
@@ -56,6 +58,7 @@ export const DIAGNOSTIC_CHECKS = [
   { id: "enums", label: "Enum values", description: "Every value the app filters on exists in its Postgres enum (catches a partly migrated database)." },
   { id: "columns", label: "Recently added columns", description: "The newest columns the code reads are there." },
   { id: "rls_helpers", label: "Row-level security helpers", description: "app_role(), is_partner(), can_see_client() and the other helpers exist and answer for you." },
+  { id: "api_gate", label: "Database API gate", description: "The database API answers only this app's server, so a login alone can't go around the app's rules." },
   { id: "storage", label: "Storage buckets", description: "client-documents, task-files, branding and generated exist, with the right visibility." },
   { id: "env", label: "Environment variables", description: "Required variables for this environment are set and well-formed (shown as yes/no only)." },
   { id: "cron", label: "Scheduled jobs", description: "The last run of each scheduled job and its result." },
@@ -494,6 +497,32 @@ const CHECKS: Record<DiagnosticCheckId, CheckFn> = {
         : `${plural(report.errors.length, "variable needs", "variables need")} fixing for APP_ENV=${report.appEnv}. Run npm run env:check on the server for details.`,
       items,
     };
+  },
+
+  async api_gate() {
+    const g = await readApiGateStatus();
+    const items: DiagnosticItem[] = [
+      { label: "Enforced", status: g.enforce ? "pass" : "warn", detail: g.enforce ? `yes${g.armedAt ? `, since ${formatDateTime(g.armedAt)}` : ""}` : "no" },
+      { label: "This app's token registered", status: g.tokens > 0 ? "pass" : "warn", detail: g.tokens > 0 ? "yes" : "no" },
+      { label: "API server calls the gate", status: g.hook === false ? "fail" : "pass", detail: g.hook === null ? "not checked" : g.hook ? "yes" : "no" },
+    ];
+    if (g.state === "not_installed") {
+      return { status: "warn", summary: "The database doesn't have the gate yet. Apply the migrations (GitHub → Actions → Database).", items: [] };
+    }
+    if (g.hook === false) {
+      return {
+        status: "fail",
+        summary: "The gate exists but the API server isn't calling it. Run in Supabase → SQL Editor: alter role authenticator set pgrst.db_pre_request = 'public.api_gate'; notify pgrst, 'reload config';",
+        items,
+      };
+    }
+    if (g.detail === "API_GATE=off") {
+      return { status: "warn", summary: "Switched off by API_GATE=off in the app's environment: anyone with a login can call the database API directly.", items };
+    }
+    if (!g.enforce) {
+      return { status: "warn", summary: "Not switched on yet. The scheduler switches it on at its next check (every 15 minutes) once the database recognises this app.", items };
+    }
+    return { status: "pass", summary: "On: the database API answers only this app's server.", items };
   },
 
   async cron(supabase) {

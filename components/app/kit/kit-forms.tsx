@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { z } from "zod"
 import { toast } from "sonner"
 import { fail, ok, unexpectedMessage, type ActionResult } from "@/lib/result"

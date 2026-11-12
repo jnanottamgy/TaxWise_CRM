@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { unstable_rethrow } from "next/navigation"
 import { Grid3x3Icon } from "lucide-react"
 import { requireManagerOrPartner } from "@/lib/auth/guards"
@@ -208,7 +208,7 @@ export default async function FilingsPage({ searchParams }: { searchParams: Prom
     } else {
       body = (
         <>
-          {kpis.length ? <KpiStrip items={kpis} lead className="mb-4" aria-label={`Summary for ${col?.name ?? "the period"}`} /> : null}
+          {kpis.length ? <KpiStrip items={kpis} compact className="mb-3" aria-label={`Summary for ${col?.name ?? "the period"}`} /> : null}
           {annualHint}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <StatusLegend />

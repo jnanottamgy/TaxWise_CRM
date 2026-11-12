@@ -218,7 +218,7 @@ describe("issue_invoice (§6.4 Rule 46, §7.9.2, §7.9.3)", () => {
     await db.asRole(U.M1, async (s) => {
       await s.as("super");
       const entry = await s.value<string>(
-        "insert into time_entries (employee_id, client_id, started_at, ended_at, minutes, billable) values ($1, $2, now() - interval '3 hours', now() - interval '1 hour', 120, true) returning id",
+        "insert into time_entries (employee_id, client_id, started_at, ended_at, minutes, billable) values ($1, $2, now() - interval '6 hours', now() - interval '4 hours', 120, true) returning id",
         [U.E1.employeeId, C.A],
       );
       await s.as(U.M1);

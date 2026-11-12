@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { unstable_rethrow } from "next/navigation"
 import { ArrowDownLeftIcon, ArrowUpRightIcon, ClipboardListIcon, MessagesSquareIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"

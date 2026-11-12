@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { requireClient } from "@/lib/auth/guards"
 import { getFirmContact, getLatestFromFirm, getPortalClient, listThread } from "@/lib/data/portal"
 import { readParam } from "@/components/app/data-table/params"

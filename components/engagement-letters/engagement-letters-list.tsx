@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { unstable_rethrow } from "next/navigation"
 import { PlusIcon } from "lucide-react"
 import type { CurrentUser } from "@/lib/auth/current-user"

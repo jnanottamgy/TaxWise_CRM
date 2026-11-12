@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { formatINR } from "@/lib/domain/money"
 import { RETAINER_SKIP_REASONS, RETAINER_SKIP_REASON_LABELS } from "@/lib/domain/invoice"

@@ -281,7 +281,15 @@ export function OnboardingWizard({ setup, initial, source, servicesLocked }: { s
       }),
       ...values,
     } as unknown as OnboardingData
-    return dedupe([...base, ...allIssues(filled, today)])
+    // These rules run on every keystroke, over half-typed values. One that can't read a value must
+    // never take the wizard (and everything typed into it) down: the field's own rule reports it.
+    let crossField: ReturnType<typeof allIssues> = []
+    try {
+      crossField = allIssues(filled, today)
+    } catch {
+      crossField = []
+    }
+    return dedupe([...base, ...crossField])
   }, [schema, values, suggestedCode, setup.reminderDays, setup.notifyChannels, today])
   const issuesFor = (id: OnboardingStepId) => issues.filter((i) => stepOfPath(i.path) === id)
 

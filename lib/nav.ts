@@ -639,8 +639,9 @@ export function getNewActions(role: AppRole): NewAction[] {
   const managerOrPartner = role === "partner" || role === "manager";
   const staff = role !== "client";
   const all: Array<[allowed: boolean, action: NewAction]> = [
-    [managerOrPartner, { id: "client", label: "New client", href: "/clients/new", icon: Building2Icon, keywords: ["add client", "onboard"] }],
+    // The task leads: it is the button's own label, so N then Enter starts what the button says.
     [managerOrPartner, { id: "task", label: "New task", href: "/work?new=1", icon: ListChecksIcon, keywords: ["add task", "assign"] }],
+    [managerOrPartner, { id: "client", label: "New client", href: "/clients/new", icon: Building2Icon, keywords: ["add client", "onboard"] }],
     [managerOrPartner, { id: "invoice", label: "New invoice", href: "/invoices/new", icon: ReceiptTextIcon, keywords: ["bill", "raise invoice"] }],
     [managerOrPartner, { id: "quotation", label: "New quotation", href: "/quotations/new", icon: FileTextIcon, keywords: ["quote", "proposal"] }],
     [managerOrPartner, { id: "lead", label: "New lead", href: "/leads?new=1", icon: TargetIcon, keywords: ["prospect", "enquiry"] }],

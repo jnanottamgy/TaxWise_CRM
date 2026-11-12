@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ChevronRightIcon } from "lucide-react"
 import type { StatusTone } from "@/lib/status"
 import { formatDate } from "@/lib/format"

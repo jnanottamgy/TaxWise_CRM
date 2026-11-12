@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { CircleAlertIcon, TriangleAlertIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ClientWarning } from "@/components/client360/logic/warnings"

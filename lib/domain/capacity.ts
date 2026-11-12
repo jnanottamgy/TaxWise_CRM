@@ -32,10 +32,10 @@ export type CapacityBand = (typeof CAPACITY_BANDS)[number];
 
 /** The band names as the UI prints them (§7.11.4). */
 export const CAPACITY_BAND_LABELS: Record<CapacityBand, string> = {
-  clear: "CLEAR",
-  busy: "BUSY",
-  tight: "TIGHT",
-  over: "OVER",
+  clear: "Free",
+  busy: "Busy",
+  tight: "Tight",
+  over: "Over",
 };
 
 /** Tasks-per-working-day thresholds: a band starts AT its threshold (`≥`). */

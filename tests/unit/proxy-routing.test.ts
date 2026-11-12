@@ -29,6 +29,24 @@ function route(pathname: string, session: SessionHint | null, extra: Partial<Rou
   return decideRoute({ pathname, search: "", isServerAction: false, session, idleExpired: false, ...extra });
 }
 
+describe("a session ended on the server while its cookie is still valid", () => {
+  it("clears the cookie and shows the sign-in form instead of bouncing the person back to their home", () => {
+    for (const s of [client, employee, partner]) {
+      expect(route("/login", s, { search: "?reason=ended&next=%2Fportal%2Fdocuments", sessionEnded: true })).toEqual({ kind: "next", signOut: true });
+    }
+  });
+
+  it("a live session on that address goes home as before (the marker alone signs nobody out)", () => {
+    expect(route("/login", client, { search: "?reason=ended", sessionEnded: false })).toEqual({ kind: "redirect", to: "/portal" });
+    expect(route("/login", partner, { search: "?reason=ended" })).toEqual({ kind: "redirect", to: "/dashboard" });
+  });
+
+  it("applies to the sign-in page only, never to a server action", () => {
+    expect(route("/dashboard", partner, { sessionEnded: true })).toEqual({ kind: "next" });
+    expect(route("/login", partner, { sessionEnded: true, isServerAction: true })).toEqual({ kind: "next" });
+  });
+});
+
 describe("public paths", () => {
   it.each(["/login", "/forgot-password", "/setup", "/q/abc123", "/q/abc123/pdf", "/api/q/abc123/pdf", "/api/health", "/api/cron/receivables", "/api/cron/tick", "/_next/static/chunk.js", "/favicon.ico", "/logo.svg"])(
     "%s is public",

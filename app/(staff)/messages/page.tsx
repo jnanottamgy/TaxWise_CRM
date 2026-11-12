@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { unstable_rethrow } from "next/navigation"
 import { ArrowLeftIcon, ExternalLinkIcon, MessagesSquareIcon } from "lucide-react"
 import { cn } from "@/lib/utils"

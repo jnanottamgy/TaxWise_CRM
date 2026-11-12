@@ -264,6 +264,17 @@
   }
 }
 
+/*
+ * Keyboard focus must show. Tailwind 4's `outline-none` sets --tw-outline-style: none, which also
+ * switches off `focus-visible:outline-2` on the same element, so buttons, checkboxes, switches and
+ * sidebar links had no visible focus at all. Outside the layers so it wins: whenever an element asks
+ * for a focus outline, draw it.
+ */
+.focus-visible\:outline-2:focus-visible,
+.focus-visible\:outline-1:focus-visible {
+  outline-style: solid;
+}
+
 /* §3.2 motion: 150–200ms ease-out; respect reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   *,

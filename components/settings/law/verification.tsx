@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { BadgeCheckIcon } from "lucide-react"
 import { formatDate } from "@/lib/format"
 import type { VerifiableTable } from "@/lib/schemas/law"
-import { markVerified } from "@/server/actions/law"
+import { markVerified, markVerifiedMany } from "@/server/actions/law"
 import { Button } from "@/components/ui/button"
 import { StatusChip } from "@/components/app/status-chip"
 import { ConfirmDialog } from "@/components/app/confirm-dialog"
@@ -78,6 +78,65 @@ export function MarkVerifiedButton({
             return false
           }
           toast.success("Marked verified")
+          router.refresh()
+        }}
+      />
+    </>
+  )
+}
+
+/**
+ * The bulk action on ticked rows: a Partner who has checked a group against one source (every TDS
+ * row against the Finance Act, say) confirms them together. Only rows still awaiting confirmation
+ * are sent; each gets its own audit row.
+ */
+export function ConfirmSelectedButton({
+  table,
+  rows,
+  onDone,
+}: {
+  table: VerifiableTable
+  /** The ticked rows that still await confirmation: id, concurrency token, and what each is in words. */
+  rows: Array<{ id: string; updatedAt: string; what: string }>
+  onDone: () => void
+}) {
+  const router = useRouter()
+  const [open, setOpen] = React.useState(false)
+  if (rows.length === 0) return <span className="text-sm text-text-muted">The ticked rows are already confirmed.</span>
+  const shown = rows.slice(0, 8)
+  return (
+    <>
+      <Button type="button" size="sm" onClick={() => setOpen(true)}>
+        <BadgeCheckIcon aria-hidden="true" />
+        Confirm {rows.length} against the source
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Confirm ${rows.length} ${rows.length === 1 ? "item" : "items"} against the source?`}
+        description="You confirm that each of these matches the notification, circular or section it cites. Your name and today's date are recorded on every one."
+        details={
+          <ul className="flex max-h-56 flex-col gap-1.5 overflow-y-auto text-sm text-text">
+            {shown.map((r) => (
+              <li key={r.id} className="flex gap-2">
+                <BadgeCheckIcon aria-hidden="true" className="mt-0.5 size-3.5 flex-none text-text-muted" />
+                <span className="min-w-0">{r.what}</span>
+              </li>
+            ))}
+            {rows.length > shown.length ? <li className="pl-5.5 text-text-muted">and {rows.length - shown.length} more</li> : null}
+          </ul>
+        }
+        confirmLabel={`Confirm ${rows.length}`}
+        onConfirm={async () => {
+          const r = await markVerifiedMany({ table, items: rows.map((x) => ({ id: x.id, updated_at: x.updatedAt })) })
+          if (!r.ok) {
+            toast.error(r.error)
+            if (r.code === "conflict") router.refresh()
+            return false
+          }
+          for (const w of r.warnings ?? []) toast.warning(w, { duration: 12_000 })
+          toast.success(`${r.data.confirmed} confirmed`)
+          onDone()
           router.refresh()
         }}
       />

@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { DateText } from "@/components/app/date-text"
 import { MonoId } from "@/components/app/mono-id"

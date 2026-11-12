@@ -455,6 +455,7 @@ type StatusResult = {
   assigned_employee_id: string | null;
   reviewer_employee_id: string | null;
   client_owner_employee_id: string | null;
+  filed_by_employee_id?: string | null;
   filing_record_id?: string | null;
   filing_skipped?: boolean;
 };
@@ -463,6 +464,7 @@ const NOTICE_TITLE: Record<TransitionNotification["type"], (title: string) => st
   review_requested: (t) => `Submitted for review: ${t}`,
   task_sent_back: (t) => `Sent back to you: ${t}`,
   task_approved: (t) => `Filed: ${t}`,
+  task_reopened: (t) => `Reopened: ${t}`,
 };
 
 /** The §9 notices, the timeline entry and the history line for a status change that went through. */
@@ -477,6 +479,7 @@ function afterStatusChange(ctx: ActionContext, r: StatusResult, clientName: stri
     assigneeEmployeeId: r.assigned_employee_id,
     reviewerEmployeeId: r.reviewer_employee_id,
     clientOwnerEmployeeId: r.client_owner_employee_id,
+    filedByEmployeeId: r.filed_by_employee_id ?? null,
   });
   const ref = taskRef(r);
   const where = clientName ? ` for ${clientName}` : "";
@@ -488,7 +491,9 @@ function afterStatusChange(ctx: ActionContext, r: StatusResult, clientName: stri
         ? `${ctx.user.fullName} submitted ${ref}${where} for review. File it, or send it back with a reason.`
         : n.type === "task_sent_back"
           ? `${ctx.user.fullName} sent ${ref}${where} back to you: ${n.reason ?? "no reason given"}.`
-          : `${ctx.user.fullName} filed ${ref}${where}.${extra.filingNote ? ` ${extra.filingNote}` : ""}`;
+          : n.type === "task_reopened"
+            ? `${ctx.user.fullName} reopened ${ref}${where}, which was filed: ${n.reason ?? "no reason given"}. It is open again.`
+            : `${ctx.user.fullName} filed ${ref}${where}.${extra.filingNote ? ` ${extra.filingNote}` : ""}`;
     ctx.after(
       "Send the notifications",
       () => notify({ to: { employeeIds, roles }, type: n.type, title: NOTICE_TITLE[n.type](r.title), body, linkUrl: link(r.task_id), entity: { type: "task", id: r.task_id }, clientId: r.client_id }),

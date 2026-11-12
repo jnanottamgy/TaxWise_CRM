@@ -60,9 +60,10 @@ describe("appeal forums and limitation (§7.8.4)", () => {
     expect(appealForumsFor("tds")).toEqual(["income_tax_first_appeal", "income_tax_tribunal", "other"]);
     expect(appealForumsFor(null)).toHaveLength(5);
   });
-  it("counts days for income tax and calendar months (clamped to month end) for GST, as the database does", () => {
+  it("counts days, calendar months (clamped to month end) or months from the month's end, as the database does", () => {
     expect(limitationPreview("income_tax_first_appeal", "2026-09-01")).toBe("2026-10-01");
-    expect(limitationPreview("income_tax_tribunal", "2026-09-01")).toBe("2026-10-31");
+    // ITAT: two months from the end of the month of the order (0245).
+    expect(limitationPreview("income_tax_tribunal", "2026-09-01")).toBe("2026-11-30");
     expect(limitationPreview("gst_first_appeal", "2026-01-31")).toBe("2026-04-30");
     expect(limitationPreview("gst_tribunal", "2026-11-30", { ...APPEAL_DEFAULTS, gst_tribunal: { months: 1 } })).toBe("2026-12-30");
     expect(limitationPreview("other", "2026-09-01")).toBeNull();

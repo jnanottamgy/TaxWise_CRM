@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DownloadIcon, IdCardIcon } from "lucide-react"
 import { toast } from "sonner"

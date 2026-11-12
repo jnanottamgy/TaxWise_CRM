@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/server/actions/auth";
 import { SignInSchema, type SignInInput } from "@/lib/schemas/auth";

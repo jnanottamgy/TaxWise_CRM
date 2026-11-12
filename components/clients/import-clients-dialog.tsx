@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useRouter } from "next/navigation"
 import Papa from "papaparse"
 import { CircleAlertIcon, CircleCheckIcon, DownloadIcon, FileUpIcon, TriangleAlertIcon, UploadIcon } from "lucide-react"

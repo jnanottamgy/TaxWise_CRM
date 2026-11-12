@@ -64,7 +64,10 @@ export function denyAccess(): never {
 export async function requireUser(options: RequireUserOptions = {}): Promise<Guarded> {
   const session = await getSession();
 
-  if (session.status === "anonymous") redirect(withNext("/login", await currentPath()));
+  // "ended" tells the proxy to look again: the cookie may still hold a token for a session that was
+  // ended on the server (password reset, access revoked, role changed), and without the marker it
+  // would send this "signed-in" person straight back here, round and round.
+  if (session.status === "anonymous") redirect(withNext("/login?reason=ended", await currentPath()));
   if (session.status === "no_profile" || session.status === "inactive") redirect("/no-access");
 
   const { user, supabase } = session;

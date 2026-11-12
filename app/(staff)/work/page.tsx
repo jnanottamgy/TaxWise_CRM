@@ -213,7 +213,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
         description={canManage ? "Every task in the firm, with who has it, what it's waiting on and when it's due." : "Tasks assigned to you, waiting for your review, and your clients' work."}
         actions={options ? <NewTaskButton options={options} defaultFy={fy} client={prefillClient} /> : null}
       />
-      {kpis ? <KpiStrip items={kpis} lead className="mb-4" aria-label="Work at a glance" /> : null}
+      {kpis ? <KpiStrip items={kpis} compact className="mb-3" aria-label="Work at a glance" /> : null}
       <div className="flex flex-col gap-2 pb-3 md:flex-row md:items-center md:justify-between">
         <WorkViewTabs active={view} params={params} reviewCount={summary.ok ? summary.data.reviewQueue : null} />
         {views.ok ? <WorkViewsMenu views={views.data} canShare={canManage} /> : null}

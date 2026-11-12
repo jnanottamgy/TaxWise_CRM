@@ -175,7 +175,7 @@ export default async function MyDayPage() {
           ) : (
             <SectionCard
               title="Messages from your clients"
-              description={messages.data.total > 0 ? `${messages.data.total.toLocaleString("en-IN")} unread, newest first.` : "Portal and email messages you haven't read yet."}
+              description={messages.data.total > 0 ? `${messages.data.total.toLocaleString("en-IN")} unread, newest first.` : "Portal messages you haven't read yet."}
               viewAll={messages.data.total > 0 ? { href: "/messages", label: "Messages" } : undefined}
             >
               <MessageList rows={messages.data.rows} emptyMessage="No unread messages from your clients." />

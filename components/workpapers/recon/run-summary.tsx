@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { AlertTriangleIcon, ArrowRightIcon } from "lucide-react"
 import { KpiStrip } from "@/components/app/kpi-strip"
 import { SectionCard } from "@/components/app/section-card"

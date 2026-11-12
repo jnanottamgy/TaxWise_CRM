@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { useEffect } from "react";
 import { RotateCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";

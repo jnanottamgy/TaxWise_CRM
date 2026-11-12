@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { KpiStrip } from "@/components/app/kpi-strip"
 import { SectionCard } from "@/components/app/section-card"
 import { StatusChip } from "@/components/app/status-chip"

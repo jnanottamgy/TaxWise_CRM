@@ -42,7 +42,7 @@
 --                                 editable copy).
 --   Appeal limitation (lib/domain/escalation.ts), all [verify] (§7.8.4)
 --   appeal.income_tax.first_appeal {"days":30}: CIT(A), from the order.
---   appeal.income_tax.tribunal    {"days":60}: ITAT.
+--   appeal.income_tax.tribunal    {"days":60} up to 30 Sep 2024; {"months":2,"from":"month_end"} since: ITAT.
 --   appeal.gst.first_appeal       {"months":3}: GST Appellate Authority.
 --   appeal.gst.tribunal           {"months":3}: GST Appellate Tribunal.
 
@@ -75,7 +75,8 @@ values
   ('escalation.overdue_days', '{"level1":3,"level2":7}'::jsonb, '2026-04-01', null, 'Firm practice', '§7.6.7 escalation', 'TaxWise Practice OS specification §7.6.7, §8', 'A task overdue by more than 3 days reaches level 1 (the assignee and Managers are told); by more than 7 days, level 2 (Partners are told). Re-arms after a reopen or a due-date change.', true),
   ('quotation.follow_up_days', '[3,7,14]'::jsonb, '2026-04-01', null, 'Firm practice', '§7.5.3 quotation follow-ups', 'TaxWise Practice OS specification §7.5.3', 'Automatic follow-ups on day 3, 7 and 14 after a quotation is sent, while it is still Sent or Viewed and not expired. firm_settings.quotation_follow_up_days is the copy used at run time.', true),
   ('appeal.income_tax.first_appeal', '{"days":30}'::jsonb, '1962-04-01', null, 'Income-tax Act, 1961', 's.249(2) [verify] the Income-tax Act, 2025 equivalent', 'Income-tax Act, 1961, s.249(2)', 'First appeal to the CIT(A): 30 days from the order (strictly, from service of the order or demand notice). [verify] against the current statute before relying on it (§7.8.4).', false),
-  ('appeal.income_tax.tribunal', '{"days":60}'::jsonb, '1962-04-01', null, 'Income-tax Act, 1961', 's.253(3) [verify] the Income-tax Act, 2025 equivalent', 'Income-tax Act, 1961, s.253(3)', 'Appeal to the Income Tax Appellate Tribunal: 60 days from the date the order is communicated. [verify] against the current statute before relying on it (§7.8.4).', false),
+  ('appeal.income_tax.tribunal', '{"days":60}'::jsonb, '1962-04-01', '2024-09-30', 'Income-tax Act, 1961', 's.253(3), before the Finance (No. 2) Act, 2024', 'Income-tax Act, 1961, s.253(3)', 'Appeal to the Income Tax Appellate Tribunal, orders up to 30 September 2024: 60 days from the date the order is communicated. [verify] against the statute as it then stood before relying on it (§7.8.4).', false),
+  ('appeal.income_tax.tribunal', '{"months":2,"from":"month_end"}'::jsonb, '2024-10-01', null, 'Income-tax Act, 1961', 's.253(3) [verify] the Income-tax Act, 2025 equivalent', 'Income-tax Act, 1961, s.253(3) as amended by the Finance (No. 2) Act, 2024, from 1 October 2024', 'Appeal to the Income Tax Appellate Tribunal: two months from the end of the month in which the order is communicated. [verify] against the current statute before relying on it (§7.8.4).', false),
   ('appeal.gst.first_appeal', '{"months":3}'::jsonb, '2017-07-01', null, 'Central Goods and Services Tax Act, 2017', 's.107(1) [verify]', 'CGST Act, 2017, s.107(1)', 'First appeal to the Appellate Authority: 3 months from the date the order is communicated. [verify] against the current statute before relying on it (§7.8.4).', false),
   ('appeal.gst.tribunal', '{"months":3}'::jsonb, '2017-07-01', null, 'Central Goods and Services Tax Act, 2017', 's.112(1) [verify]', 'CGST Act, 2017, s.112(1)', 'Appeal to the GST Appellate Tribunal: 3 months from the date the order appealed against is communicated. [verify] against the current statute and the GSTAT notifications before relying on it (§7.8.4).', false)
 on conflict (key, effective_from) do nothing;

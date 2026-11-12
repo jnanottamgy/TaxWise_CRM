@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { CalculatorIcon, PlusIcon } from "lucide-react"
 import { DataTable, type DataTableColumn } from "@/components/app/data-table/data-table"
 import type { SortDir } from "@/components/app/data-table/params"

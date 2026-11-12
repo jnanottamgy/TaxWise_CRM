@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { formatCount } from "@/components/app/data-table/params"
 import { RUN_TABS, RUN_TAB_LABELS, type RunTab } from "@/lib/schemas/gst-recon"

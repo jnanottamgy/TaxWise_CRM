@@ -4,13 +4,13 @@ import * as React from "react"
 import { CalendarClockIcon, FileClockIcon, LandmarkIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, ScaleIcon, Trash2Icon } from "lucide-react"
 import { COMPLIANCE_TYPE_LABELS, SERVICE_FREQUENCY_LABELS, type ComplianceType, type ServiceFrequency } from "@/lib/domain/enums"
 import { formatDate, formatDateTime } from "@/lib/format"
-import { describeParameterValue, summariseParameterValue } from "@/lib/schemas/law"
+import { describeParameterValue, splitParameterNote } from "@/lib/schemas/law"
 import type { ConcordanceRow, DueDateRuleRow, LawChangeRow, OverrideRow, ParameterRow } from "@/lib/data/law"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DataTable, type DataTableColumn } from "@/components/app/data-table/data-table"
 import { EmptyState } from "@/components/app/empty-state"
-import { MarkVerifiedButton, VerificationCell } from "@/components/settings/law/verification"
+import { ConfirmSelectedButton, MarkVerifiedButton, VerificationCell } from "@/components/settings/law/verification"
 import { ConcordanceDialog, OverrideAddDialog, ParameterAddDialog, ParameterChangeDialog, RemoveOverrideDialog, RuleChangeDialog } from "@/components/settings/law/law-dialogs"
 
 interface PageProps<T> {
@@ -116,6 +116,12 @@ export function AddConcordanceButton() {
 // Statutory parameters
 // -------------------------------------------------------------------------------------------------
 
+/** A parameter in words, for confirmation dialogs: its meaning (or key), its value and when it starts. */
+function parameterInWords(row: ParameterRow): string {
+  const meaning = splitParameterNote(row.notes).meaning
+  return `${meaning || row.key} Value: ${describeParameterValue(row.value, 60, row.key)}, from ${formatDate(row.effective_from)}.`
+}
+
 function ParameterActions({ row, today }: { row: ParameterRow; today: string }) {
   const [changing, setChanging] = React.useState(false)
   const ended = row.effective_to !== null && row.effective_to < today
@@ -126,7 +132,7 @@ function ParameterActions({ row, today }: { row: ParameterRow; today: string }) 
           table="statutory_parameters"
           id={row.id}
           updatedAt={row.updated_at}
-          what={`${row.key} = ${summariseParameterValue(row.value, 40)} from ${formatDate(row.effective_from)}`}
+          what={parameterInWords(row)}
           source={row.source_ref}
         />
       ) : null}
@@ -150,27 +156,50 @@ export function ParametersTable({ rows, total, page, pageSize, today }: PageProp
       header: "Parameter",
       hideable: false,
       mobile: "primary",
-      width: "28%",
-      // Both lines wrap (the key at its dots and underscores) so the column can be as narrow as 28%.
-      cell: (r) => (
-        <div className="min-w-0 whitespace-normal">
-          <p className="font-mono text-sm [overflow-wrap:anywhere] text-text">{r.key}</p>
-          <p className="text-xs text-text-muted">{[r.statute, r.section_ref].filter(Boolean).join(" · ") || "—"}</p>
-        </div>
-      ),
+      width: "40%",
+      // What the parameter means, in words, leads; then what a Partner still has to check, the
+      // provision, and the key the code uses (small: it is a reference, not something to read).
+      cell: (r) => {
+        const note = splitParameterNote(r.notes)
+        // A section reference can carry its own open point ("s.249(2) [verify] the 2025 Act equivalent").
+        const section = splitParameterNote(r.section_ref)
+        const provision = [r.statute, section.meaning].filter(Boolean).join(" · ")
+        const toCheck = [note.toCheck, section.toCheck].filter(Boolean).join(" ")
+        return (
+          <div className="flex min-w-0 flex-col gap-0.5 py-0.5 whitespace-normal">
+            <p className="text-base text-text">{note.meaning || r.key}</p>
+            {!r.verified && toCheck ? (
+              <p className="text-sm text-warning-text">
+                <span className="font-medium">To check:</span> {toCheck}
+              </p>
+            ) : null}
+            {provision ? <p className="text-xs text-text-muted">{provision}</p> : null}
+            <p className="font-mono text-[11px] [overflow-wrap:anywhere] text-text-muted">{r.key}</p>
+          </div>
+        )
+      },
+      mobileCell: (r) => splitParameterNote(r.notes).meaning || r.key,
     },
     {
       id: "value",
       header: "Value",
       mobile: "secondary",
       className: WRAP,
+      // Below the widest screens the date it applies from sits under the value, so the table fits.
       cell: (r) => (
-        <span className="text-sm text-text" title={summariseParameterValue(r.value, 400)}>
-          {describeParameterValue(r.value, 80)}
-        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-base font-medium text-text" title={describeParameterValue(r.value, 400, r.key)}>
+            {describeParameterValue(r.value, 80, r.key)}
+          </span>
+          <span className="num text-xs text-text-muted 2xl:hidden">
+            {r.effective_to
+              ? `${formatDate(r.effective_from)} – ${formatDate(r.effective_to)}${r.effective_to < today ? " · past" : ""}`
+              : `from ${formatDate(r.effective_from)}${r.effective_from > today ? " · starts later" : ""}`}
+          </span>
+        </div>
       ),
     },
-    { id: "in_force", header: "In force", align: "right", mobile: "secondary", cell: (r) => <InForce from={r.effective_from} to={r.effective_to} today={today} /> },
+    { id: "in_force", header: "In force", align: "right", hideBelow: "2xl", mobile: "secondary", cell: (r) => <InForce from={r.effective_from} to={r.effective_to} today={today} /> },
     { id: "source", header: "Source", hideBelow: "2xl", className: WRAP_WIDE, cell: (r) => <Source text={r.source_ref} /> },
     { id: "verified", header: "Confirmation", mobile: "trailing", cell: (r) => <VerificationCell verified={r.verified} byName={r.verified_by_name} on={r.verified_on} /> },
     { id: "actions", header: "Actions", hideable: false, align: "right", cell: (r) => <ParameterActions row={r} today={today} /> },
@@ -187,6 +216,14 @@ export function ParametersTable({ rows, total, page, pageSize, today }: PageProp
       pageSize={pageSize}
       countLabel={(n, t) => `${n} parameter row${t === 1 ? "" : "s"}`}
       rowClassName={(r) => (r.verified ? undefined : AWAITING_ROW)}
+      selectable
+      bulkActions={({ selectedRows, clear }) => (
+        <ConfirmSelectedButton
+          table="statutory_parameters"
+          rows={selectedRows.filter((r) => !r.verified).map((r) => ({ id: r.id, updatedAt: r.updated_at, what: parameterInWords(r) }))}
+          onDone={clear}
+        />
+      )}
       empty={<EmptyState icon={<LandmarkIcon />} message="No statutory parameters yet. They come with the database seed; add one here if the seed hasn't run." action={<AddParameterButton />} />}
     />
   )
@@ -281,6 +318,14 @@ export function RulesTable({ rows, total, page, pageSize, today }: PageProps<Due
       pageSize={pageSize}
       countLabel={(n, t) => `${n} rule${t === 1 ? "" : "s"}`}
       rowClassName={(r) => (r.verified ? undefined : AWAITING_ROW)}
+      selectable
+      bulkActions={({ selectedRows, clear }) => (
+        <ConfirmSelectedButton
+          table="due_date_rules"
+          rows={selectedRows.filter((r) => !r.verified).map((r) => ({ id: r.id, updatedAt: r.updated_at, what: `${r.title} (${r.code})` }))}
+          onDone={clear}
+        />
+      )}
       empty={<EmptyState icon={<CalendarClockIcon />} message="No due-date rules yet. They come with the database seed (the statutory calendar)." />}
     />
   )
@@ -425,6 +470,14 @@ export function ConcordanceTable({ rows, total, page, pageSize }: Omit<PageProps
       pageSize={pageSize}
       countLabel={(n, t) => `${n} row${t === 1 ? "" : "s"}`}
       rowClassName={(r) => (r.verified ? undefined : AWAITING_ROW)}
+      selectable
+      bulkActions={({ selectedRows, clear }) => (
+        <ConfirmSelectedButton
+          table="section_concordance"
+          rows={selectedRows.filter((r) => !r.verified).map((r) => ({ id: r.id, updatedAt: r.updated_at, what: [r.topic, [r.old_section, r.new_section].filter(Boolean).join(" → ")].filter(Boolean).join(": ") }))}
+          onDone={clear}
+        />
+      )}
       empty={<EmptyState icon={<ScaleIcon />} message="No concordance rows yet. Add the 1961 ↔ 2025 mapping from the CBDT's published table." action={<AddConcordanceButton />} />}
     />
   )

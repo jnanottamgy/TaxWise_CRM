@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ChartColumnIcon, KanbanSquareIcon, TableIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LeadView } from "@/lib/schemas/leads"

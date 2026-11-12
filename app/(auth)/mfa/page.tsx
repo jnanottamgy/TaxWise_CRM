@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/app/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/current-user";
 import { getMfaState, mfaRequiredFor, mfaStep, type MfaState } from "@/lib/auth/mfa";

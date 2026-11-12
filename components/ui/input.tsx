@@ -9,6 +9,8 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       className={cn(
         "h-9 w-full min-w-0 rounded-md border border-text-muted/30 bg-surface px-3 py-1 text-base text-text transition-[color,border-color,box-shadow] duration-150 outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-text-muted disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-muted read-only:bg-surface-2 max-md:text-md pointer-coarse:h-11",
         "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20",
+        // A finger needs 44 px (DESIGN.md); the buttons beside it already grow on touch screens.
+        "pointer-coarse:min-h-11",
         "aria-invalid:border-danger aria-invalid:ring-danger/20",
         className
       )}

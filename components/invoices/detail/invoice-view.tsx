@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { cn } from "@/lib/utils"
 import { Money } from "@/components/app/money"
 import { MonoId } from "@/components/app/mono-id"

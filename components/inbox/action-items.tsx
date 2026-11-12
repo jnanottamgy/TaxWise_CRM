@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ArrowRightIcon, CheckCheckIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Explain } from "@/components/app/explain"

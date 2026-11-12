@@ -55,7 +55,9 @@ export function ReceiptDialog({
       invoiceId: invoice.id,
       invoiceUpdatedAt: invoice.updatedAt,
       paymentDate: claim?.paidOn && isDateString(claim.paidOn) && claim.paidOn <= ctx.today ? claim.paidOn : ctx.today,
-      amountReceived: "",
+      // The usual receipt settles the invoice: start with the outstanding amount (typing replaces it).
+      // A client who deducts TDS pays less than that, so theirs starts blank with the "Use it" helpers.
+      amountReceived: !ctx.clientHasTan && invoice.outstandingPaise > 0 ? paiseToDecimalString(invoice.outstandingPaise) : "",
       tdsAmount: "",
       tdsSection: ctx.clientHasTan && professional ? `${professional.section}:${professional.nature}` : "",
       method: claim ? "upi" : "bank_transfer",

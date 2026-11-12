@@ -159,6 +159,7 @@ export const NOTIFICATION_EVENTS: readonly NotificationEvent[] = [
   { type: "review_requested", label: "A task is submitted for your review", group: "Work", roles: STAFF },
   { type: "task_sent_back", label: "A task is sent back to you", group: "Work", roles: STAFF },
   { type: "task_approved", label: "A task is filed or approved", group: "Work", roles: STAFF },
+  { type: "task_reopened", label: "A filed task is reopened", group: "Work", roles: STAFF },
   { type: "task_overdue", label: "A task is overdue or escalated", group: "Work", roles: STAFF },
   { type: "compliance_due", label: "A compliance deadline is coming up", group: "Clients and compliance", roles: STAFF },
   { type: "document_uploaded", label: "A client uploads a document or sends a message", group: "Clients and compliance", roles: STAFF },

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { requirePartner } from "@/lib/auth/guards"
 import { TEMPLATE_TYPE_LABELS } from "@/lib/schemas/message-templates"
 import { formatCount } from "@/components/app/data-table/params"

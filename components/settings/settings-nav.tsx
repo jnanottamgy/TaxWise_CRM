@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { useSelectedLayoutSegment } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { SETTINGS_SECTIONS, type SettingsSlug } from "@/lib/schemas/settings"

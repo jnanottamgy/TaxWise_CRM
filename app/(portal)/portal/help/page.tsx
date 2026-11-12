@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import Link from "@/components/app/link"
 import { ChevronDownIcon } from "lucide-react"
 import { requireClient } from "@/lib/auth/guards"
 import { getFirmContact, getPortalClient } from "@/lib/data/portal"

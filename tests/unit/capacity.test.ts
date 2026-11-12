@@ -66,7 +66,7 @@ describe("capacity bands (§7.11.4)", () => {
     expect(bandForRate(1.5, CAPACITY_DEFAULTS)).toBe("busy");
     expect(bandForRate(2.5, CAPACITY_DEFAULTS)).toBe("tight");
     expect(bandForRate(4, CAPACITY_DEFAULTS)).toBe("over");
-    expect(CAPACITY_BAND_LABELS.over).toBe("OVER");
+    expect(CAPACITY_BAND_LABELS).toEqual({ clear: "Free", busy: "Busy", tight: "Tight", over: "Over" });
   });
 
   it("rejects nonsense counts", () => {
