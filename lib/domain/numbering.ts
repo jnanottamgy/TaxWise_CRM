@@ -154,7 +154,12 @@ export function checkSeriesPrefix(
 }
 
 /** One `number_series` row (§5.11). `financialYear` is null for series that aren't FY-scoped. */
-export type SeriesState = { financialYear: FinancialYear | null; nextValue: number };
+export type SeriesState = {
+  financialYear: FinancialYear | null;
+  nextValue: number;
+  /** Counters of the years the series has left (`number_series_years`): FY label → next value. */
+  years?: Record<string, number>;
+};
 
 export type NextNumber =
   | { ok: true; number: string; seq: number; next: SeriesState }
@@ -164,8 +169,9 @@ export type NextNumber =
  * One step of the counter, as `next_document_number(p_key, p_date)` does it under `FOR UPDATE`:
  * - the prefix (trimmed) may use only letters, digits, `-` and `/` (GST Rule 46), checked first;
  * - an FY-scoped series restarts at 1 when the date is in a later FY than the row;
- * - a date in an earlier FY than the row is refused, because restarting would reuse that FY's
- *   numbers (the row only remembers its latest FY);
+ * - moving to a later FY keeps the counter of the year being left, and a date in such a year
+ *   carries on from it (one document dated next year must not block this year);
+ * - a date in an earlier FY whose counter was never kept is refused: restarting would reuse numbers;
  * - the result must stay within the length limit.
  */
 export function planNextNumber(
@@ -187,17 +193,29 @@ export function planNextNumber(
   }
   let seq = state.nextValue;
   let fy: FinancialYear | null = state.financialYear;
+  let years = state.years;
   if (def.fyScoped) {
     const dateFy = financialYearOf(args.date);
     const rowStart = state.financialYear ? parseFinancialYear(state.financialYear) : null;
     const dateStart = parseFinancialYear(dateFy) as number;
     if (rowStart !== null && dateStart < rowStart) {
-      return {
-        ok: false,
-        error: `The ${def.noun} series has moved on to FY ${state.financialYear}, so it can't number a document dated in FY ${dateFy}.`,
-      };
+      const kept = state.years?.[dateFy];
+      if (kept === undefined) {
+        return {
+          ok: false,
+          error: `The ${def.noun} series has moved on to FY ${state.financialYear}, so it can't number a document dated in FY ${dateFy}.`,
+        };
+      }
+      const number = formatSeriesNumber(key, { seq: kept, prefix, fy: dateFy });
+      if (number.length > max) {
+        return { ok: false, error: `The next ${def.noun} number (${number}) would be longer than ${max} characters. Shorten the prefix in Settings → Numbering.` };
+      }
+      return { ok: true, number, seq: kept, next: { ...state, years: { ...state.years, [dateFy]: kept + 1 } } };
     }
-    if (rowStart === null || dateStart > rowStart) seq = 1;
+    if (rowStart === null || dateStart > rowStart) {
+      seq = 1;
+      if (rowStart !== null && state.financialYear) years = { ...years, [state.financialYear]: Math.max(years?.[state.financialYear] ?? 1, state.nextValue) };
+    }
     fy = dateFy;
   }
   const number = formatSeriesNumber(key, { seq, prefix, fy: fy ?? undefined });
@@ -207,5 +225,5 @@ export function planNextNumber(
       error: `The next ${def.noun} number (${number}) would be longer than ${max} characters. Shorten the prefix in Settings → Numbering.`,
     };
   }
-  return { ok: true, number, seq, next: { financialYear: def.fyScoped ? fy : state.financialYear, nextValue: seq + 1 } };
+  return { ok: true, number, seq, next: { financialYear: def.fyScoped ? fy : state.financialYear, nextValue: seq + 1, ...(years ? { years } : {}) } };
 }

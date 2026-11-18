@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { assessCapacity, readCapacityThresholds, workingDaysLeft, type CapacityAssessment, type CapacityThresholds, type LeaveSpan } from "@/lib/domain/capacity";
 import { ATTENDANCE_DEFAULTS, type AttendanceParams } from "@/lib/domain/attendance";
@@ -23,7 +24,7 @@ export interface WorkingCalendarSettings {
 const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5, 6];
 
 /** Working weekdays, holidays between `from` and `to`, capacity bands and the working day. */
-export async function getWorkingCalendar(supabase: ServerSupabase, from: DateString, to: DateString): Promise<WorkingCalendarSettings> {
+async function getWorkingCalendarUncached(supabase: ServerSupabase, from: DateString, to: DateString): Promise<WorkingCalendarSettings> {
   const [settings, holidays] = await Promise.all([
     supabase
       .from("firm_settings")
@@ -105,3 +106,6 @@ export async function getCapacityFor(
   }
   return out;
 }
+
+/** Read once per request: several parts of one page ask for it (same client, same arguments). */
+export const getWorkingCalendar = cache(getWorkingCalendarUncached);

@@ -69,7 +69,12 @@ export default async function NewItrPage({ searchParams }: { searchParams: Promi
   }
 
   const selectedFy = await getSelectedFy()
-  const fy = fyParam && isFinancialYear(fyParam) && ctx.years.includes(fyParam) ? fyParam : ctx.years.includes(selectedFy) ? selectedFy : ctx.years[0]
+  // A return is prepared for the year that has ended, so a new computation starts on the year before
+  // the one in the header (it used to open on the running year, under next year's Act and labels).
+  const start = Number(selectedFy.slice(0, 4))
+  const lastFy = `${start - 1}-${String(start % 100).padStart(2, "0")}`
+  const fy =
+    fyParam && isFinancialYear(fyParam) && ctx.years.includes(fyParam) ? fyParam : ctx.years.includes(lastFy) ? lastFy : ctx.years.includes(selectedFy) ? selectedFy : ctx.years[0]
   const eligible = facts && facts.eligible ? facts : null
   const kind = defaultReturnKind({ taxAuditApplicable: eligible?.tax_audit_applicable ?? null, businessIncome: false })
   const band = eligible ? (eligible.assesseeType === "huf" ? "below_60" : ageBandFor(eligible.date_of_birth, fy)) : null

@@ -59,8 +59,8 @@ function plannedSentence(r: GenerateResult): string {
   const parts: string[] = [];
   if (r.created) parts.push(`${r.created} ${r.created === 1 ? "deadline" : "deadlines"} added`);
   if (r.updated) parts.push(`${r.updated} ${r.updated === 1 ? "date" : "dates"} updated`);
-  if (r.restored) parts.push(`${r.restored} restored for resumed services`);
-  if (r.retired) parts.push(`${r.retired} cancelled for ended services`);
+  if (r.restored) parts.push(`${r.restored} restored (apply again)`);
+  if (r.retired) parts.push(`${r.retired} cancelled (no longer apply)`);
   return parts.length ? parts.join(", ") : "Deadlines already up to date";
 }
 

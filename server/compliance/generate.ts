@@ -236,7 +236,7 @@ export async function retireEndedServiceEvents(db: Db, engine: ComplianceEngine,
         entity_type: "compliance_event",
         entity_id: e.id,
         action: "cancelled",
-        description: "Cancelled: the service it belongs to has ended.",
+        description: `${e.title}: cancelled, the service it belongs to has ended.`,
         metadata: { reason: "service_ended" } as Json,
       }));
     if (logs.length) {
@@ -255,7 +255,7 @@ export async function retireEndedServiceEvents(db: Db, engine: ComplianceEngine,
  * this a resumed service had nothing on the calendar, and planning couldn't add it again because
  * the cancelled rows still held their keys.
  */
-export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngine, facts: ClientCalendarFacts, today: DateString): Promise<number> {
+export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngine, facts: ClientCalendarFacts, today: DateString, planned?: ReadonlySet<string>): Promise<number> {
   const active = new Set(facts.services.map((s) => s.serviceType));
   if (active.size === 0) return 0;
   const rows = await fetchAll((a, b) =>
@@ -270,6 +270,8 @@ export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngin
       .range(a, b),
   );
   const candidates = rows.filter((e) => {
+    // Only what today's plan asks for again (a deadline of a scheme the client has left stays cancelled).
+    if (planned && e.dedupe_key && !planned.has(e.dedupe_key)) return false;
     const services = servicesOfStored(e, engine);
     return services.length > 0 && services.some((s) => active.has(s));
   });
@@ -297,7 +299,7 @@ export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngin
     }
     const ids = batch.filter((e) => {
       const l = latest.get(e.id);
-      return l?.action === "cancelled" && l.reason === "service_ended";
+      return l?.action === "cancelled" && (l.reason === "service_ended" || l.reason === "rule_no_longer_applies");
     }).map((e) => e.id);
     if (ids.length === 0) continue;
 
@@ -311,7 +313,7 @@ export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngin
           entity_type: "compliance_event",
           entity_id: id,
           action: "restored",
-          description: "Restored: the service it belongs to is active again.",
+          description: "Restored: it applies to this client again.",
           metadata: { reason: "service_resumed" } as Json,
         })),
       );
@@ -319,6 +321,68 @@ export async function reviveResumedServiceEvents(db: Db, engine: ComplianceEngin
     }
   }
   return restored;
+}
+
+/**
+ * When a client's facts change (monthly GST to QRMP, a tax audit recorded), the rules that applied
+ * before leave their future deadlines behind, next to the new ones. This cancels the untouched
+ * future deadlines the engine planned whose rule no longer gives them: the rule is still known, the
+ * date falls inside today's plan, and today's plan doesn't contain the deadline. Started, filed and
+ * hand-made deadlines are never touched. Skipped when the plan is empty or a rule failed to load,
+ * so a broken rule can never cancel a calendar.
+ */
+export async function retireUnplannedEvents(
+  db: Db,
+  engine: ComplianceEngine,
+  facts: ClientCalendarFacts,
+  today: DateString,
+  generated: ReadonlyArray<{ dedupeKey: string; dueDate: DateString }>,
+): Promise<number> {
+  if (generated.length === 0 || engine.skipped.length > 0) return 0;
+  const planned = new Set(generated.map((g) => g.dedupeKey));
+  const horizon = generated.reduce((m, g) => (g.dueDate > m ? g.dueDate : m), today);
+  const rows = await fetchAll((a, b) =>
+    db
+      .from("compliance_events")
+      .select("id, rule_code, dedupe_key, due_date, title")
+      .eq("client_id", facts.id)
+      .eq("status", "pending")
+      .eq("workflow_status", "not_started")
+      .eq("source", "statutory_engine")
+      .gte("due_date", today)
+      .lte("due_date", horizon)
+      .order("due_date")
+      .range(a, b),
+  );
+  const stale = rows.filter((e) => e.dedupe_key && e.rule_code && engine.rulesByCode.has(e.rule_code) && !planned.has(e.dedupe_key));
+  let retired = 0;
+  for (let i = 0; i < stale.length; i += 100) {
+    const batch = stale.slice(i, i + 100);
+    const { data, error } = await db
+      .from("compliance_events")
+      .update({ status: "cancelled" })
+      .in("id", batch.map((e) => e.id))
+      .eq("status", "pending")
+      .eq("workflow_status", "not_started")
+      .select("id");
+    if (error) throw error;
+    const done = new Set((data ?? []).map((r) => r.id));
+    retired += done.size;
+    const logs = batch
+      .filter((e) => done.has(e.id))
+      .map((e) => ({
+        entity_type: "compliance_event",
+        entity_id: e.id,
+        action: "cancelled",
+        description: `${e.title}: cancelled, it no longer applies to this client (the client's details changed).`,
+        metadata: { reason: "rule_no_longer_applies" } as Json,
+      }));
+    if (logs.length) {
+      const { error: le } = await db.from("activity_logs").insert(logs);
+      if (le) throw le;
+    }
+  }
+  return retired;
 }
 
 /** Plans and writes one client's deadlines. Throws on a database error; the caller reports it. */
@@ -339,7 +403,8 @@ export async function generateForClient(
   if (!facts) return null;
   // First bring back what was cancelled for a service that is active again, so the plan below sees
   // those deadlines as live ones (and moves their dates if a rule has changed meanwhile).
-  const restored = opts.retire ? await reviveResumedServiceEvents(db, engine, facts, opts.today) : 0;
+  const plannedKeys = new Set(generateClientEvents(engine, facts.profile, opts.today).map((g) => g.dedupeKey));
+  const restored = opts.retire ? await reviveResumedServiceEvents(db, engine, facts, opts.today, plannedKeys) : 0;
   const { generated, rows } = await planClientDeadlines(db, engine, facts, opts.today);
   const total: GenerateResult = { created: 0, updated: 0, locked: 0, unchanged: generated.length - rows.length, skipped: 0, generated: generated.length, skippedRules: engine.skipped.length, retired: 0, restored };
   for (let i = 0; i < rows.length; i += BATCH) {
@@ -352,6 +417,9 @@ export async function generateForClient(
     total.unchanged += r.unchanged ?? 0;
     total.skipped += r.skipped ?? 0;
   }
-  if (opts.retire) total.retired = await retireEndedServiceEvents(db, engine, facts, opts.today);
+  if (opts.retire) {
+    total.retired = await retireEndedServiceEvents(db, engine, facts, opts.today);
+    total.retired += await retireUnplannedEvents(db, engine, facts, opts.today, generated);
+  }
   return total;
 }

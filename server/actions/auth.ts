@@ -186,6 +186,11 @@ export async function signIn(input: SignInInput): Promise<ActionResult<{ redirec
         .update({ last_login_at: new Date().toISOString() })
         .eq("id", user.id);
       if (touchError) throw touchError;
+      // A portal client: the firm's card for them reads "Active, last seen …" instead of "Invite pending" for ever.
+      if (role === "client") {
+        const { error: seenError } = await createAdminClient().from("clients").update({ portal_last_seen_at: new Date().toISOString() }).eq("portal_user_id", user.id);
+        if (seenError) throw seenError;
+      }
     } catch (err) {
       log("warn", "last_login_at update failed", { source: "action:auth.sign_in", userId: user.id, err });
     }

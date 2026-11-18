@@ -46,8 +46,8 @@ export function GenerateButton({
             : [
                 created ? `${created} ${created === 1 ? "deadline" : "deadlines"} added` : null,
                 updated ? `${updated} ${updated === 1 ? "date" : "dates"} updated` : null,
-                restored ? `${restored} brought back because the service is active again` : null,
-                retired ? `${retired} cancelled because the service ended` : null,
+                restored ? `${restored} brought back because they apply again` : null,
+                retired ? `${retired} cancelled because they no longer apply` : null,
               ]
                 .filter(Boolean)
                 .join(", ") + ".",

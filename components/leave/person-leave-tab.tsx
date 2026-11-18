@@ -9,7 +9,7 @@ import { getSelectedFy } from "@/lib/fy-context"
 import { parseTableParams } from "@/components/app/data-table/params"
 import { KpiStrip } from "@/components/app/kpi-strip"
 import { ErrorBlock } from "@/components/app/error-block"
-import { LEAVE_FILTERS, LEAVE_SORTABLE, getLeaveSummary, listLeave } from "@/lib/data/leave"
+import { LEAVE_FILTERS, LEAVE_SORTABLE, getLeaveSummary, leaveLeft, listLeave } from "@/lib/data/leave"
 import { listActiveStaff, type PersonOption } from "@/lib/data/people"
 import { LeaveTable } from "@/components/leave/leave-table"
 import { RequestLeaveDialog } from "@/components/leave/request-leave-dialog"
@@ -76,6 +76,14 @@ export async function PersonLeaveTab({
             { label: `Taken in FY ${fy}`, value: days(summary.taken), sub: byType || "working days, by type" },
             { label: "Approved ahead", value: days(summary.upcoming) },
             { label: "Waiting for a decision", value: days(summary.pending) },
+            ...LEAVE_TYPES.filter((ty) => leaveLeft(summary, ty) !== null).map((ty) => {
+              const left = leaveLeft(summary, ty) as number
+              return {
+                label: `${LEAVE_TYPE_LABELS[ty]} left`,
+                value: days(Math.max(left, 0)),
+                sub: left < 0 ? `${formatNumber(-left, { maxDecimals: 1 })} over the ${summary.allowance[ty]} allowed` : `of ${summary.allowance[ty]} allowed in FY ${fy}`,
+              }
+            }),
           ]}
         />
         {self && requestButton ? <RequestLeaveDialog variant="outline" /> : null}

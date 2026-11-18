@@ -6,10 +6,10 @@ import { ActionError, fail, ok, type ActionResult } from "@/lib/result";
 import { log } from "@/lib/log";
 import { LEAVE_TYPE_LABELS } from "@/lib/domain/enums";
 import { findOverlappingLeave, formatLeaveRange, overlapMessage, reassignPrompt } from "@/lib/domain/leave";
-import { todayIST } from "@/lib/domain/fy";
+import { financialYearOf, todayIST } from "@/lib/domain/fy";
 import { canManagePerson, type StaffRole } from "@/lib/schemas/people";
 import { LeaveCancelSchema, LeaveDecisionSchema, LeaveRequestSchema, LeaveUpdateSchema, NoCoverNeededSchema, ReassignLeaveTasksSchema } from "@/lib/schemas/leave";
-import { getLeave, getLiveLeave, getTasksDuringLeave, type LeaveRow } from "@/lib/data/leave";
+import { getLeave, getLeaveSummary, getLiveLeave, getTasksDuringLeave, leaveLeft, type LeaveRow } from "@/lib/data/leave";
 import { getClientsOfPerson, type CoverClientRow } from "@/lib/data/covers";
 import { notify } from "@/server/notify";
 import { addTimelineEvent } from "@/server/timeline";
@@ -100,7 +100,22 @@ export const requestLeave = defineAction(
         logEmployeeActivity({ activityType: "leave_requested", description: `Asked for ${LEAVE_TYPE_LABELS[input.type].toLowerCase()} leave ${range}.`, entityType: "employee_leave", entityId: id }),
       );
     }
-    return ok({ id });
+    // The allowance never blocks a request (the approver decides); it says when one goes past it.
+    const warnings: string[] = [];
+    try {
+      const today = todayIST();
+      const summary = await getLeaveSummary(ctx.supabase, forId, financialYearOf(input.start_date), today);
+      const left = leaveLeft(summary, input.type);
+      // The summary already counts this request as pending, not as approved.
+      if (left !== null && summary.pending > left) {
+        warnings.push(
+          `${own ? "You have" : `${subject.full_name} has`} ${Math.max(left, 0)} ${Math.max(left, 0) === 1 ? "day" : "days"} of ${LEAVE_TYPE_LABELS[input.type].toLowerCase()} leave left this year, and ${summary.pending} waiting for a decision. The approver will see that.`,
+        );
+      }
+    } catch (err) {
+      log("warn", "leave balance check failed", { source: "action:leave.request", userId: ctx.user.id, err });
+    }
+    return ok({ id }, warnings.length ? warnings : undefined);
   },
 );
 

@@ -177,12 +177,45 @@ export interface LeaveSummary {
   taken: number;
   upcoming: number;
   pending: number;
+  /** Working days approved in the FY (taken and ahead), by type: what counts against the allowance. */
+  approvedByType: Partial<Record<LeaveType, number>>;
+  /** The firm's allowance for the FY by type (`leave.allowance_days`); a type without one has no limit. */
+  allowance: Partial<Record<LeaveType, number>>;
+}
+
+/** Days left of a type in the summary's year, or null when the firm sets no limit for it. */
+export function leaveLeft(summary: Pick<LeaveSummary, "allowance" | "approvedByType">, type: LeaveType): number | null {
+  const allowed = summary.allowance[type];
+  if (!allowed || allowed <= 0) return null;
+  return allowed - (summary.approvedByType[type] ?? 0);
+}
+
+/** `leave.allowance_days` in force on a date: `{ annual: 18, sick: 12 }`. Empty when none is recorded. */
+export async function getLeaveAllowance(supabase: ServerSupabase, on: DateString): Promise<Partial<Record<LeaveType, number>>> {
+  const { data, error } = await supabase
+    .from("statutory_parameters")
+    .select("value, effective_from")
+    .eq("key", "leave.allowance_days")
+    .lte("effective_from", on)
+    .or(`effective_to.is.null,effective_to.gte.${on}`)
+    .order("effective_from", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const v = data?.value;
+  const out: Partial<Record<LeaveType, number>> = {};
+  if (v && typeof v === "object" && !Array.isArray(v)) {
+    for (const [k, n] of Object.entries(v as Record<string, unknown>)) {
+      if (typeof n === "number" && n > 0) out[k as LeaveType] = n;
+    }
+  }
+  return out;
 }
 
 /**
- * The Leave tab's summary (§7.11.2 "Leave: balance and history"): the firm keeps no leave
- * allowance, so the balance is what has been taken in the year (working days, by type), what is
- * approved ahead, and what is waiting for a decision.
+ * The Leave tab's summary (§7.11.2 "Leave: balance and history"): what has been taken in the year
+ * (working days, by type), what is approved ahead, what is waiting for a decision, and what is left
+ * of the firm's allowance for each type that has one (`leave.allowance_days`, migration 0248).
  */
 export async function getLeaveSummary(supabase: ServerSupabase, employeeId: string, fy: FinancialYear, today: DateString): Promise<LeaveSummary> {
   const start = fyStart(fy);
@@ -198,7 +231,8 @@ export async function getLeaveSummary(supabase: ServerSupabase, employeeId: stri
   if (error) throw error;
   const calendar = await getWorkingCalendar(supabase, start, end);
   const opts = { weekdays: calendar.weekdays, holidays: calendar.holidays };
-  const out: LeaveSummary = { fy, takenByType: {}, taken: 0, upcoming: 0, pending: 0 };
+  const allowance = await getLeaveAllowance(supabase, today < start ? start : today > end ? end : today);
+  const out: LeaveSummary = { fy, takenByType: {}, taken: 0, upcoming: 0, pending: 0, approvedByType: {}, allowance };
   for (const l of data ?? []) {
     const from = l.start_date < start ? start : l.start_date;
     const to = l.end_date > end ? end : l.end_date;
@@ -212,6 +246,7 @@ export async function getLeaveSummary(supabase: ServerSupabase, employeeId: stri
     out.taken += past;
     out.upcoming += to >= today ? ahead : 0;
     out.takenByType[l.type as LeaveType] = (out.takenByType[l.type as LeaveType] ?? 0) + past;
+    out.approvedByType[l.type as LeaveType] = (out.approvedByType[l.type as LeaveType] ?? 0) + past + (to >= today ? ahead : 0);
   }
   return out;
 }

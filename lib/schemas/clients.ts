@@ -661,12 +661,20 @@ export function checkImportRows(rows: readonly RawImportRow[], ctx: ImportContex
   const seenCodes = new Map<string, number>();
   const seenPans = new Map<string, number>();
   const seenGstins = new Map<string, number>();
+  const seenNames = new Map<string, number>();
   return rows.map((raw, i) => {
     const row = i + 2;
     const errors: string[] = [];
     const warnings: string[] = [];
     const get = (k: ImportKey) => (raw[k] ?? "").trim();
     const name = get("display_name").replace(/\s+/g, " ");
+
+    // The same name twice in one file is usually the same client twice (the wizard asks about it too).
+    const nameKey = name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    if (nameKey.length >= 2) {
+      if (seenNames.has(nameKey)) warnings.push(`The same name is on row ${seenNames.get(nameKey)}. Check it isn't the same client twice.`);
+      else seenNames.set(nameKey, row);
+    }
 
     if (name.length < 2) errors.push("The display name is missing (2–120 characters).");
     else if (name.length > 120) errors.push("The display name is longer than 120 characters.");
@@ -723,6 +731,8 @@ export function checkImportRows(rows: readonly RawImportRow[], ctx: ImportContex
           pan = r.pan;
           const other = ctx.existingPans.get(pan);
           if (other) errors.push(`The PAN in this GSTIN (${pan}) already belongs to client ${other}.`);
+          else if (seenPans.has(pan)) errors.push(`The PAN in this GSTIN (${pan}) is also on row ${seenPans.get(pan)}.`);
+          else seenPans.set(pan, row);
         }
         const other = ctx.existingGstins.get(gstin);
         if (other) errors.push(`GSTIN ${gstin} already belongs to client ${other}.`);

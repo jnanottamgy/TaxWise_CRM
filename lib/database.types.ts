@@ -5079,6 +5079,35 @@ export type Database = {
         }
         Relationships: []
       }
+      number_series_years: {
+        Row: {
+          financial_year: string
+          key: string
+          next_value: number
+          updated_at: string
+        }
+        Insert: {
+          financial_year: string
+          key: string
+          next_value: number
+          updated_at?: string
+        }
+        Update: {
+          financial_year?: string
+          key?: string
+          next_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "number_series_years_key_fkey"
+            columns: ["key"]
+            isOneToOne: false
+            referencedRelation: "number_series"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       onboarding_drafts: {
         Row: {
           created_at: string
@@ -9436,6 +9465,7 @@ export type Database = {
       task_needs_filing_capture: { Args: { p_service: Database["public"]["Enums"]["service_type"] | null; p_compliance_event_id: string | null }; Returns: boolean }
       task_open_blocker_count: { Args: { p_task_id: string | null }; Returns: number }
       task_status_label: { Args: { p: Database["public"]["Enums"]["task_status"] | null }; Returns: string }
+      task_visible_to: { Args: { p_task: string | null; p_profile: string | null }; Returns: boolean }
       tasks_guard_employee: { Args: { p_old: Database["public"]["Tables"]["tasks"]["Row"] | null; p_new: Database["public"]["Tables"]["tasks"]["Row"] | null }; Returns: undefined }
       tax_audit_position: { Args: { p_member: string | null; p_fy: string | null; p_record_id?: string | null; p_key?: string | null }; Returns: Json }
       tax_notice_conflict: { Args: { p_id: string | null }; Returns: string }

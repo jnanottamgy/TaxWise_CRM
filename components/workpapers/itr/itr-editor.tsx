@@ -330,7 +330,7 @@ export function ItrEditor({ mode, initial, computation, client: initialClient, f
             </div>
           </SectionCard>
 
-          <SectionCard title="Income" description="Enter each head as computed. Leave a head blank if the client has none.">
+          <SectionCard title="Income" description="Enter each head as computed. Leave a head blank if the client has none. Not worked out here: agricultural income (it raises the rate on other income), losses brought forward from earlier years, and the 44AD / 44ADA presumptive working. Adjust for those by hand before sending the sheet.">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {!huf ? (
                 <>

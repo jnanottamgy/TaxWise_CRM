@@ -124,7 +124,7 @@ describe("formats (§5.11)", () => {
 });
 
 describe("financial-year reset (§6.3, §5.11)", () => {
-  it("FY-scoped series restart at 1 in a new FY and refuse a date in an earlier FY", async () => {
+  it("FY-scoped series restart at 1 in a new FY, keep the year they leave, and refuse a year never kept", async () => {
     await db.asSuper(async (s) => {
       await setSeries(s, "invoice", 57, "2026-27");
       await setSeries(s, "receipt", 9, "2026-27");
@@ -132,8 +132,10 @@ describe("financial-year reset (§6.3, §5.11)", () => {
       expect(await take(s, "invoice", "2027-03-31")).toBe("TW/26-27/0057");
       expect(await take(s, "invoice", "2027-04-01")).toBe("TW/27-28/0001");
       expect(await take(s, "invoice", "2027-05-15")).toBe("TW/27-28/0002");
-      expect(await refusal(s, "invoice", "2027-03-31")).toBe(
-        "The invoice series has moved on to FY 2027-28, so it can't number a document dated in FY 2026-27.",
+      // 0246: the year the series left carries on from its own counter; a year never kept is refused.
+      expect(await take(s, "invoice", "2027-03-31")).toBe("TW/26-27/0058");
+      expect(await refusal(s, "invoice", "2025-06-01")).toBe(
+        "The invoice series has moved on to FY 2027-28, so it can't number a document dated in FY 2025-26.",
       );
       // the other series are independent
       expect(await take(s, "receipt", "2027-03-31")).toBe("TW-R/26-27/0009");

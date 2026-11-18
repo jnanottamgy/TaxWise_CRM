@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/database.types";
 import { FIRM_DEFAULTS } from "@/lib/auth/firm-defaults";
@@ -158,7 +159,7 @@ export function toFirmProfile(row: PublicProfileRow, logoUrl: string | null): Fi
 }
 
 /** The public subset of the firm's settings (§4.6). Works for anon, signed-in users and the service role. */
-export async function getFirmProfile(supabase: AnySupabase): Promise<FirmProfile> {
+async function getFirmProfileUncached(supabase: AnySupabase): Promise<FirmProfile> {
   const { data, error } = await supabase.rpc("public_firm_profile");
   if (error) throw Object.assign(new Error(error.message || "public_firm_profile failed"), error);
   const row = (data ?? [])[0];
@@ -170,7 +171,7 @@ export async function getFirmProfile(supabase: AnySupabase): Promise<FirmProfile
 }
 
 /** The whole firm_settings row, or null when the seed hasn't run. Staff sessions and the service role only (RLS). */
-export async function getFirmSettings(supabase: AnySupabase): Promise<FirmSettings | null> {
+async function getFirmSettingsUncached(supabase: AnySupabase): Promise<FirmSettings | null> {
   const { data, error } = await supabase.from("firm_settings").select("*").eq("id", 1).maybeSingle();
   if (error) throw Object.assign(new Error(error.message || "firm_settings read failed"), error);
   return data ?? null;
@@ -188,3 +189,9 @@ export function displayWebsite(url: string | null | undefined): string | null {
   if (!t) return null;
   return t.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
 }
+
+/** Read once per request: several parts of one page ask for it (same client, same arguments). */
+export const getFirmProfile = cache(getFirmProfileUncached);
+
+/** Read once per request: several parts of one page ask for it (same client, same arguments). */
+export const getFirmSettings = cache(getFirmSettingsUncached);

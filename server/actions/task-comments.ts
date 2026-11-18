@@ -1,5 +1,6 @@
 "use server";
 
+import { untyped } from "@/lib/supabase/untyped";
 import { defineAction, throwIfDbError } from "@/lib/action";
 import { fail, ok, type ActionResult } from "@/lib/result";
 import { STAFF_ROLES, isManagerOrPartner } from "@/lib/auth/roles";
@@ -35,6 +36,23 @@ async function validMentions(supabase: ServerSupabase, ids: readonly string[], a
   return (data ?? []).filter((d) => d.is_active && d.profile_id).map((d) => d.profile_id as string);
 }
 
+/**
+ * Of the people mentioned, those who may open the task. The others are not notified: the notice
+ * carries the task's title and the comment, and its link would show them "not found".
+ */
+async function canOpenTask(supabase: ServerSupabase, taskId: string, ids: readonly string[]): Promise<{ allowed: string[]; dropped: number }> {
+  const allowed: string[] = [];
+  for (const id of ids) {
+    const { data, error } = await untyped(supabase).rpc("task_visible_to", { p_task: taskId, p_profile: id });
+    // A database without the function yet (migrations behind) behaves as before.
+    if (error || data === true) allowed.push(id);
+  }
+  return { allowed, dropped: ids.length - allowed.length };
+}
+
+const droppedWarning = (n: number) =>
+  `${n === 1 ? "One person you mentioned isn't" : `${n} people you mentioned aren't`} on this client, so ${n === 1 ? "they weren't" : "they weren't"} notified. Ask a Manager to add them to the team.`;
+
 function mentionNotice(
   task: { id: string | null; task_number: string | null; title: string | null; client_id: string | null },
   commentId: string,
@@ -69,10 +87,11 @@ export const addTaskComment = defineAction(
     throwIfDbError(error);
     const id = data!.id;
     await ctx.audit({ event: "data_create", resourceType: "task_comment", resourceId: id, details: { task_id: input.task_id, mentions: mentions.length } });
-    if (mentions.length) {
-      ctx.after("Tell the people you mentioned", () => mentionNotice(task, id, ctx.user.fullName, input.body, mentions), "The people you mentioned weren't notified. Tell them by hand.");
+    const seen = await canOpenTask(ctx.supabase, input.task_id, mentions);
+    if (seen.allowed.length) {
+      ctx.after("Tell the people you mentioned", () => mentionNotice(task, id, ctx.user.fullName, input.body, seen.allowed), "The people you mentioned weren't notified. Tell them by hand.");
     }
-    return ok({ id });
+    return ok({ id }, seen.dropped ? [droppedWarning(seen.dropped)] : undefined);
   },
 );
 
@@ -87,12 +106,14 @@ export const editTaskComment = defineAction(
     const { error } = await ctx.supabase.from("task_comments").update({ body: input.body, mentions, edited_at: new Date().toISOString() }).eq("id", input.id);
     throwIfDbError(error);
     await ctx.audit({ event: "data_update", resourceType: "task_comment", resourceId: input.id, details: { task_id: before.task_id } });
-    const added = mentions.filter((m) => !(before.mentions ?? []).includes(m));
+    const newly = mentions.filter((m) => !(before.mentions ?? []).includes(m));
+    const seen = await canOpenTask(ctx.supabase, before.task_id, newly);
+    const added = seen.allowed;
     if (added.length) {
       const task = await taskFor(ctx.supabase, before.task_id);
       if (task) ctx.after("Tell the people you mentioned", () => mentionNotice(task, input.id, ctx.user.fullName, input.body, added, `task_mention:${input.id}:${Date.now()}`));
     }
-    return ok({ id: input.id });
+    return ok({ id: input.id }, seen.dropped ? [droppedWarning(seen.dropped)] : undefined);
   },
 );
 

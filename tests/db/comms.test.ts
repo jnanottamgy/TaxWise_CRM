@@ -350,12 +350,14 @@ describe("message threads (0173)", () => {
 });
 
 describe("number series across a new FY (what the new-FY job relies on, §8)", () => {
-  it("an FY-scoped series restarts at 0001 with the first document dated in the new year, and won't go back", async () => {
+  it("an FY-scoped series restarts at 0001 with the first document dated in the new year, and keeps the year it left", async () => {
     await db.asSuper(async (s) => {
       expect(await s.value<string>("select next_document_number('receipt', '2026-10-10')")).toMatch(/\/26-27\/\d{4}$/);
       expect(await s.value<string>("select next_document_number('receipt', '2027-04-02')")).toMatch(/\/27-28\/0001$/);
       expect(await s.value<string>("select next_document_number('receipt', '2027-04-03')")).toMatch(/\/27-28\/0002$/);
-      const back = await s.fails("select next_document_number('receipt', '2027-03-31')");
+      // 0246: the year it left carries on from its own counter; a year never kept is refused.
+      expect(await s.value<string>("select next_document_number('receipt', '2027-03-31')")).toMatch(/\/26-27\/\d{4}$/);
+      const back = await s.fails("select next_document_number('receipt', '2025-03-31')");
       expect(userMessage(back)).toContain("moved on to FY 2027-28");
     });
   });

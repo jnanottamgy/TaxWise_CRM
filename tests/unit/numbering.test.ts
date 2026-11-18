@@ -190,8 +190,12 @@ describe("planNextNumber (mirror of next_document_number)", () => {
       ok: true,
       number: "TW/27-28/0001",
       seq: 1,
-      next: { financialYear: "2027-28", nextValue: 2 },
+      next: { financialYear: "2027-28", nextValue: 2, years: { "2026-27": 120 } },
     });
+    // The year left behind carries on from its own counter; a year never kept is refused.
+    const moved = { financialYear: "2027-28" as const, nextValue: 2, years: { "2026-27": 120 } };
+    expect(planNextNumber("invoice", moved, { date: "2027-03-31" })).toMatchObject({ ok: true, number: "TW/26-27/0120", next: { nextValue: 2, years: { "2026-27": 121 } } });
+    expect(planNextNumber("invoice", moved, { date: "2025-06-01" })).toMatchObject({ ok: false });
     expect(planNextNumber("invoice", { financialYear: "2026-27", nextValue: 120 }, { date: "2027-03-31" })).toMatchObject({
       number: "TW/26-27/0120",
     });

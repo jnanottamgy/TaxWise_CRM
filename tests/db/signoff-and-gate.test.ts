@@ -275,3 +275,63 @@ describe("the tribunal appeal period (0245)", () => {
     });
   });
 });
+
+describe("a document dated next year doesn't block this year (0246)", () => {
+  it("keeps the counter of the year the series leaves and carries on from it", async () => {
+    await db.asRole(U.M1, async (s) => {
+      const next = (d: string) => s.value<string>("select next_document_number('quotation', $1::date)", [d]);
+      const a = await next("2026-11-12");
+      const seq = Number(a.slice(-4));
+      expect(a).toMatch(/^TW-Q\/26-27\/\d{4}$/);
+      expect(await next("2027-04-01")).toBe("TW-Q/27-28/0001");
+      expect(await next("2026-11-13")).toBe(`TW-Q/26-27/${String(seq + 1).padStart(4, "0")}`);
+      expect(await next("2027-04-02")).toBe("TW-Q/27-28/0002");
+      expect(await next("2026-11-14")).toBe(`TW-Q/26-27/${String(seq + 2).padStart(4, "0")}`);
+      // A year that was never kept is still refused.
+      expect(userMessage(await s.fails("select next_document_number('quotation', date '2024-06-01')"))).toMatch(/has moved on to FY 2027-28/);
+    });
+  });
+});
+
+describe("smaller integrity rules (0247)", () => {
+  it("only the author changes what a comment says, and an edit is stamped", async () => {
+    await db.asSuper(async (s) => {
+      const task = await newTask(s, { status: "in_progress" });
+      const id = await s.value<string>("insert into task_comments (task_id, author_id, body) values ($1, $2, 'First draft') returning id", [task, U.E1.id]);
+      await s.as(U.M1);
+      expect(await refusal(s, "update task_comments set body = 'Rewritten by a Manager' where id = $1", [id])).toMatch(/Only the person who wrote a comment can change it/);
+      expect(await s.exec("update task_comments set deleted_at = now() where id = $1", [id])).toBe(1);
+      await s.as("super");
+      await s.exec("update task_comments set deleted_at = null where id = $1", [id]);
+      await s.as(U.E1);
+      await s.exec("update task_comments set body = 'Second draft' where id = $1", [id]);
+      expect(await s.value("select edited_at is not null from task_comments where id = $1", [id])).toBe(true);
+    });
+  });
+
+  it("one person's leave can't overlap, and a half day is one day", async () => {
+    await db.asSuper(async (s) => {
+      const add = (from: string, to: string, half = false) =>
+        s.attempt("insert into employee_leave (employee_id, start_date, end_date, half_day, type) values ($1, $2::date, $3::date, $4, 'annual')", [U.E3.employeeId, from, to, half]);
+      expect((await add("2027-02-01", "2027-02-05")).ok).toBe(true);
+      const clash = await add("2027-02-05", "2027-02-08");
+      expect(clash.ok).toBe(false);
+      if (!clash.ok) expect(userMessage(clash)).toMatch(/overlaps leave already requested/);
+      expect((await add("2027-02-08", "2027-02-09")).ok).toBe(true);
+      const half = await add("2027-03-01", "2027-03-02", true);
+      expect(half.ok).toBe(false);
+      if (!half.ok) expect(userMessage(half)).toMatch(/half day is a single day/);
+    });
+  });
+
+  it("task_visible_to follows who may open the task", async () => {
+    await db.asSuper(async (s) => {
+      const task = await newTask(s, { status: "in_progress" }, U.M1);
+      const sees = (who: TestUser) => s.value<boolean>("select task_visible_to($1, $2)", [task, who.id]);
+      expect(await sees(U.E1)).toBe(true); // the assignee
+      expect(await sees(U.P1)).toBe(true);
+      expect(await sees(U.E4)).toBe(false); // not on client A
+      expect(await sees(U.CA)).toBe(false); // a portal client
+    });
+  });
+});

@@ -505,3 +505,24 @@ Fixed in this pass (each re-tested on the copy, with unit or database tests adde
 
 Open, with the suggested fix, is in the run's report (kept outside the repository).
 
+Second pass (18 November 2026), the items left open above:
+
+- Numbering (0246): each financial year keeps its own counter, so a quotation dated next year no
+  longer blocks this year.
+- Integrity (0247): only the author edits a comment and an edit is stamped; leave can't overlap and a
+  half day is one day; back-dated leave no longer overwrites a past attendance day and cancelling it
+  clears its days; a receipt can't be dated more than a year before its invoice; a credit note for the
+  whole remaining value credits the whole remaining GST (no ₹0.01 left); an @mention notifies only
+  people who can open the task.
+- Leave allowance (0248): `leave.allowance_days` (a placeholder until a Partner sets the firm's
+  figures) gives a balance by type on the Leave tab and a warning when a request goes past it.
+- Deadlines that no longer apply after a client's details change (monthly GST to QRMP) are
+  cancelled; they come back if the details change back.
+- A new ITR computation opens on the year being filed; the editor says what it doesn't work out
+  (agricultural income, brought-forward losses, the 44AD / 44ADA working).
+- The portal card shows a client's last sign-in; a repeated PAN or name in an import file is caught;
+  firm settings and the working calendar are read once per page.
+
+Still open: Inbox approve / decline in place, the dashboard charts, an error summary that names the
+fields, and the ITR engine for agricultural income and brought-forward losses.
+

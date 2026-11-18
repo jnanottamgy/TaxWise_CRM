@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { SERIES_KEYS, type SeriesKey } from "@/lib/domain/numbering";
 
@@ -166,7 +167,7 @@ export interface FirmSettingsView {
 }
 
 /** The firm settings row (§2.3: id = 1), or null when the seed hasn't run. */
-export async function getFirmSettings(supabase: ServerSupabase): Promise<FirmSettingsView | null> {
+async function getFirmSettingsUncached(supabase: ServerSupabase): Promise<FirmSettingsView | null> {
   const { data, error } = await supabase.from("firm_settings").select(FIRM_SETTINGS_COLUMNS.join(", ")).eq("id", 1).maybeSingle();
   if (error) throw error;
   if (!data) return null;
@@ -255,3 +256,6 @@ export function logoPublicUrl(supabase: ServerSupabase, row: Pick<FirmSettingsRo
   const version = row.logo_updated_at ? Date.parse(row.logo_updated_at) : NaN;
   return Number.isFinite(version) ? `${data.publicUrl}?v=${version}` : data.publicUrl;
 }
+
+/** Read once per request: several parts of one page ask for it (same client, same arguments). */
+export const getFirmSettings = cache(getFirmSettingsUncached);

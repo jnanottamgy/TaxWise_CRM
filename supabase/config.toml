@@ -11,3 +11,8 @@ sql_paths = ["./seed/*.sql"]
 
 [auth]
 enable_signup = false
+# The app checks passwords itself; these make the auth server refuse a weak one too when it is
+# called directly. A hosted project takes them from Authentication → Sign In / Providers → Email
+# in the Supabase dashboard, not from this file: set the same two values there.
+minimum_password_length = 8
+password_requirements = "lower_upper_letters_digits_symbols"
