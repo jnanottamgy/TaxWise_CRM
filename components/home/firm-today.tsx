@@ -291,6 +291,14 @@ export function ActivityList({ rows }: { rows: ActivityItem[] }) {
       {rows.map((r) => (
         <li key={r.id} className="flex min-h-11 items-start justify-between gap-3 py-2">
           <p className="min-w-0 text-base text-text">
+            {r.client_id && r.client_name ? (
+              <>
+                <Link href={`/clients/${r.client_id}`} className="font-medium hover:underline">
+                  {r.client_name}
+                </Link>
+                {": "}
+              </>
+            ) : null}
             {r.description}
             {r.user_name ? <span className="text-text-muted"> · {r.user_name}</span> : null}
           </p>

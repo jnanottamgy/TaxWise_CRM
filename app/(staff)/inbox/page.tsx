@@ -11,6 +11,8 @@ import { PageGuide } from "@/components/shell/page-slots"
 import { INBOX_FILTERS, INBOX_SHOW, NOTIFICATION_GROUP_SLUGS, groupActionItems, notificationGroupsFor, type InboxShow } from "@/lib/schemas/inbox"
 import { getActionItems, getInboxCounts, getUnreadActionNotifications, listUpdates } from "@/lib/data/inbox"
 import { ActionItems } from "@/components/inbox/action-items"
+import { listPendingForApprover } from "@/lib/data/leave"
+import { listActiveStaff } from "@/lib/data/people"
 import { UpdatesList } from "@/components/inbox/updates-list"
 import { MarkAllReadButton, NotificationSettingsLink, UpdatesTabs } from "@/components/inbox/inbox-controls"
 
@@ -55,6 +57,16 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const unread: Record<string, number> = {}
   if (marks.ok) for (const [k, v] of marks.data) unread[k] = v.length
   const groups = actions.ok ? groupActionItems(actions.data.items) : []
+  // Leave requests are decided right here (Approve / Decline), as on the Leave page.
+  const hasLeave = groups.some((g) => g.kind === "leave_approval")
+  const [pendingLeave, staff] = hasLeave
+    ? await Promise.all([
+        attempt("pending leave", user.id, () => listPendingForApprover(supabase, user)),
+        attempt("staff", user.id, () => listActiveStaff(supabase)),
+      ])
+    : [null, null]
+  const leaveById = Object.fromEntries((pendingLeave?.ok ? pendingLeave.data : []).map((l) => [l.id, l]))
+  const decide = hasLeave ? { leaveById, staff: staff?.ok ? staff.data : [], actorRole: user.role } : undefined
   const tabHref = (s: InboxShow) => {
     const qs = applyTablePatch(sp, { page: null })
     const params = new URLSearchParams(qs)
@@ -83,7 +95,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       />
 
       {actions.ok ? (
-        <ActionItems groups={groups} unread={unread} today={today} now={now} />
+        <ActionItems groups={groups} unread={unread} today={today} now={now} decide={decide} />
       ) : (
         <section aria-label="Needs your action" className="rounded-lg border border-border bg-surface">
           <ErrorBlock message="Couldn't load what needs your action." errorRef={actions.ref} />

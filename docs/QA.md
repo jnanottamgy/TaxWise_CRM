@@ -523,6 +523,10 @@ Second pass (18 November 2026), the items left open above:
 - The portal card shows a client's last sign-in; a repeated PAN or name in an import file is caught;
   firm settings and the working calendar are read once per page.
 
-Still open: Inbox approve / decline in place, the dashboard charts, an error summary that names the
-fields, and the ITR engine for agricultural income and brought-forward losses.
+Third pass (18 November 2026): Next.js 16.4.6 (security release) and exceljs's uuid pinned to a
+patched version (npm audit: 0); leave decided from the Inbox; a failed form lists each field by
+label, as links; client-import row numbers count blank lines; the ITR sheet works out agricultural
+income (partial integration), the 44AD / 44ADA presumptive figure with its turnover limits, and losses
+brought forward (s.71B, s.72, s.74); the filing chart names every return in status colours and Recent
+activity names the client.
 

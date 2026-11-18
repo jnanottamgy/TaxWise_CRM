@@ -657,13 +657,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
  * and against the database (codes, PANs, GSTINs, recycled clients included), the owner and the
  * group. A row with any error is left out ("import valid rows only"); warnings don't stop it.
  */
-export function checkImportRows(rows: readonly RawImportRow[], ctx: ImportContext): ImportRowCheck[] {
+export function checkImportRows(rows: readonly RawImportRow[], ctx: ImportContext, lines?: readonly number[]): ImportRowCheck[] {
   const seenCodes = new Map<string, number>();
   const seenPans = new Map<string, number>();
   const seenGstins = new Map<string, number>();
   const seenNames = new Map<string, number>();
   return rows.map((raw, i) => {
-    const row = i + 2;
+    const row = lines?.length === rows.length ? lines[i] : i + 2;
     const errors: string[] = [];
     const warnings: string[] = [];
     const get = (k: ImportKey) => (raw[k] ?? "").trim();
@@ -920,6 +920,8 @@ export const ImportRowsSchema = z.object({
     .min(1, { error: "The file has no rows to import." })
     .max(IMPORT_MAX_ROWS, { error: `Import at most ${IMPORT_MAX_ROWS.toLocaleString("en-IN")} clients at a time.` }),
   fileName: z.string().max(200).optional(),
+  /** Each row's line in the file (the header is line 1), so blank lines don't shift the report's row numbers. */
+  lines: z.array(z.number().int().min(2).max(1_000_000)).max(IMPORT_MAX_ROWS).optional(),
 });
 export type ImportRowsInput = z.input<typeof ImportRowsSchema>;
 

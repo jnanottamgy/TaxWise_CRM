@@ -10,6 +10,10 @@ import { formatNumber } from "@/lib/format"
 import { ACTION_KIND_META, describeActionItem, type ActionGroup, type ActionItem } from "@/lib/schemas/inbox"
 import { openActionItem } from "@/server/actions/inbox"
 import { announceInboxChanged } from "@/components/comms/comms-ui"
+import { DecideLeaveButtons } from "@/components/leave/leave-decision"
+import type { LeaveRow } from "@/lib/data/leave"
+import type { PersonOption } from "@/lib/data/people"
+import type { AppRole } from "@/lib/auth/roles"
 
 /**
  * "Needs your action" (§7.17): approvals, reviews, tasks to accept, declined tasks to reassign,
@@ -18,7 +22,7 @@ import { announceInboxChanged } from "@/components/comms/comms-ui"
  * disappears as soon as it is dealt with. A dot marks an item whose notification you haven't read;
  * opening the item reads it.
  */
-export function ActionItems({ groups, unread, today, now: serverNow }: { groups: ActionGroup[]; unread: Record<string, number>; today: string; /** The server's render time (ISO), so "45 minutes ago" hydrates to the same text. */ now?: string }) {
+export function ActionItems({ groups, unread, today, now: serverNow, decide }: { groups: ActionGroup[]; unread: Record<string, number>; today: string; /** The server's render time (ISO), so "45 minutes ago" hydrates to the same text. */ now?: string; decide?: { leaveById: Record<string, LeaveRow>; staff: PersonOption[]; actorRole: AppRole } }) {
   const [seen, setSeen] = React.useState<Set<string>>(() => new Set())
   const [now] = React.useState(() => (serverNow ? new Date(serverNow) : new Date()))
   const total = groups.reduce((n, g) => n + g.total, 0)
@@ -73,14 +77,15 @@ export function ActionItems({ groups, unread, today, now: serverNow }: { groups:
                     const view = describeActionItem(item, now)
                     const key = `${item.entity_type}:${item.entity_id}`
                     const isNew = Boolean(unread[key]) && !seen.has(key)
+                    const leave = item.kind === "leave_approval" ? decide?.leaveById[item.entity_id] : undefined
                     return (
-                      <li key={key}>
+                      <li key={key} className={cn(leave && "flex flex-wrap items-center gap-x-2 pr-4 md:pr-5")}>
                         <Link
                           href={item.link_url}
                           onClick={() => open(item)}
                           aria-label={`${view.primary}. ${view.secondary}. ${view.verb}.${isNew ? " New." : ""}`}
                           title={view.verb}
-                          className="flex min-h-14 items-center gap-3 px-4 py-2 outline-none hover:bg-surface-2/60 focus-visible:bg-surface-2/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring md:px-5"
+                          className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 py-2 outline-none hover:bg-surface-2/60 focus-visible:bg-surface-2/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring md:px-5"
                         >
                           <span aria-hidden="true" className={cn("size-2 flex-none rounded-full", isNew ? "bg-primary" : "bg-transparent")} />
                           <span className="min-w-0 flex-1">
@@ -95,6 +100,11 @@ export function ActionItems({ groups, unread, today, now: serverNow }: { groups:
                             ) : null}
                           </span>
                         </Link>
+                        {leave && decide ? (
+                          <div className="pb-2 pl-9 md:pb-0 md:pl-0">
+                            <DecideLeaveButtons leave={leave} actorRole={decide.actorRole} staff={decide.staff} />
+                          </div>
+                        ) : null}
                       </li>
                     )
                   })}

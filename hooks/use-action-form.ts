@@ -31,6 +31,38 @@ export interface FormError {
   unplaced?: Array<{ name: string; message: string }>
   /** Client validation failed (fields are highlighted; focus went to the first one). */
   client?: boolean
+  /** The fields in error that are on screen, by their label: the alert lists them as links. */
+  fields?: Array<{ id: string; label: string; message: string }>
+}
+
+/** Field paths with an error, nested ones included ("lines.2.rate"), with their message. */
+function errorPaths(errors: unknown, prefix = ""): Array<{ name: string; message: string }> {
+  const out: Array<{ name: string; message: string }> = []
+  if (!errors || typeof errors !== "object") return out
+  for (const [k, v] of Object.entries(errors as Record<string, unknown>)) {
+    if (!v || typeof v !== "object" || k === "ref") continue
+    const name = prefix ? `${prefix}.${k}` : k
+    const msg = (v as { message?: unknown }).message
+    if (typeof msg === "string" && msg) out.push({ name, message: msg })
+    else out.push(...errorPaths(v, name))
+  }
+  return out
+}
+
+/** The on-screen fields among the errors, labelled as the person sees them, in page order. */
+function fieldsOnScreen(control: unknown, errors: Array<{ name: string; message: string }>): FormError["fields"] {
+  if (typeof document === "undefined") return undefined
+  const found: Array<{ id: string; label: string; message: string; el: HTMLElement }> = []
+  for (const e of errors) {
+    const id = fieldDomId(control, e.name)
+    const el = document.getElementById(id)
+    if (!el) continue
+    const labelEl = document.querySelector(`label[for="${CSS.escape(id)}"]`)
+    const label = (labelEl?.textContent ?? el.getAttribute("aria-label") ?? e.name).replace(/\s*\*\s*$/, "").trim()
+    found.push({ id, label, message: e.message, el })
+  }
+  found.sort((a, b) => (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+  return found.length ? found.map(({ id, label, message }) => ({ id, label, message })) : undefined
 }
 
 export interface UseActionFormOptions<In extends FieldValues, T> {
@@ -146,6 +178,7 @@ export function useActionForm<S extends z.ZodType<FieldValues, FieldValues>, T>(
         message: formLevel && result.code === "validation" ? formLevel : result.error,
         ref: result.ref,
         unplaced: unplaced.length ? unplaced : undefined,
+        fields: fieldsOnScreen(control, errorPaths(form.formState.errors)),
       })
       focusAlert()
       return
@@ -160,11 +193,14 @@ export function useActionForm<S extends z.ZodType<FieldValues, FieldValues>, T>(
     await o.onSuccess?.(result.data, values)
   }
 
-  const onInvalid = () => {
-    const count = Object.keys(form.formState.errors).length
+  // React Hook Form hands the errors to this callback; formState isn't updated yet when it runs.
+  const onInvalid = (invalid?: unknown) => {
+    const errors = errorPaths(invalid ?? form.formState.errors)
+    const count = Math.max(errors.length, 1)
     setFormError({
-      message: count > 1 ? `Please check the ${count} highlighted fields.` : "Please check the highlighted field.",
+      message: count > 1 ? `Please check these ${count} fields:` : "Please check this field:",
       client: true,
+      fields: fieldsOnScreen(control, errors),
     })
   }
 

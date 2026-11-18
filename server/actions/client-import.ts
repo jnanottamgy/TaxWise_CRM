@@ -20,15 +20,15 @@ const PM = ["partner", "manager"] as const;
 
 export type ImportReportRow = { row: number; name: string; ok: boolean; errors: string[]; warnings: string[] };
 
-async function check(supabase: ServerSupabase, rows: RawImportRow[]) {
+async function check(supabase: ServerSupabase, rows: RawImportRow[], lines?: number[]) {
   const ctx = await getImportContext(supabase, importLookups(rows));
-  return checkImportRows(rows, ctx);
+  return checkImportRows(rows, ctx, lines);
 }
 
 export const previewClientImport = defineAction(
   { name: "clients.import.preview", schema: ImportRowsSchema, roles: PM },
   async (input, ctx): Promise<ActionResult<{ report: ImportReportRow[]; valid: number; invalid: number }>> => {
-    const checks = await check(ctx.supabase, input.rows as RawImportRow[]);
+    const checks = await check(ctx.supabase, input.rows as RawImportRow[], input.lines);
     const report = checks.map((c) => ({ row: c.row, name: c.name, ok: c.value !== null, errors: c.errors, warnings: c.warnings }));
     const valid = report.filter((r) => r.ok).length;
     return ok({ report, valid, invalid: report.length - valid });
@@ -45,7 +45,7 @@ export type ImportOutcome = {
 export const importClients = defineAction(
   { name: "clients.import", schema: ImportRowsSchema, roles: PM },
   async (input, ctx): Promise<ActionResult<ImportOutcome>> => {
-    const checks = await check(ctx.supabase, input.rows as RawImportRow[]);
+    const checks = await check(ctx.supabase, input.rows as RawImportRow[], input.lines);
     const valid = checks.filter((c) => c.value !== null);
     if (valid.length === 0) return fail("None of the rows can be imported. Fix the problems in the report and try again.", { code: "validation" });
     const { data, error } = await ctx.supabase.rpc("import_clients", {

@@ -69,17 +69,20 @@ function yAxisWidth(ticks: number[], fmt: ValueFormat): number {
 export function LineChartCard({
   series,
   reference,
+  colors: colorsIn,
   ...p
 }: BaseCardProps & {
   series: Array<{ key: string; label: string }>
   /** A 1px dashed reference line (a target, a capacity) with its label at the end. */
   reference?: { value: number; label: string }
+  /** One colour per series (a second series otherwise reads in the muted text colour). */
+  colors?: string[]
 }) {
   const fmt = p.valueFormat ?? "number"
   const values = p.data.flatMap((d) => series.map((s) => num(d[s.key])))
   const scale = niceTicks(reference ? [...values, reference.value] : values, { integer: p.integer })
   const height = p.height ?? 200
-  const colors = series.map((_, i) => (i === 0 ? "var(--chart-1)" : "var(--text-muted)"))
+  const colors = series.map((_, i) => colorsIn?.[i] ?? (i === 0 ? "var(--chart-1)" : "var(--text-muted)"))
   return (
     <ChartFrame
       title={p.title}
@@ -266,8 +269,14 @@ export const STACK_COLORS = [
 export function StackedBarCard({
   series,
   showTotal = true,
+  colors,
+  horizontal = false,
   ...p
 }: BaseCardProps & {
+  /** One colour per part, e.g. the status tones (overdue red, not yet due grey, filed green). */
+  colors?: string[]
+  /** Bars across, one per row with its label beside it: every label shows, however many rows. */
+  horizontal?: boolean
   /** Two to four parts; extra parts should be folded into "Other" before charting. */
   series: Array<{ key: string; label: string }>
   /** Add a Total column to the table view. */
@@ -277,7 +286,7 @@ export function StackedBarCard({
   const parts = series.slice(0, 4)
   const totals = p.data.map((d) => parts.reduce((sum, s) => sum + num(d[s.key]), 0))
   const scale = niceTicks(totals, { integer: p.integer })
-  const height = p.height ?? 220
+  const height = p.height ?? (horizontal ? Math.max(120, p.data.length * 34 + 24) : 220)
   const table = tableFor(p.data, p.xKey, p.xLabel ?? "Period", parts, fmt)
   if (showTotal) {
     table.columns.push({ label: "Total", align: "right" })
@@ -290,29 +299,45 @@ export function StackedBarCard({
       action={p.action}
       summary={p.summary}
       className={p.className}
-      legend={<ChartLegend items={parts.map((s, i) => ({ label: s.label, color: STACK_COLORS[i] }))} />}
+      legend={<ChartLegend items={parts.map((s, i) => ({ label: s.label, color: (colors?.[i] ?? STACK_COLORS[i]) }))} />}
       table={table}
       empty={p.data.length === 0 ? <EmptyState size="compact" message={p.emptyMessage ?? "Nothing to show for this period yet."} /> : undefined}
     >
-      <BarChart responsive data={p.data} style={{ width: "100%", height }} margin={{ top: 8, right: 12, bottom: 0, left: 0 }} barCategoryGap="28%">
-        <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis
-          dataKey={p.xKey}
-          tickLine={false}
-          axisLine={{ stroke: "var(--text-muted)", strokeOpacity: 0.35 }}
-          tick={AXIS_TICK}
-          interval={xLabelInterval(p.data.length)}
-          tickMargin={8}
-        />
-        <YAxis
-          domain={[scale.min, scale.max]}
-          ticks={scale.ticks}
-          tickLine={false}
-          axisLine={false}
-          tick={AXIS_TICK}
-          width={yAxisWidth(scale.ticks, fmt)}
-          tickFormatter={(v: number) => formatValue(v, fmt, "tick")}
-        />
+      <BarChart
+        responsive
+        data={p.data}
+        layout={horizontal ? "vertical" : "horizontal"}
+        style={{ width: "100%", height }}
+        margin={{ top: 8, right: 12, bottom: 0, left: 0 }}
+        barCategoryGap="28%"
+      >
+        <CartesianGrid vertical={horizontal} horizontal={!horizontal} stroke={GRID} />
+        {horizontal ? (
+          <>
+            <XAxis type="number" domain={[scale.min, scale.max]} ticks={scale.ticks} tickLine={false} axisLine={false} tick={AXIS_TICK} tickFormatter={(v: number) => formatValue(v, fmt, "tick")} />
+            <YAxis type="category" dataKey={p.xKey} tickLine={false} axisLine={false} tick={AXIS_TICK} width={96} interval={0} />
+          </>
+        ) : (
+          <>
+            <XAxis
+              dataKey={p.xKey}
+              tickLine={false}
+              axisLine={{ stroke: "var(--text-muted)", strokeOpacity: 0.35 }}
+              tick={AXIS_TICK}
+              interval={xLabelInterval(p.data.length)}
+              tickMargin={8}
+            />
+            <YAxis
+              domain={[scale.min, scale.max]}
+              ticks={scale.ticks}
+              tickLine={false}
+              axisLine={false}
+              tick={AXIS_TICK}
+              width={yAxisWidth(scale.ticks, fmt)}
+              tickFormatter={(v: number) => formatValue(v, fmt, "tick")}
+            />
+          </>
+        )}
         <Tooltip
           cursor={{ fill: "var(--surface-2)" }}
           isAnimationActive={false}
@@ -322,7 +347,7 @@ export function StackedBarCard({
                 label={label}
                 rows={[...payload].reverse().map((pl) => {
                   const idx = parts.findIndex((s) => s.key === pl.dataKey)
-                  return { name: parts[idx]?.label ?? String(pl.name ?? ""), value: formatValue(num(pl.value), fmt), color: STACK_COLORS[idx] }
+                  return { name: parts[idx]?.label ?? String(pl.name ?? ""), value: formatValue(num(pl.value), fmt), color: (colors?.[idx] ?? STACK_COLORS[idx]) }
                 })}
               />
             ) : null
@@ -334,7 +359,7 @@ export function StackedBarCard({
             dataKey={s.key}
             name={s.label}
             stackId="stack"
-            fill={STACK_COLORS[i]}
+            fill={(colors?.[i] ?? STACK_COLORS[i])}
             stroke="var(--surface)"
             strokeWidth={2}
             radius={0}

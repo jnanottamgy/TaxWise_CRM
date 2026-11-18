@@ -38,7 +38,27 @@ export function FormAlert({
     >
       <CircleAlertIcon aria-hidden="true" className="mt-0.5 size-4 flex-none text-danger-text" />
       <div className="min-w-0 flex-1">
-        <p>{e.message}</p>
+        <p>{e.fields?.length || !e.client ? e.message : e.message.replace(/:$/, ".")}</p>
+        {e.fields?.length ? (
+          <ul className="mt-1 flex flex-col gap-0.5 text-sm">
+            {e.fields.map((f) => (
+              <li key={f.id}>
+                {/* Names the field and takes you to it: the alert sits at the top, the field may be off screen. */}
+                <button
+                  type="button"
+                  className="text-left underline decoration-danger/40 underline-offset-2 hover:decoration-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  onClick={() => {
+                    const el = document.getElementById(f.id)
+                    el?.scrollIntoView({ block: "center", behavior: "smooth" })
+                    el?.focus({ preventScroll: true })
+                  }}
+                >
+                  <span className="font-medium">{f.label}</span>: {f.message}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {e.unplaced?.length ? (
           <ul className="mt-1 list-disc pl-4 text-sm">
             {e.unplaced.map((u) => (

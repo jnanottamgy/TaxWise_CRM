@@ -22,7 +22,7 @@ import {
 } from "@/lib/schemas/clients"
 import { importClients, previewClientImport, type ImportOutcome, type ImportReportRow } from "@/server/actions/client-import"
 
-type Parsed = { fileName: string; headers: string[]; data: Array<Record<string, string>> }
+type Parsed = { fileName: string; headers: string[]; data: Array<Record<string, string>>; lines?: number[] }
 type Step =
   | { kind: "choose" }
   | { kind: "map"; parsed: Parsed; mapping: Record<string, ImportKey | null> }
@@ -78,11 +78,21 @@ export function ImportClientsDialog() {
     setBusy("parse")
     Papa.parse<Record<string, string>>(file, {
       header: true,
-      skipEmptyLines: "greedy",
+      // Blank lines are dropped below, keeping each row's line number for the report.
+      skipEmptyLines: false,
       transformHeader: (h) => h.trim(),
       complete: (res) => {
         setBusy(null)
         const headers = (res.meta.fields ?? []).filter((h) => h.length > 0)
+        const kept: Record<string, string>[] = []
+        const lines: number[] = []
+        res.data.forEach((r, i) => {
+          if (Object.values(r).some((v) => typeof v === "string" && v.trim() !== "")) {
+            kept.push(r)
+            lines.push(i + 2)
+          }
+        })
+        res.data = kept
         if (headers.length === 0) {
           setError({ message: "The first row of the file must name the columns. Download the template to see them." })
           return
@@ -95,7 +105,7 @@ export function ImportClientsDialog() {
           setError({ message: `The file has ${res.data.length.toLocaleString("en-IN")} rows. Import at most ${IMPORT_MAX_ROWS.toLocaleString("en-IN")} at a time.` })
           return
         }
-        setStep({ kind: "map", parsed: { fileName: file.name, headers, data: res.data }, mapping: autoMapHeaders(headers) })
+        setStep({ kind: "map", parsed: { fileName: file.name, headers, data: kept, lines }, mapping: autoMapHeaders(headers) })
       },
       error: () => {
         setBusy(null)
@@ -115,7 +125,7 @@ export function ImportClientsDialog() {
     setBusy("check")
     setError(null)
     try {
-      const r = await previewClientImport({ rows, fileName: step.parsed.fileName })
+      const r = await previewClientImport({ rows, fileName: step.parsed.fileName, lines: step.parsed.lines })
       if (!r.ok) {
         setError({ message: r.error, ref: r.ref })
         return
@@ -133,7 +143,7 @@ export function ImportClientsDialog() {
     setBusy("import")
     setError(null)
     try {
-      const r = await importClients({ rows: step.rows, fileName: step.parsed.fileName })
+      const r = await importClients({ rows: step.rows, fileName: step.parsed.fileName, lines: step.parsed.lines })
       if (!r.ok) {
         setError({ message: r.error, ref: r.ref })
         return

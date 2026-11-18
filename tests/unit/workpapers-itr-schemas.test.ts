@@ -339,3 +339,29 @@ describe("status changes", () => {
     expect(itrActions({ status: "final", preparedBy: "e" }, p)).toMatchObject({ edit: false, reopen: true, delete: false });
   });
 });
+
+describe("the new income inputs: agricultural income, presumptive working, losses brought forward", () => {
+  it("go from the form to the engine and back", () => {
+    const base = blankItrForm({ clientId: "00000000-0000-4000-8000-000000000001", financialYear: "2025-26", ageBand: "below_60", ageBandSource: "auto", filingDate: "2026-07-20", dueDate: "2026-07-31", returnKind: "business" })
+    const values = ItrFormSchema.parse({
+      ...base,
+      income: { ...base.income, agriculturalIncome: "5,00,000", presumptiveSection: "44AD", presumptiveGross: "1,00,00,000", presumptiveNonCash: "80,00,000", broughtForward: { houseProperty: "", business: "3,00,000", shortTermCapital: "", longTermCapital: "1,00,000" } },
+    })
+    const r = formToStoredInputs(values, "individual")
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.stored.engine.income).toMatchObject({
+      agriculturalIncome: 50000000,
+      presumptiveWorking: { section: "44AD", grossReceipts: 1000000000, nonCashReceipts: 800000000 },
+      broughtForward: { business: 30000000, longTermCapital: 10000000 },
+    })
+  })
+
+  it("asks for the receipts when a scheme is chosen, and refuses bank receipts above the gross", () => {
+    const base = blankItrForm({ clientId: "00000000-0000-4000-8000-000000000001", financialYear: "2025-26", ageBand: "below_60", ageBandSource: "auto", filingDate: "2026-07-20", dueDate: "2026-07-31", returnKind: "business" })
+    const missing = formToStoredInputs(ItrFormSchema.parse({ ...base, income: { ...base.income, presumptiveSection: "44ADA" } }), "individual")
+    expect(missing).toMatchObject({ ok: false, fieldErrors: { "income.presumptiveGross": [expect.stringMatching(/gross receipts/)] } })
+    const over = formToStoredInputs(ItrFormSchema.parse({ ...base, income: { ...base.income, presumptiveSection: "44AD", presumptiveGross: "100", presumptiveNonCash: "200" } }), "individual")
+    expect(over.ok).toBe(false)
+  })
+})

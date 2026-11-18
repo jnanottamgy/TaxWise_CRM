@@ -330,7 +330,7 @@ export function ItrEditor({ mode, initial, computation, client: initialClient, f
             </div>
           </SectionCard>
 
-          <SectionCard title="Income" description="Enter each head as computed. Leave a head blank if the client has none. Not worked out here: agricultural income (it raises the rate on other income), losses brought forward from earlier years, and the 44AD / 44ADA presumptive working. Adjust for those by hand before sending the sheet.">
+          <SectionCard title="Income" description="Enter each head as computed. Leave a head blank if the client has none.">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {!huf ? (
                 <>
@@ -354,7 +354,36 @@ export function ItrEditor({ mode, initial, computation, client: initialClient, f
               <MoneyField control={control} name="income.stcg111a" label="Short-term gains on listed equity (111A)" />
               <MoneyField control={control} name="income.ltcg112a" label="Long-term gains on listed equity (112A)" helper="Before the annual exemption; the sheet applies it." />
               <MoneyField control={control} name="income.ltcg112" label="Other long-term gains (112)" />
+              <MoneyField control={control} name="income.agriculturalIncome" label="Agricultural income (net)" helper="Exempt, but above ₹5,000 it raises the rate on other income. The sheet works it out." />
             </div>
+            <fieldset className="mt-5 rounded-md border border-border px-4 pt-3 pb-4">
+              <legend className="px-1 text-sm font-medium text-text">Presumptive working (44AD / 44ADA)</legend>
+              <p className="mb-3 text-sm text-text-muted">The sheet takes the higher of this and the business figure above, and checks the turnover limit.</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <SelectField
+                  control={control}
+                  name="income.presumptiveSection"
+                  label="Scheme"
+                  options={[
+                    { value: "", label: "Not used" },
+                    { value: "44AD", label: "44AD: business, 6% / 8%" },
+                    { value: "44ADA", label: "44ADA: profession, 50%" },
+                  ]}
+                />
+                <MoneyField control={control} name="income.presumptiveGross" label="Gross receipts / turnover" />
+                <MoneyField control={control} name="income.presumptiveNonCash" label="Of which by bank or digital means" />
+              </div>
+            </fieldset>
+            <fieldset className="mt-5 rounded-md border border-border px-4 pt-3 pb-4">
+              <legend className="px-1 text-sm font-medium text-text">Losses brought forward from earlier years</legend>
+              <p className="mb-3 text-sm text-text-muted">Set off within their own head; what is left is noted on the sheet to carry forward.</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MoneyField control={control} name="income.broughtForward.business" label="Business loss (s.72)" />
+                <MoneyField control={control} name="income.broughtForward.houseProperty" label="House-property loss (s.71B)" />
+                <MoneyField control={control} name="income.broughtForward.shortTermCapital" label="Short-term capital loss (s.74)" />
+                <MoneyField control={control} name="income.broughtForward.longTermCapital" label="Long-term capital loss (s.74)" />
+              </div>
+            </fieldset>
             {earlierRates ? (
               <fieldset className="mt-5 rounded-md border border-border px-4 pt-3 pb-4">
                 <legend className="px-1 text-sm font-medium text-text">Gains on transfers before {formatDate(earlierRates.cutoverDate)}</legend>

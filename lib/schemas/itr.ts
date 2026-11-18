@@ -116,6 +116,15 @@ export const ItrIncomeFormSchema = z.object({
     .object({ stcg111a: amountText, ltcg112a: amountText, ltcg112: amountText })
     .optional()
     .default({ stcg111a: "", ltcg112a: "", ltcg112: "" }),
+  agriculturalIncome: amountText.optional().default(""),
+  /** The presumptive working (44AD / 44ADA); "" = none. */
+  presumptiveSection: z.enum(["", "44AD", "44ADA"]).optional().default(""),
+  presumptiveGross: amountText.optional().default(""),
+  presumptiveNonCash: amountText.optional().default(""),
+  broughtForward: z
+    .object({ houseProperty: amountText, business: amountText, shortTermCapital: amountText, longTermCapital: amountText })
+    .optional()
+    .default({ houseProperty: "", business: "", shortTermCapital: "", longTermCapital: "" }),
 });
 
 export const ItrDeductionsFormSchema = z.object({
@@ -252,6 +261,11 @@ export function blankItrForm(p: {
       ltcg112a: "",
       ltcg112: "",
       earlierTransfers: { stcg111a: "", ltcg112a: "", ltcg112: "" },
+      agriculturalIncome: "",
+      presumptiveSection: "",
+      presumptiveGross: "",
+      presumptiveNonCash: "",
+      broughtForward: { houseProperty: "", business: "", shortTermCapital: "", longTermCapital: "" },
     },
     deductions: {
       sec80CBasket: "",
@@ -327,6 +341,21 @@ export function formToStoredInputs(values: ItrFormValues, assesseeType: Assessee
     ltcg112a: amount("income.earlierTransfers.ltcg112a", inc.earlierTransfers.ltcg112a),
     ltcg112: amount("income.earlierTransfers.ltcg112", inc.earlierTransfers.ltcg112),
   });
+  const bfIn = inc.broughtForward ?? { houseProperty: "", business: "", shortTermCapital: "", longTermCapital: "" };
+  const broughtForward = clean({
+    houseProperty: amount("income.broughtForward.houseProperty", bfIn.houseProperty),
+    business: amount("income.broughtForward.business", bfIn.business),
+    shortTermCapital: amount("income.broughtForward.shortTermCapital", bfIn.shortTermCapital),
+    longTermCapital: amount("income.broughtForward.longTermCapital", bfIn.longTermCapital),
+  });
+  let presumptiveWorking: { section: "44AD" | "44ADA"; grossReceipts: Paise; nonCashReceipts?: Paise } | undefined;
+  if (inc.presumptiveSection) {
+    const gross = amount("income.presumptiveGross", inc.presumptiveGross ?? "");
+    const nonCash = amount("income.presumptiveNonCash", inc.presumptiveNonCash ?? "");
+    if (gross === undefined) add("income.presumptiveGross", "Enter the gross receipts for the presumptive working.");
+    else if (nonCash !== undefined && nonCash > gross) add("income.presumptiveNonCash", "This can't exceed the gross receipts.");
+    else presumptiveWorking = clean({ section: inc.presumptiveSection, grossReceipts: gross, nonCashReceipts: nonCash });
+  }
   const income = clean({
     salaryGross: amount("income.salaryGross", inc.salaryGross),
     salaryOldRegimeExemptions: amount("income.salaryOldRegimeExemptions", inc.salaryOldRegimeExemptions),
@@ -338,6 +367,9 @@ export function formToStoredInputs(values: ItrFormValues, assesseeType: Assessee
     ltcg112a: amount("income.ltcg112a", inc.ltcg112a),
     ltcg112: amount("income.ltcg112", inc.ltcg112),
     earlierTransfers: Object.keys(earlier).length ? earlier : undefined,
+    agriculturalIncome: amount("income.agriculturalIncome", inc.agriculturalIncome ?? ""),
+    presumptiveWorking: presumptiveWorking,
+    broughtForward: Object.keys(broughtForward).length ? broughtForward : undefined,
   });
 
   const d = values.deductions;
@@ -464,6 +496,16 @@ export function storedToForm(stored: StoredItrInputs, row: { id: string; updated
       ltcg112a: money(inc.ltcg112a),
       ltcg112: money(inc.ltcg112),
       earlierTransfers: { stcg111a: money(ear.stcg111a), ltcg112a: money(ear.ltcg112a), ltcg112: money(ear.ltcg112) },
+      agriculturalIncome: money(inc.agriculturalIncome),
+      presumptiveSection: inc.presumptiveWorking?.section ?? "",
+      presumptiveGross: money(inc.presumptiveWorking?.grossReceipts),
+      presumptiveNonCash: money(inc.presumptiveWorking?.nonCashReceipts),
+      broughtForward: {
+        houseProperty: money(inc.broughtForward?.houseProperty),
+        business: money(inc.broughtForward?.business),
+        shortTermCapital: money(inc.broughtForward?.shortTermCapital),
+        longTermCapital: money(inc.broughtForward?.longTermCapital),
+      },
     },
     deductions: {
       sec80CBasket: money(d.sec80CBasket),

@@ -267,6 +267,7 @@ function MoneyAndFilings({ m, today }: { m: FirmToday; today: DateString }) {
             { key: "collected", label: "Collected" },
             { key: "invoiced", label: "Invoiced" },
           ]}
+          colors={["var(--chart-1)", "var(--chart-3)"]}
           summary={`FY ${m.fy} so far: ${formatINR(toDate.invoicedPaise)} invoiced and ${formatINR(toDate.collectedPaise)} collected.`}
         />
         <StackedBarCard
@@ -290,6 +291,9 @@ function MoneyAndFilings({ m, today }: { m: FirmToday; today: DateString }) {
             { key: "pending", label: "Not yet due" },
             { key: "filed", label: "Filed" },
           ]}
+          // Every return named on its own row, in the app's status tones.
+          horizontal
+          colors={["var(--danger)", "color-mix(in srgb, var(--text-muted) 45%, var(--surface))", "var(--success)"]}
           emptyMessage="No deadlines fall due this month."
         />
       </div>

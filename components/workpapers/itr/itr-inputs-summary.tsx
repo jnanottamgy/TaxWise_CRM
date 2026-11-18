@@ -74,6 +74,13 @@ export function ItrInputsSummary({ inputs }: { inputs: StoredItrInputs }) {
           { label: "111A, earlier transfers", value: ear.stcg111a },
           { label: "112A, earlier transfers", value: ear.ltcg112a },
           { label: "112, earlier transfers", value: ear.ltcg112 },
+          { label: "Agricultural income (net)", value: inc.agriculturalIncome },
+          { label: `Presumptive receipts${inc.presumptiveWorking ? ` (${inc.presumptiveWorking.section})` : ""}`, value: inc.presumptiveWorking?.grossReceipts },
+          { label: "Of which by bank or digital means", value: inc.presumptiveWorking?.nonCashReceipts },
+          { label: "Business loss brought forward", value: inc.broughtForward?.business },
+          { label: "House-property loss brought forward", value: inc.broughtForward?.houseProperty },
+          { label: "Short-term capital loss brought forward", value: inc.broughtForward?.shortTermCapital },
+          { label: "Long-term capital loss brought forward", value: inc.broughtForward?.longTermCapital },
         ]}
       />
       <Group

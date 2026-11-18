@@ -102,6 +102,19 @@ export type ItrIncomeInputs = {
   ltcg112?: Paise;
   /** Gains on transfers before the rule set's cut-over date (23 Jul 2024; FY 2024-25 only). */
   earlierTransfers?: SpecialGainsInput;
+  /**
+   * Net agricultural income (s.10(1)): exempt, but above ₹5,000 it raises the rate on the rest
+   * (partial integration, Finance Act Part I) when other income passes the basic exemption.
+   */
+  agriculturalIncome?: Paise;
+  /**
+   * The presumptive working: s.44AD (business: 6% of receipts by bank / digital means, 8% of the
+   * rest) or s.44ADA (profession: 50% of gross receipts). The business figure used is the higher of
+   * this and `businessProfession`. Ignored, with a note, when receipts pass the scheme's limit.
+   */
+  presumptiveWorking?: { section: "44AD" | "44ADA"; grossReceipts: Paise; nonCashReceipts?: Paise };
+  /** Losses brought forward from earlier years, as positive amounts, set off within their own head. */
+  broughtForward?: { houseProperty?: Paise; business?: Paise; shortTermCapital?: Paise; longTermCapital?: Paise };
 };
 
 export type ItrDeductionInputs = {
@@ -436,6 +449,7 @@ export function itrYearLabel(ruleSet: Pick<ItrRuleSet, "financialYear" | "statut
 // -------------------------------------------------------------------------------------------------
 
 const NON_NEGATIVE_INCOME: readonly (keyof ItrIncomeInputs)[] = [
+  "agriculturalIncome",
   "salaryGross",
   "salaryOldRegimeExemptions",
   "businessProfession",
@@ -485,6 +499,15 @@ export function validateItrInputs(inputs: ItrInputs, ruleSet: ItrRuleSet, dates:
   for (const key of ["stcg111a", "ltcg112a", "ltcg112"] as const) amount(`income.earlierTransfers.${key}`, earlier[key]);
 
   if ((inc.dividends ?? 0) > (inc.otherSources ?? 0)) add("income.dividends", "Dividends are part of other sources, so they can't exceed it.");
+  const pw = inc.presumptiveWorking;
+  if (pw) {
+    if (pw.section !== "44AD" && pw.section !== "44ADA") add("income.presumptiveWorking.section", "Choose 44AD or 44ADA.");
+    amount("income.presumptiveWorking.grossReceipts", pw.grossReceipts);
+    amount("income.presumptiveWorking.nonCashReceipts", pw.nonCashReceipts);
+    if ((pw.nonCashReceipts ?? 0) > pw.grossReceipts) add("income.presumptiveWorking.nonCashReceipts", "Receipts by bank or digital means can't exceed the gross receipts.");
+  }
+  const bf = inc.broughtForward ?? {};
+  for (const key of ["houseProperty", "business", "shortTermCapital", "longTermCapital"] as const) amount(`income.broughtForward.${key}`, bf[key]);
   if ((inc.salaryOldRegimeExemptions ?? 0) > (inc.salaryGross ?? 0)) {
     add("income.salaryOldRegimeExemptions", "Exemptions can't exceed the gross salary.");
   }
@@ -564,12 +587,14 @@ function reduceComposition(c: Composition, amount: Paise): Composition {
   return { other, dividends, buckets };
 }
 
-type PersonCtx = { rules: RegimeRules; ruleSet: ItrRuleSet; slabs: Slab[]; rebatePerson: boolean; resident: boolean };
+type PersonCtx = { rules: RegimeRules; ruleSet: ItrRuleSet; slabs: Slab[]; rebatePerson: boolean; resident: boolean; agricultural: Paise };
 
 type Pipeline = {
   totalIncome: Paise;
   normalIncome: Paise;
   slabLines: SlabLine[];
+  /** Extra tax on normal-rate income from partial integration of agricultural income (0 when none). */
+  agriculturalExtra: Paise;
   normalTax: Paise;
   special: SpecialRateLine[];
   specialTax: Paise;
@@ -592,7 +617,17 @@ function taxPipeline(c: Composition, ctx: PersonCtx): Pipeline {
   const { rules, ruleSet } = ctx;
   const normalIncome = c.other + c.dividends;
   const totalIncome = compositionTotal(c);
-  const { tax: normalTax, lines: slabLines } = slabTax(normalIncome, ctx.slabs);
+  const plain = slabTax(normalIncome, ctx.slabs);
+  const slabLines = plain.lines;
+  // Partial integration (Finance Act, Part I, Paragraph A): agricultural income above ₹5,000, with
+  // normal-rate income above the basic exemption, is added for the rate and then taken out again:
+  // tax on (income + agricultural) less tax on (agricultural + the basic exemption).
+  const basic = basicExemption(ctx.slabs);
+  const integrate = ctx.agricultural > 500_000 && normalIncome > basic;
+  const normalTax = integrate
+    ? Math.max(0, slabTax(normalIncome + ctx.agricultural, ctx.slabs).tax - slabTax(ctx.agricultural + basic, ctx.slabs).tax)
+    : plain.tax;
+  const agriculturalExtra = normalTax - plain.tax;
 
   // Special-rate gains: the 112A exemption, then a resident's unused basic exemption, highest rate first.
   const special: SpecialRateLine[] = c.buckets.map((b) => ({
@@ -681,6 +716,7 @@ function taxPipeline(c: Composition, ctx: PersonCtx): Pipeline {
     totalIncome,
     normalIncome,
     slabLines,
+    agriculturalExtra,
     normalTax,
     special,
     specialTax,
@@ -883,7 +919,7 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
   const seniorResident = individual && resident && inputs.ageBand !== "below_60";
   const slabs =
     seniorResident && rules.seniorSlabs && inputs.ageBand !== "below_60" ? rules.seniorSlabs[inputs.ageBand] : rules.slabs;
-  const ctx: PersonCtx = { rules, ruleSet, slabs, rebatePerson: individual && resident, resident };
+  const ctx: PersonCtx = { rules, ruleSet, slabs, rebatePerson: individual && resident, resident, agricultural: inputs.income.agriculturalIncome ?? 0 };
   const inc = inputs.income;
   const ded = inputs.deductions ?? {};
   const paid = inputs.taxesPaid ?? {};
@@ -914,7 +950,34 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
   push("income.salary", "Income from salary", salary);
 
   // ---- Other heads before set-off ------------------------------------------------------------
-  const business = inc.businessProfession ?? 0;
+  let business = inc.businessProfession ?? 0;
+  let businessNote: string | undefined;
+  const pw = inc.presumptiveWorking;
+  if (pw && pw.grossReceipts > 0) {
+    const nonCash = Math.min(pw.nonCashReceipts ?? 0, pw.grossReceipts);
+    const cash = pw.grossReceipts - nonCash;
+    const mostlyBanked = cash <= Math.floor(pw.grossReceipts / 20); // cash within 5% of receipts
+    const limit = pw.section === "44AD" ? rupees(mostlyBanked ? 30_000_000 : 20_000_000) : rupees(mostlyBanked ? 7_500_000 : 5_000_000);
+    if (pw.grossReceipts > limit) {
+      businessNote = `Receipts of ${inr(pw.grossReceipts)} are above the s.${pw.section} limit of ${inr(limit)}: the presumptive scheme doesn't apply; the figure entered is used.`;
+    } else {
+      const deemed = pw.section === "44AD" ? percentOf(nonCash, 6) + percentOf(cash, 8) : percentOf(pw.grossReceipts, 50);
+      const working = pw.section === "44AD" ? `6% of ${inr(nonCash)} by bank or digital means + 8% of ${inr(cash)}` : `50% of ${inr(pw.grossReceipts)}`;
+      if (deemed >= business) {
+        business = deemed;
+        businessNote = `Presumptive income u/s ${pw.section}: ${working} = ${inr(deemed)}.`;
+      } else {
+        businessNote = `Declared above the s.${pw.section} figure (${working} = ${inr(deemed)}).`;
+      }
+    }
+  }
+  const bf = inc.broughtForward ?? {};
+  const setOffNotes: string[] = [];
+  if ((bf.business ?? 0) > 0 && business > 0) {
+    const used = Math.min(bf.business ?? 0, business);
+    business -= used;
+    businessNote = `${businessNote ? `${businessNote} ` : ""}After setting off ${inr(used)} of business loss brought forward (s.72)${used < (bf.business ?? 0) ? `; ${inr((bf.business ?? 0) - used)} still to carry forward` : ""}.`;
+  }
   const otherSources = inc.otherSources ?? 0;
   const cg = ruleSet.capitalGains;
   const buckets: Bucket[] = [
@@ -930,9 +993,34 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
       { kind: "112", period: "earlier", rate: cg.earlierRates["112"], amount: e.ltcg112 ?? 0 },
     );
   }
+  // Capital losses brought forward (s.74): short-term against any gain, long-term against long-term gains only.
+  {
+    let stcl = bf.shortTermCapital ?? 0;
+    let ltcl = bf.longTermCapital ?? 0;
+    const start = stcl + ltcl;
+    for (const i of rateOrder(buckets)) {
+      const b = buckets[i];
+      if (b.kind !== "111A" && ltcl > 0) {
+        const used = Math.min(ltcl, b.amount);
+        b.amount -= used;
+        ltcl -= used;
+      }
+      const used = Math.min(stcl, b.amount);
+      b.amount -= used;
+      stcl -= used;
+    }
+    if (start > 0) {
+      setOffNotes.push(`${inr(start - stcl - ltcl)} of capital losses brought forward set off against this year's gains (s.74)${stcl + ltcl > 0 ? `; ${inr(stcl + ltcl)} still to carry forward` : ""}.`);
+    }
+  }
 
   // ---- House property ------------------------------------------------------------------------
-  const hpEntered = inc.houseProperty ?? 0;
+  let hpEntered = inc.houseProperty ?? 0;
+  if ((bf.houseProperty ?? 0) > 0 && hpEntered > 0) {
+    const used = Math.min(bf.houseProperty ?? 0, hpEntered);
+    hpEntered -= used;
+    setOffNotes.push(`${inr(used)} of house-property loss brought forward set off against this year's house-property income (s.71B).`);
+  }
   let hpAllowed = hpEntered;
   let lossSetOff = 0;
   let lossCarriedForward = 0;
@@ -962,7 +1050,7 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
     note: hpNote,
     section: hpEntered < 0 ? cite("houseLossSetOff") : undefined,
   });
-  push("income.business", "Profits and gains of business or profession", business);
+  push("income.business", "Profits and gains of business or profession", business, { note: businessNote });
 
   // The set-off reduces normal-rate income first, then gains (highest rate first).
   const lossAgainstNormal = Math.min(lossSetOff, normalHeads);
@@ -986,7 +1074,7 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
   const normalGti = normalHeads - lossAgainstNormal;
   const specialIncome = sum(buckets.map((b) => b.amount));
   const grossTotalIncome = normalGti + specialIncome;
-  push("gti", "Gross total income", grossTotalIncome);
+  push("gti", "Gross total income", grossTotalIncome, { note: setOffNotes.length ? setOffNotes.join(" ") : undefined });
 
   // ---- Deductions ----------------------------------------------------------------------------
   const deductionLines: DeductionLine[] = [];
@@ -1082,6 +1170,11 @@ function computeRegime(regime: Regime, inputs: ItrInputs, ruleSet: ItrRuleSet, d
     const range = s.to === null ? `above ${inr(s.from)}` : s.from === 0 ? `up to ${inr(s.to)}` : `${inr(s.from + 100)} to ${inr(s.to)}`;
     push(`tax.slab.${i + 1}`, `Tax at ${pct(s.rate)} on income ${range}`, s.tax, { note: `${pct(s.rate)} of ${inr(s.income)}.` });
   });
+  if (p.agriculturalExtra !== 0) {
+    push("tax.agricultural", "Add: rate effect of agricultural income", p.agriculturalExtra, {
+      note: `Agricultural income of ${inr(ctx.agricultural)} is exempt but sets the rate: tax on ${inr(p.normalIncome + ctx.agricultural)} less tax on ${inr(ctx.agricultural + basicExemption(ctx.slabs))} (agricultural income plus the basic exemption).`,
+    });
+  }
   push("tax.normal", "Tax on normal-rate income", p.normalTax, {
     note: `On ${inr(p.normalIncome)} at the ${regimeName} slab rates${seniorResident && rules.seniorSlabs ? ` for age ${inputs.ageBand.replace(/_/g, " ")}` : ""}.`,
     section: regime === "new" ? cite("newRegime") : undefined,

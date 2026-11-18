@@ -349,6 +349,49 @@ describe("both regimes side by side", () => {
     expect(r.regimes.new.totalIncome).toBe(R(1425000));
   });
 
+  it("agricultural income above ₹5,000 raises the rate on other income (partial integration)", () => {
+    // Other sources 20,00,000 + agricultural 5,00,000.
+    // New: tax(25 L) 3,30,000 − tax(5 L + 4 L basic) 30,000 = 3,00,000 (2,00,000 without it); cess 12,000 → 3,12,000.
+    // Old: tax(25 L) 5,62,500 − tax(5 L + 2.5 L) 62,500 = 5,00,000; cess 20,000 → 5,20,000.
+    const r = compute({ income: { otherSources: R(2000000), agriculturalIncome: R(500000) } });
+    expect(r.regimes.new.totalIncome).toBe(R(2000000));
+    expect(line(r.regimes.new, "tax.agricultural").amount).toBe(R(100000));
+    expect(r.regimes.new.taxLiabilityRounded).toBe(R(312000));
+    expect(r.regimes.old.taxLiabilityRounded).toBe(R(520000));
+    // At ₹5,000 or less, or with other income within the basic exemption, nothing changes.
+    expect(compute({ income: { otherSources: R(2000000), agriculturalIncome: R(5000) } }).regimes.new.taxLiabilityRounded).toBe(R(208000));
+    expect(compute({ income: { otherSources: R(300000), agriculturalIncome: R(900000) } }).regimes.new.taxLiabilityRounded).toBe(0);
+  });
+
+  it("works out presumptive income u/s 44AD and 44ADA, within the turnover limits", () => {
+    // 44ADA: 50% of 40,00,000 = 20,00,000; new regime tax 2,00,000 + cess 8,000.
+    const ada = compute({ income: { presumptiveWorking: { section: "44ADA", grossReceipts: R(4000000), nonCashReceipts: R(4000000) } } });
+    expect(line(ada.regimes.new, "income.business").amount).toBe(R(2000000));
+    expect(ada.regimes.new.taxLiabilityRounded).toBe(R(208000));
+    // 44AD: 6% of 80,00,000 + 8% of 20,00,000 = 6,40,000 (cash above 5%: the ₹2 crore limit, still within it).
+    const ad = compute({ income: { presumptiveWorking: { section: "44AD", grossReceipts: R(10000000), nonCashReceipts: R(8000000) } } });
+    expect(line(ad.regimes.new, "income.business").amount).toBe(R(640000));
+    // A higher figure declared is kept.
+    const higher = compute({ income: { businessProfession: R(900000), presumptiveWorking: { section: "44AD", grossReceipts: R(10000000), nonCashReceipts: R(8000000) } } });
+    expect(line(higher.regimes.new, "income.business").amount).toBe(R(900000));
+    // 44ADA receipts 60 L with 10 L in cash (over 5%): the limit is 50 L, so the scheme doesn't apply.
+    const over = compute({ income: { businessProfession: R(1000000), presumptiveWorking: { section: "44ADA", grossReceipts: R(6000000), nonCashReceipts: R(5000000) } } });
+    expect(line(over.regimes.new, "income.business").amount).toBe(R(1000000));
+    expect(line(over.regimes.new, "income.business").note).toMatch(/above the s.44ADA limit/);
+  });
+
+  it("sets off losses brought forward within their own heads", () => {
+    const r = compute({
+      income: { businessProfession: R(1000000), stcg111a: R(200000), ltcg112a: R(300000), houseProperty: R(400000), broughtForward: { business: R(300000), shortTermCapital: R(50000), longTermCapital: R(100000), houseProperty: R(500000) } },
+    });
+    const n = r.regimes.new;
+    expect(line(n, "income.business").amount).toBe(R(700000));
+    expect(line(n, "income.capital_gains.111A").amount).toBe(R(150000)); // short-term loss only
+    expect(line(n, "income.capital_gains.112A").amount).toBe(R(200000)); // long-term loss only against long-term gains
+    expect(line(n, "income.house_property").amount).toBe(0); // 4 L of the 5 L used
+    expect(line(n, "gti").note).toMatch(/s\.74/);
+  });
+
   it("positive house-property income is part of total income, in both regimes", () => {
     // Rent only, ₹15,00,000 (net). New regime FY 2025-26: 20,000 + 40,000 + 45,000 = 1,05,000; cess 4,200 → 1,09,200.
     const rent = compute({ income: { houseProperty: R(1500000) } });

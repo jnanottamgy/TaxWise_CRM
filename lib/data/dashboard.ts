@@ -629,13 +629,42 @@ export async function getPendingLeave(supabase: ServerSupabase, user: CurrentUse
   return { rows: rows.slice(0, limit), total: rows.length };
 }
 
-export type ActivityItem = { id: string; description: string; user_name: string | null; at: string; entity_type: string; entity_id: string };
+export type ActivityItem = {
+  id: string;
+  description: string;
+  user_name: string | null;
+  at: string;
+  entity_type: string;
+  entity_id: string;
+  /** The client the entry is about, when it is about one: a line has to say what happened to whom. */
+  client_id?: string | null;
+  client_name?: string | null;
+};
 
-/** The latest entries of the firm's activity log (§7.2 Partner "recent activity"). */
+/** The latest entries of the firm's activity log (§7.2 Partner "recent activity"), each with its client. */
 export async function getRecentActivity(supabase: ServerSupabase, limit = 6): Promise<ActivityItem[]> {
   const { data, error } = await supabase.from("activity_logs").select("id, description, user_name, at, entity_type, entity_id").order("at", { ascending: false }).limit(limit);
   if (error) throw error;
-  return data ?? [];
+  const rows: ActivityItem[] = data ?? [];
+  const idsOf = (type: string) => [...new Set(rows.filter((r) => r.entity_type === type).map((r) => r.entity_id))];
+  const clientOf = new Map<string, string>(); // entity id → client id
+  const [events, tasks, invoices] = await Promise.all([
+    idsOf("compliance_event").length ? supabase.from("compliance_events").select("id, client_id").in("id", idsOf("compliance_event")) : null,
+    idsOf("task").length ? supabase.from("tasks").select("id, client_id").in("id", idsOf("task")) : null,
+    idsOf("invoice").length ? supabase.from("invoices").select("id, client_id").in("id", idsOf("invoice")) : null,
+  ]);
+  for (const res of [events, tasks, invoices]) for (const r of res?.data ?? []) if (r.client_id) clientOf.set(r.id, r.client_id);
+  for (const id of idsOf("client")) clientOf.set(id, id);
+  const clientIds = [...new Set(clientOf.values())];
+  const names = new Map<string, string>();
+  if (clientIds.length) {
+    const { data: cs } = await supabase.from("clients").select("id, display_name").in("id", clientIds);
+    for (const c of cs ?? []) names.set(c.id, c.display_name);
+  }
+  return rows.map((r) => {
+    const clientId = clientOf.get(r.entity_id) ?? null;
+    return { ...r, client_id: clientId, client_name: clientId ? (names.get(clientId) ?? null) : null };
+  });
 }
 
 // =================================================================================================
